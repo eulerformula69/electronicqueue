@@ -244,13 +244,12 @@ function updateNewTicketSystemNotificationButton() {
         button.classList.add("notification-disabled");
 
         icon.setAttribute("src", "icons/notification-off.svg");
+        button.title = "Системные уведомления при новом тикете выключены";
+        button.setAttribute("aria-label", "Системные уведомления при новом тикете выключены");
 
         if (Notification.permission === "denied") {
             button.title = "Уведомления запрещены в настройках браузера";
             button.setAttribute("aria-label", "Уведомления запрещены в настройках браузера");
-        } else {
-            button.title = "Системные уведомления при новом тикете выключены";
-            button.setAttribute("aria-label", "Системные уведомления при новом тикете выключены");
         }
     }
 }
