@@ -2088,3 +2088,79 @@ body.board-media-page.lite-version .board-column-split #board .card {
 body.board-media-page.lite-version .board-column-split #board.board {
     padding-top: 0 !important;
 }
+
+
+
+/* board-media-lite: убрать старую сетку .board, которая раздувает расстояния */
+body.board-media-page.lite-version #board,
+body.board-media-page.lite-version #waiting-board {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+
+    /* ВАЖНО: сбрасывает старое repeat(7, minmax(85px, 1fr)) */
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+
+    gap: 8px !important;
+    row-gap: 8px !important;
+
+    align-content: start !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+}
+
+body.board-media-page.lite-version #board .card,
+body.board-media-page.lite-version #waiting-board .waiting-card {
+    height: 54px !important;
+    min-height: 54px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1) !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+/* чтобы секции не добавляли лишний вертикальный разнос */
+body.board-media-page.lite-version .board-column-split {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    row-gap: 8px !important;
+    height: auto !important;
+    justify-content: flex-start !important;
+}
+
+/* цвета board-media-lite */
+body.board-media-page.lite-version {
+    --lite-cyan: #138c9d;
+    --lite-orange: #ff6b35;
+}
+
+/* ожидающие — синий */
+body.board-media-page.lite-version .lite-board-section-waiting .lite-board-section-header,
+body.board-media-page.lite-version .lite-board-section-waiting .board-page-indicator,
+body.board-media-page.lite-version #waiting-board .ticket {
+    color: var(--lite-cyan) !important;
+}
+
+/* вызванные — оранжевый */
+body.board-media-page.lite-version .lite-board-section-called .lite-board-section-header,
+body.board-media-page.lite-version .lite-board-section-called .board-page-indicator,
+body.board-media-page.lite-version #board .ticket,
+body.board-media-page.lite-version #board .window,
+body.board-media-page.lite-version #board .ticket span,
+body.board-media-page.lite-version #board .window span {
+    color: var(--lite-orange) !important;
+}
+
+/* стрелка */
+body.board-media-page.lite-version #board .arrow {
+    color: #777 !important;
+}

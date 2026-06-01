@@ -3,8 +3,8 @@
    Без async/await, стрелок-функций, optional chaining, replaceAll, Set/Map. */
 
 (function () {
-    var CALLED_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.calledPageSize) || 3;
-    var WAITING_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.waitingPageSize) || 4;
+    var CALLED_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.calledPageSize) || 7;
+    var WAITING_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.waitingPageSize) || 7;
     var PAGE_INTERVAL_MS = (window.BOARD_CONFIG && window.BOARD_CONFIG.pageIntervalMs) || 5000;
     var RECONNECT_MS = 3000;
     var CLEAN_PROCESSED_MS = 5 * 60 * 1000;
