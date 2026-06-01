@@ -26,9 +26,19 @@ let queueSoundInitialized = false;
 // Храним известные тикеты из прошлой загрузки очереди
 let knownQueueTicketIds = new Set();
 
-// Антидребезг: если за короткое время пришло несколько queue_updated/polling
+// Антидребезг звукового оповещения
 let lastNewTicketSoundAt = 0;
 const NEW_TICKET_SOUND_COOLDOWN_MS = 1200;
+
+// Главный флаг: включены ли системные уведомления
+const NEW_TICKET_NOTIFICATION_STORAGE_KEY = "newTicketSystemNotificationEnabled";
+
+let newTicketSystemNotificationEnabled =
+    localStorage.getItem(NEW_TICKET_NOTIFICATION_STORAGE_KEY) === "true";
+	
+// Антидребезг системных уведомлений
+let lastNewTicketNotificationAt = 0;
+const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;	
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -57,6 +67,9 @@ async function init() {
     }
 	
 	loadCurrentTicket();
+	loadCurrentTicket();
+	updateNewTicketSoundButton();
+	updateNewTicketSystemNotificationButton();	
 }
 
 function initWebSocket() {
@@ -191,6 +204,143 @@ function toggleNewTicketSound() {
     }
 }
 
+function isSystemNotificationSupported() {
+    return "Notification" in window;
+}
+
+function updateNewTicketSystemNotificationButton() {
+    const button = document.getElementById("new-ticket-notification-toggle");
+    const icon = document.getElementById("new-ticket-notification-icon");
+
+    if (!button || !icon) {
+        console.warn("Notification button elements not found", { button, icon });
+        return;
+    }
+
+    if (!isSystemNotificationSupported()) {
+        button.classList.remove("notification-enabled");
+        button.classList.add("notification-disabled");
+        button.disabled = true;
+
+        icon.setAttribute("src", "icons/notification-off.svg");
+        button.title = "Системные уведомления не поддерживаются этим браузером";
+        button.setAttribute("aria-label", "Системные уведомления не поддерживаются этим браузером");
+        return;
+    }
+
+    const enabled =
+        newTicketSystemNotificationEnabled &&
+        Notification.permission === "granted";
+
+    if (enabled) {
+        button.classList.add("notification-enabled");
+        button.classList.remove("notification-disabled");
+
+        icon.setAttribute("src", "icons/notification-on.svg");
+        button.title = "Системные уведомления при новом тикете включены";
+        button.setAttribute("aria-label", "Системные уведомления при новом тикете включены");
+    } else {
+        button.classList.remove("notification-enabled");
+        button.classList.add("notification-disabled");
+
+        icon.setAttribute("src", "icons/notification-off.svg");
+
+        if (Notification.permission === "denied") {
+            button.title = "Уведомления запрещены в настройках браузера";
+            button.setAttribute("aria-label", "Уведомления запрещены в настройках браузера");
+        } else {
+            button.title = "Системные уведомления при новом тикете выключены";
+            button.setAttribute("aria-label", "Системные уведомления при новом тикете выключены");
+        }
+    }
+}
+
+async function toggleNewTicketSystemNotification() {
+    if (!("Notification" in window)) {
+        showToast("Браузер не поддерживает системные уведомления", "warning");
+        return;
+    }
+
+    if (newTicketSystemNotificationEnabled) {
+        newTicketSystemNotificationEnabled = false;
+        localStorage.setItem(NEW_TICKET_NOTIFICATION_STORAGE_KEY, "false");
+        updateNewTicketSystemNotificationButton();
+        return;
+    }
+
+    if (Notification.permission === "denied") {
+        newTicketSystemNotificationEnabled = false;
+        localStorage.setItem(NEW_TICKET_NOTIFICATION_STORAGE_KEY, "false");
+        showToast("Уведомления запрещены в настройках браузера", "warning");
+        updateNewTicketSystemNotificationButton();
+        return;
+    }
+
+    let permission = Notification.permission;
+
+    if (permission === "default") {
+        permission = await Notification.requestPermission();
+    }
+
+    if (permission === "granted") {
+        newTicketSystemNotificationEnabled = true;
+        localStorage.setItem(NEW_TICKET_NOTIFICATION_STORAGE_KEY, "true");
+
+        showNewTicketSystemNotification([
+            {
+                number: "Тест",
+                service_name: "Уведомления включены"
+            }
+        ], { force: true });
+    } else {
+        newTicketSystemNotificationEnabled = false;
+        localStorage.setItem(NEW_TICKET_NOTIFICATION_STORAGE_KEY, "false");
+    }
+
+    updateNewTicketSystemNotificationButton();
+}
+
+function shouldShowNewTicketSystemNotification() {
+    if (!newTicketSystemNotificationEnabled) return false;
+    if (!isSystemNotificationSupported()) return false;
+    if (Notification.permission !== "granted") return false;
+
+    return true;
+}
+
+function showNewTicketSystemNotification(newTickets, options = {}) {
+    if (!options.force && !shouldShowNewTicketSystemNotification()) return;
+
+    const now = Date.now();
+    if (!options.force && now - lastNewTicketNotificationAt < NEW_TICKET_NOTIFICATION_COOLDOWN_MS) return;
+    lastNewTicketNotificationAt = now;
+
+    const firstTicket = newTickets[0];
+
+    const title = "Новый билет";
+
+    const body = newTickets.length === 1
+        ? `Билет № ${firstTicket.number}\n${firstTicket.service_name || "Услуга не указана"}`
+        : `Добавлено новых билетов: ${newTickets.length}`;
+
+    try {
+        const notification = new Notification(title, {
+            body,
+            icon: "icons/notification-on.svg",
+            tag: "new-ticket-notification",
+            renotify: true,
+            requireInteraction: false
+        });
+
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+    } catch (e) {
+        console.debug("New ticket system notification error:", e);
+    }
+}
+
 async function loadOperatorInfo() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/operators/details`, {
@@ -290,18 +440,32 @@ function playNewTicketSound(options = {}) {
     }
 }
 
-function checkNewTicketsAndPlaySound(tickets) {
-    const currentIds = new Set(tickets.map(t => `${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`));
-    const newTickets = tickets.filter(t => !knownQueueTicketIds.has(`${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`));
+function checkNewTicketsAndNotify(tickets) {
+    const currentIds = new Set(
+        tickets.map(t => `${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`)
+    );
+
+    const newTickets = tickets.filter(
+        t => !knownQueueTicketIds.has(`${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`)
+    );
 
     if (queueSoundInitialized && newTickets.length > 0) {
-        playNewTicketSound();
+        try {
+            playNewTicketSound();
+        } catch (e) {
+            console.debug("New ticket sound failed:", e);
+        }
+
+        try {
+            showNewTicketSystemNotification(newTickets);
+        } catch (e) {
+            console.debug("New ticket system notification failed:", e);
+        }
     }
 
     knownQueueTicketIds = currentIds;
     queueSoundInitialized = true;
 }
-
 
 async function loadQueue(options = {}) {
     try {
@@ -312,7 +476,7 @@ async function loadQueue(options = {}) {
         const data = await res.json();
         const tickets = data.tickets ?? data;
 		if (options.checkNewTickets !== false) {
-			checkNewTicketsAndPlaySound(tickets);
+			checkNewTicketsAndNotify(tickets);
 		}		
         const panel = document.getElementById("queue-list");
 
