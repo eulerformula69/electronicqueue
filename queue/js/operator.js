@@ -11,6 +11,25 @@ let operatorSocket = null;
 let operatorPollingTimer = null;
 let operatorPollingInProgress = false;
 
+// ==================== Аудиооповещение о новом тикете ====================
+
+// Главный флаг: включено ли аудиооповещение вообще
+let newTicketSoundEnabled = localStorage.getItem("newTicketSoundEnabled") !== "false";
+
+// По умолчанию звук только когда вкладка/окно неактивны.
+// Если понадобится звук и при открытом окне — поставить true.
+let newTicketSoundWhenWindowActive = false;
+
+// Чтобы не пищать при первой загрузке страницы
+let queueSoundInitialized = false;
+
+// Храним известные тикеты из прошлой загрузки очереди
+let knownQueueTicketIds = new Set();
+
+// Антидребезг: если за короткое время пришло несколько queue_updated/polling
+let lastNewTicketSoundAt = 0;
+const NEW_TICKET_SOUND_COOLDOWN_MS = 1200;
+
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
     if (!sessionToken) {
@@ -134,6 +153,44 @@ let allWindows = [];
 /* =========================
    Загрузка информации об операторе
 ========================= */
+function updateNewTicketSoundButton() {
+    const button = document.getElementById("new-ticket-sound-toggle");
+    const icon = document.getElementById("new-ticket-sound-icon");
+
+    if (!button || !icon) {
+        console.warn("Sound button elements not found", { button, icon });
+        return;
+    }
+
+    if (newTicketSoundEnabled) {
+        button.classList.add("sound-enabled");
+        button.classList.remove("sound-disabled");
+
+        icon.setAttribute("src", "icons/volume-on.svg");
+        button.title = "Звук при новом тикете включён";
+        button.setAttribute("aria-label", "Звук при новом тикете включён");
+    } else {
+        button.classList.remove("sound-enabled");
+        button.classList.add("sound-disabled");
+
+        icon.setAttribute("src", "icons/volume-off.svg");
+        button.title = "Звук при новом тикете выключен";
+        button.setAttribute("aria-label", "Звук при новом тикете выключен");
+    }
+}
+
+function toggleNewTicketSound() {
+    newTicketSoundEnabled = !newTicketSoundEnabled;
+    localStorage.setItem("newTicketSoundEnabled", String(newTicketSoundEnabled));
+    updateNewTicketSoundButton();
+
+    // Небольшой тестовый звук при включении.
+    // Заодно помогает браузеру разрешить аудио после действия пользователя.
+    if (newTicketSoundEnabled) {
+        playNewTicketSound({ force: true });
+    }
+}
+
 async function loadOperatorInfo() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/operators/details`, {
@@ -181,7 +238,72 @@ const servicesHtml = data.services && data.services.length > 0
 /* =========================
    Загрузка очереди оператора
 ========================= */
-async function loadQueue() {
+function isOperatorWindowInactive() {
+    return document.hidden || document.visibilityState === "hidden" || !document.hasFocus();
+}
+
+function shouldPlayNewTicketSound() {
+    if (!newTicketSoundEnabled) return false;
+
+    // Если разрешили звук при активном окне — играем всегда
+    if (newTicketSoundWhenWindowActive) return true;
+
+    // Иначе только когда окно/вкладка неактивны
+    return isOperatorWindowInactive();
+}
+
+function playNewTicketSound(options = {}) {
+    if (!options.force && !shouldPlayNewTicketSound()) return;
+
+    const now = Date.now();
+    if (now - lastNewTicketSoundAt < NEW_TICKET_SOUND_COOLDOWN_MS) return;
+    lastNewTicketSoundAt = now;
+
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = 880;
+
+        gain.gain.setValueAtTime(0.001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.5);
+
+        oscillator.onended = () => {
+            try {
+                ctx.close();
+            } catch (e) {}
+        };
+    } catch (e) {
+        console.debug("New ticket sound error:", e);
+    }
+}
+
+function checkNewTicketsAndPlaySound(tickets) {
+    const currentIds = new Set(tickets.map(t => `${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`));
+    const newTickets = tickets.filter(t => !knownQueueTicketIds.has(`${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`));
+
+    if (queueSoundInitialized && newTickets.length > 0) {
+        playNewTicketSound();
+    }
+
+    knownQueueTicketIds = currentIds;
+    queueSoundInitialized = true;
+}
+
+
+async function loadQueue(options = {}) {
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/my-queue`, {
             headers: { "session-id": sessionId }
@@ -189,6 +311,9 @@ async function loadQueue() {
 
         const data = await res.json();
         const tickets = data.tickets ?? data;
+		if (options.checkNewTickets !== false) {
+			checkNewTicketsAndPlaySound(tickets);
+		}		
         const panel = document.getElementById("queue-list");
 
         if (!tickets.length) {

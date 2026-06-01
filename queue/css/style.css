@@ -416,6 +416,22 @@ body.operator-page button:disabled{
     cursor: not-allowed;
 }
 
+body.operator-page .icon-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+body.operator-page .button-icon {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+body.operator-page .sound-toggle-button.sound-disabled {
+    opacity: 0.65;
+}
+
 
 /* Статус-бар */
 body.operator-page .status-indicator{
