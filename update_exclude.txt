@@ -1,0 +1,29 @@
+# Файлы и папки, которые нельзя перезаписывать при обновлении
+
+# Сам updater
+update_from_git.py
+update_exclude.txt
+
+# Git и мусор Python
+.git/
+__pycache__/
+*.pyc
+
+# Локальные настройки
+.env
+*.env
+main.env
+
+# Базы данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup-папки
+.backup_update_*/
+
+# TTS-модели
+queue/tts/
+
+# Если config.js содержит локальный адрес сервера, лучше исключить
+queue/js/config.js

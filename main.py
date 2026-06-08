@@ -1206,6 +1206,8 @@ async def create_ticket(
             "service_id": service.id
         })
 
+        await broadcast_board()
+
         return {
             "id": db_ticket.id,
             "number": db_ticket.number,
