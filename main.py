@@ -28,8 +28,10 @@ import hashlib
 import re
 from fastapi.responses import FileResponse
 
-# Загружаем переменные из файла main.env
-load_dotenv("main.env")
+# Always load the environment file next to main.py. Deployment helpers may run
+# the module from another directory that also contains a main.env file.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, "main.env"), override=True)
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 DEFAULT_PAGE_LIMIT = 100
@@ -2645,8 +2647,6 @@ async def get_public_settings():
         }
     finally:
         db.close()
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PIPER_PATH = os.getenv("PIPER_PATH", "piper")
 

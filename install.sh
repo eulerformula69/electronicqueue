@@ -42,8 +42,9 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 
 log "Устанавливаю системные компоненты"
+rm -f /etc/apt/sources.list.d/grafana.list
 apt-get update
-apt-get install -y python3 python3-venv python3-pip postgresql nginx rsync curl wget gpg
+apt-get install -y python3 python3-venv python3-pip postgresql nginx rsync curl
 
 if ! id "${APP_USER}" >/dev/null 2>&1; then
     useradd --create-home --home-dir "${APP_HOME}" --shell /bin/bash "${APP_USER}"
@@ -52,13 +53,15 @@ fi
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/deploy"
 
-if [[ ! -f "${APP_DIR}/main.env" ]]; then
+if [[ ! -f "${APP_DIR}/main.env" ]] \
+    || ! grep -q "^DATABASE_URL=postgresql://${DB_USER}:" "${APP_DIR}/main.env"; then
     FIRST_INSTALL=1
 fi
 
 log "Копирую приложение"
 install -m 0644 "${SOURCE_DIR}/main.py" "${APP_DIR}/main.py"
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
+install -m 0750 "${SOURCE_DIR}/manageAdmins.py" "${APP_DIR}/manageAdmins.py"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/queue"
 rsync -a --delete \
@@ -108,6 +111,7 @@ EOF
 
     ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
     TERMINAL_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
+    GRAFANA_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
     install -m 0600 /dev/null /root/queue-credentials.txt
     cat > /root/queue-credentials.txt <<EOF
 Панель администратора: admin
@@ -115,6 +119,9 @@ EOF
 
 Терминал: terminal
 Пароль терминала: ${TERMINAL_PASSWORD}
+
+Grafana: admin
+Пароль Grafana: ${GRAFANA_ADMIN_PASSWORD}
 EOF
 fi
 
@@ -140,6 +147,25 @@ fi
 
 chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 chmod 0600 "${APP_DIR}/main.env"
+
+cat > /usr/local/bin/queue-admin <<EOF
+#!/bin/sh
+exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/manageAdmins.py "\$@"
+EOF
+chmod 0755 /usr/local/bin/queue-admin
+
+log "Проверяю подключение к базе данных"
+runuser -u "${APP_USER}" -- "${APP_DIR}/venv/bin/python" - "${APP_DIR}/main.env" <<'PY'
+import sys
+
+from dotenv import dotenv_values
+from sqlalchemy import create_engine, text
+
+database_url = dotenv_values(sys.argv[1])["DATABASE_URL"]
+engine = create_engine(database_url)
+with engine.connect() as connection:
+    connection.execute(text("SELECT 1"))
+PY
 
 log "Настраиваю автоматический запуск"
 cat > "/etc/systemd/system/${SERVICE_NAME}" <<EOF
@@ -172,20 +198,47 @@ if [[ -f /root/queue-credentials.txt ]]; then
 else
     ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
     TERMINAL_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
+    install -m 0600 /dev/null /root/queue-credentials.txt
+    cat > /root/queue-credentials.txt <<EOF
+Панель администратора: admin
+Пароль администратора: ${ADMIN_PASSWORD}
+
+Терминал: terminal
+Пароль терминала: ${TERMINAL_PASSWORD}
+EOF
 fi
 
-QUEUE_ADMIN_PASSWORD="${ADMIN_PASSWORD}" QUEUE_TERMINAL_PASSWORD="${TERMINAL_PASSWORD}" \
-    runuser -u "${APP_USER}" -- "${APP_DIR}/venv/bin/python" "${APP_DIR}/deploy/bootstrap_users.py"
+GRAFANA_ADMIN_PASSWORD="$(sed -n 's/^Пароль Grafana: //p' /root/queue-credentials.txt 2>/dev/null || true)"
+if [[ -z "${GRAFANA_ADMIN_PASSWORD}" ]]; then
+    GRAFANA_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
+    cat >> /root/queue-credentials.txt <<EOF
+
+Grafana: admin
+Пароль Grafana: ${GRAFANA_ADMIN_PASSWORD}
+EOF
+    chmod 0600 /root/queue-credentials.txt
+fi
+
+(
+    cd "${APP_DIR}"
+    QUEUE_ADMIN_PASSWORD="${ADMIN_PASSWORD}" QUEUE_TERMINAL_PASSWORD="${TERMINAL_PASSWORD}" \
+        runuser -u "${APP_USER}" -- "${APP_DIR}/venv/bin/python" "${APP_DIR}/deploy/bootstrap_users.py"
+)
 
 log "Устанавливаю и настраиваю Grafana"
-install -d -m 0755 /etc/apt/keyrings
-wget -q -O - https://apt.grafana.com/gpg.key \
-    | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
-cat > /etc/apt/sources.list.d/grafana.list <<'EOF'
-deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main
-EOF
-apt-get update
-apt-get install -y grafana
+rm -f /etc/apt/sources.list.d/grafana.list
+if ! dpkg-query -W -f='${Status}' grafana 2>/dev/null | grep -q 'install ok installed'; then
+    GRAFANA_DEB="/tmp/grafana_11.5.1_amd64.deb"
+    rm -f "${GRAFANA_DEB}"
+    curl --fail --show-error --location --retry 3 \
+        --output "${GRAFANA_DEB}" \
+        https://dl.grafana.com/oss/release/grafana_11.5.1_amd64.deb \
+        || fail "не удалось скачать Grafana с dl.grafana.com"
+    dpkg-deb --info "${GRAFANA_DEB}" >/dev/null \
+        || fail "загруженный пакет Grafana повреждён"
+    apt-get install -y "${GRAFANA_DEB}"
+    rm -f "${GRAFANA_DEB}"
+fi
 
 runuser -u postgres -- psql -v ON_ERROR_STOP=1 -d "${DB_NAME}" <<EOF
 GRANT CONNECT ON DATABASE ${DB_NAME} TO ${GRAFANA_DB_USER};
@@ -230,12 +283,13 @@ providers:
     folder: Queue
     type: file
     disableDeletion: true
+    allowUiUpdates: true
     updateIntervalSeconds: 30
     options:
       path: /var/lib/grafana/dashboards
 EOF
 
-DASHBOARD_SOURCE="${SOURCE_DIR}/Статистика для очереди 2-1776781181260.json"
+DASHBOARD_SOURCE="${SOURCE_DIR}/statistics.json"
 if [[ ! -f "${DASHBOARD_SOURCE}" ]]; then
     DASHBOARD_SOURCE="$(find "${SOURCE_DIR}" -maxdepth 1 -type f -name 'Статистика для очереди*.json' -print -quit)"
 fi
@@ -265,6 +319,13 @@ def replace_datasource_uid(value):
 
 
 replace_datasource_uid(dashboard)
+for variable in dashboard.get("templating", {}).get("list", []):
+    query = variable.get("query")
+    if variable.get("type") == "query" and isinstance(query, dict):
+        sql = query.get("rawSql") or query.get("query") or variable.get("definition")
+        if isinstance(sql, str) and sql.strip():
+            variable["query"] = sql.strip()
+            variable["definition"] = sql.strip()
 dashboard["id"] = None
 dashboard["uid"] = "queue-statistics"
 dashboard["title"] = "Статистика очереди"
@@ -280,13 +341,33 @@ Environment=GF_SECURITY_ALLOW_EMBEDDING=true
 Environment=GF_AUTH_ANONYMOUS_ENABLED=true
 Environment="GF_AUTH_ANONYMOUS_ORG_NAME=Main Org."
 Environment=GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-Environment=GF_AUTH_DISABLE_LOGIN_FORM=true
+Environment=GF_AUTH_DISABLE_LOGIN_FORM=false
 Environment=GF_USERS_DEFAULT_THEME=light
 EOF
 
 systemctl daemon-reload
 systemctl enable --now grafana-server
 systemctl restart grafana-server
+
+for _ in {1..30}; do
+    if curl --fail --silent --output /dev/null http://127.0.0.1:3000/api/health; then
+        break
+    fi
+    sleep 1
+done
+if ! curl --fail --silent --output /dev/null http://127.0.0.1:3000/api/health; then
+    journalctl -u grafana-server -n 30 --no-pager >&2
+    fail "Grafana не запустилась перед созданием администратора"
+fi
+if command -v grafana >/dev/null 2>&1; then
+    grafana cli --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+        admin reset-admin-password "${GRAFANA_ADMIN_PASSWORD}" >/dev/null
+elif command -v grafana-cli >/dev/null 2>&1; then
+    grafana-cli --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+        admin reset-admin-password "${GRAFANA_ADMIN_PASSWORD}" >/dev/null
+else
+    fail "не найдена команда управления Grafana"
+fi
 
 log "Настраиваю веб-доступ"
 cat > /etc/nginx/sites-available/queue <<'EOF'
@@ -349,6 +430,9 @@ if ! curl --fail --silent --output /dev/null http://127.0.0.1:3000/api/health; t
     fail "Grafana не ответила. Выше показан журнал ошибки"
 fi
 
+touch "${APP_DIR}/.queue-installed"
+chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.queue-installed"
+
 SERVER_IP="$(hostname -I | awk '{print $1}')"
 [[ -n "${SERVER_IP}" ]] || SERVER_IP="127.0.0.1"
 
@@ -357,8 +441,8 @@ printf 'Вход:       http://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'Терминал:   http://%s/queue/terminal.html\n' "${SERVER_IP}"
 printf 'Табло:      http://%s/queue/board-media.html\n' "${SERVER_IP}"
 printf 'Статистика: http://%s:3000/d/queue-statistics/queue-statistics\n' "${SERVER_IP}"
-if [[ ${FIRST_INSTALL} -eq 1 ]]; then
-    printf 'Пароли:     /root/queue-credentials.txt\n'
-else
+printf 'Пароли:     sudo cat /root/queue-credentials.txt\n'
+printf 'Grafana:    просмотр без пароля; редактирование через admin\n'
+if [[ ${FIRST_INSTALL} -ne 1 ]]; then
     printf 'Настройки и пользовательские данные сохранены.\n'
 fi

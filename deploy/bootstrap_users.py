@@ -5,8 +5,14 @@ import sys
 from pathlib import Path
 
 import bcrypt
+from dotenv import load_dotenv
+from sqlalchemy.engine import make_url
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+os.chdir(PROJECT_DIR)
+sys.path.insert(0, str(PROJECT_DIR))
+load_dotenv(PROJECT_DIR / "main.env", override=True)
+print(f"Пользователь базы данных: {make_url(os.environ['DATABASE_URL']).username}")
 
 from main import Admin, SessionLocal
 
