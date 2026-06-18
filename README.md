@@ -4,7 +4,7 @@
 
 ## Установка
 
-Перенесите всю папку проекта на чистую виртуальную машину и выполните:
+Перенести всю папку проекта на чистую виртуальную машину и выполнить:
 
 ```bash
 sudo bash install.sh
@@ -57,16 +57,3 @@ sudo queue-admin add new_terminal terminal
 sudo queue-admin change new_admin --password
 sudo queue-admin delete new_admin
 ```
-
-## Локальные файлы
-
-Следующие данные не публикуются в Git:
-
-- `main.env`;
-- `dump.sql`;
-- `PostgreSQL/`;
-- `queue/media/`;
-- `queue/tts/cache/`;
-- `__pycache__/`.
-
-Они могут содержать пароли, рабочие данные или локальные установочные файлы.
