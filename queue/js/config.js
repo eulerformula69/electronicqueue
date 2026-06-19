@@ -7,6 +7,6 @@ const CONFIG = {
     NOTICE_DURATION: 7,
     RECONNECT_INTERVAL: 2000,
     OPERATOR_POLL_INTERVAL_MS: 7000,
-    GRAFANA_URL: `http://${window.location.hostname}:3000/d/queue-statistics/queue-statistics`,
+    GRAFANA_URL: "http://10.0.1.132:3000/goto/afkrc5tm2ovlsf?orgId=1",
     MEDIA_IDLE_DELAY: 15
 };

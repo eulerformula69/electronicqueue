@@ -233,6 +233,28 @@ def init_ticket_numbering(engine):
 
 # Разрешение для CORS
 
+def migrate_operator_choice_schema(engine):
+    """Add operator-choice columns to databases created by older releases."""
+    ddl = """
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS operator_choice_enabled integer NOT NULL DEFAULT 0;
+
+    UPDATE services
+    SET operator_choice_enabled = 0
+    WHERE operator_choice_enabled IS NULL;
+
+    ALTER TABLE services
+        ALTER COLUMN operator_choice_enabled SET DEFAULT 0,
+        ALTER COLUMN operator_choice_enabled SET NOT NULL;
+
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS target_window_id integer REFERENCES windows(id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,  
@@ -254,6 +276,9 @@ class Service(Base):
     name = Column(String, nullable=False)
     status = Column(String, default="inactive")
     last_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
+    operator_choice_enabled = Column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
 class ServiceRename(BaseModel):
     name: str
@@ -336,9 +361,14 @@ class PingRequest(BaseModel):
 
 class ServiceCreate(BaseModel):
     name: str
+    operator_choice_enabled: bool = False
+
+class ServiceOperatorChoiceUpdate(BaseModel):
+    operator_choice_enabled: bool
 
 class TicketCreate(BaseModel):
     service_id: int
+    window_id: int | None = None
 
 class OperatorCreate(BaseModel):
     name: str
@@ -1064,17 +1094,29 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
 @app.post("/services/", tags=["Services"])
 async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
-    db_service = Service(**service.dict())
-    db.add(db_service)
-    
-    await manager.broadcast({
-        "type": "services_updated"
-    })    
-        
-    db.commit()
-    db.refresh(db_service)
-    db.close()
-    return db_service
+    try:
+        db_service = Service(
+            name=service.name.strip(),
+            operator_choice_enabled=1 if service.operator_choice_enabled else 0
+        )
+        db.add(db_service)
+        db.commit()
+        db.refresh(db_service)
+
+        await manager.broadcast({"type": "services_updated"})
+        return db_service
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        print(f"Failed to create service: {exc!r}")
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось создать услугу из-за ошибки базы данных"
+        ) from exc
+    finally:
+        db.close()
 
 @app.get("/services/", tags=["Services"])
 def list_services(
@@ -1130,6 +1172,30 @@ async def update_service_status(
         return {"id": service.id, "status": service.status}
     finally:
         db.close()
+
+@app.patch("/services/{service_id}/operator-choice", tags=["Services"])
+async def update_service_operator_choice(
+    service_id: int = Path(..., gt=0),
+    data: ServiceOperatorChoiceUpdate = ...,
+    admin: Admin = Depends(verify_admin_session)
+    ):
+    db = SessionLocal()
+    try:
+        service = db.query(Service).filter(Service.id == service_id).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        service.operator_choice_enabled = 1 if data.operator_choice_enabled else 0
+        db.commit()
+        db.refresh(service)
+        await manager.broadcast({"type": "services_updated"})
+
+        return {
+            "id": service.id,
+            "operator_choice_enabled": service.operator_choice_enabled
+        }
+    finally:
+        db.close()
  
 def get_current_terminal(session_id: str = Header(None)):
     if not session_id:
@@ -1151,6 +1217,41 @@ def get_current_terminal(session_id: str = Header(None)):
     finally:
         db.close()
  
+@app.get("/services/{service_id}/operators", tags=["Services"])
+def list_service_operators(
+    service_id: int = Path(..., gt=0),
+    _auth = Depends(get_current_terminal)
+    ):
+    db = SessionLocal()
+    try:
+        service = db.query(Service).filter(Service.id == service_id).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="Услуга не найдена")
+
+        rows = (
+            db.query(Operator, Window)
+            .join(Window, Operator.window_id == Window.id)
+            .join(WindowService, Window.id == WindowService.window_id)
+            .filter(
+                WindowService.service_id == service_id,
+                Window.status == "online"
+            )
+            .order_by(Operator.name.asc())
+            .all()
+        )
+
+        return [
+            {
+                "operator_id": operator.id,
+                "operator_name": operator.name,
+                "window_id": window.id,
+                "window_name": window.name
+            }
+            for operator, window in rows
+        ]
+    finally:
+        db.close()
+
 @app.post("/tickets/", tags=["Tickets"])
 async def create_ticket(
     ticket: TicketCreate,
@@ -1181,16 +1282,39 @@ async def create_ticket(
                     detail="В данный момент услуга не оказывается (нет активных окон)"
                 )
 
+        target_window_id = None
+
+        if service.operator_choice_enabled:
+            if not ticket.window_id:
+                raise HTTPException(status_code=400, detail="Выберите оператора")
+
+            selected_window = (
+                db.query(Window)
+                .join(WindowService, Window.id == WindowService.window_id)
+                .filter(
+                    Window.id == ticket.window_id,
+                    WindowService.service_id == service.id,
+                    Window.status == "online"
+                )
+                .first()
+            )
+
+            if not selected_window:
+                raise HTTPException(status_code=400, detail="Выбранный оператор сейчас недоступен")
+
+            target_window_id = ticket.window_id
+
         # 3. Создаем тикет
         db_ticket = Ticket(
             service_id=service.id,
             status="waiting",
+            target_window_id=target_window_id,
             created_at=datetime.now()
         )
 
         db.add(db_ticket)
 
-        if settings.get("queue_mode") == "dynamic_operator_distribution":
+        if not target_window_id and settings.get("queue_mode") == "dynamic_operator_distribution":
             assign_ticket_to_least_loaded_window(db, db_ticket)
 
         db.commit()
@@ -2756,6 +2880,7 @@ async def get_tts_audio(text: str = Query(..., min_length=1, max_length=200)):
 @app.on_event("startup")
 async def startup():
     Base.metadata.create_all(bind=engine)
+    migrate_operator_choice_schema(engine)
     init_ticket_numbering(engine)
 
     asyncio.create_task(cleanup_sessions())

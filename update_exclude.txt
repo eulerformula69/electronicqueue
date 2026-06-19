@@ -8,11 +8,15 @@ update_exclude.txt
 .git/
 __pycache__/
 *.pyc
+.gitignore
 
 # Локальные настройки
 .env
 *.env
 main.env
+
+# Виртуальное окружение
+venv/
 
 # Базы данных
 *.db
@@ -21,9 +25,12 @@ main.env
 
 # Backup-папки
 .backup_update_*/
+backup_update_*/
+*.bak
 
-# TTS-модели
+# Файлы
 queue/tts/
+queue/media/
 
-# Если config.js содержит локальный адрес сервера, лучше исключить
+# config.js
 queue/js/config.js

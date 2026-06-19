@@ -106,6 +106,17 @@ async function fetchJSON(url, options = {}) {
     return res.json();
 }
 
+async function readResponseData(res) {
+    const text = await res.text();
+    if (!text) return {};
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { detail: text };
+    }
+}
+
 function setTable(html){
 document.getElementById("table").innerHTML=html
 }
@@ -144,6 +155,7 @@ async function loadServices() {
     <th>ID</th>
     <th>Название</th>
     <th>Статус</th>
+    <th>Выбор оператора</th>
     <th>Действия</th>
   </tr>`;
 
@@ -153,9 +165,13 @@ async function loadServices() {
       <td>${s.id}</td>
       <td>${s.name}</td>
       <td>${s.status}</td>
+      <td>${s.operator_choice_enabled ? "Да" : "Нет"}</td>
       <td>
         <button onclick="editService(${s.id},'${s.name}')">Название</button>
         <button onclick="editServiceStatus(${s.id}, '${s.status}')">Статус</button>
+        <button onclick="toggleOperatorChoice(${s.id}, ${s.operator_choice_enabled ? 0 : 1})">
+          ${s.operator_choice_enabled ? "Отключить выбор" : "Включить выбор"}
+        </button>
         <button style="background: #ffcccc;" onclick="deleteService(${s.id})">Удалить</button>
       </td>
     </tr>`;
@@ -188,6 +204,7 @@ function editServiceStatus(id, currentStatus) {
     <td></td>
     <td></td>
     <td></td>
+    <td></td>
     <td>
       <div class="servicesBox" style="max-width:200px; box-sizing:border-box;">
         <select id="serviceStatus-${id}" style="width:100%; box-sizing:border-box;">
@@ -204,6 +221,32 @@ function editServiceStatus(id, currentStatus) {
 }
 
 // функция сохранения статуса через эндпоинт
+async function toggleOperatorChoice(id, enabled) {
+  const sessionId = sessionStorage.getItem("session_id");
+
+  if (!sessionId) {
+    alert("Ошибка: вы не авторизованы как администратор");
+    return;
+  }
+
+  const res = await fetch(`${API}/services/${id}/operator-choice`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "session-id": sessionId
+    },
+    body: JSON.stringify({ operator_choice_enabled: !!enabled })
+  });
+
+  if (res.ok) {
+    resetOpened();
+    loadServices();
+  } else {
+    const err = await res.json();
+    alert("Ошибка: " + (err.detail || "Не удалось обновить выбор оператора"));
+  }
+}
+
 async function saveServiceStatus(id) {
   const select = document.getElementById(`serviceStatus-${id}`);
   const newStatus = select.value;
@@ -255,6 +298,7 @@ function editService(id, name) {
 
   let row = document.getElementById(`service-${id}`);
   let html = `<tr class="serviceRow" data-service-id="${id}" data-type="service">
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -328,14 +372,14 @@ async function addService() {
             "Content-Type": "application/json",
             "session-id": sessionId // Передаем заголовок
         },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name, operator_choice_enabled: false })
     });
 
     if (res.ok) {
         nameInput.value = ""; // Очищаем поле
         loadServices();       // Обновляем список
     } else {
-        const err = await res.json();
+        const err = await readResponseData(res);
         alert("Ошибка: " + (err.detail || "Не удалось создать услугу"));
     }
 }

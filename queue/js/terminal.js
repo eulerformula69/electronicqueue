@@ -157,7 +157,13 @@ async function loadServices() {
                 };
             } else {
                 btn.textContent = service.name;
-                btn.onclick = () => createTicket(service.id, service.name);
+                btn.onclick = () => {
+                    if (service.operator_choice_enabled) {
+                        chooseOperator(service.id, service.name);
+                    } else {
+                        createTicket(service.id, service.name);
+                    }
+                };
             }
             container.appendChild(btn);
         });
@@ -169,8 +175,137 @@ async function loadServices() {
     }
 }
 
+function ensureOperatorChoiceModal() {
+    let overlay = document.getElementById("operator-choice-overlay");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "operator-choice-overlay";
+    overlay.className = "operator-choice-overlay";
+    overlay.style.display = "none";
+
+    overlay.innerHTML = `
+        <div class="operator-choice-modal">
+            <button type="button" class="operator-choice-close" onclick="closeOperatorChoiceModal()" aria-label="Закрыть">×</button>
+            <h2>Выберите оператора</h2>
+            <div id="operator-choice-service" class="operator-choice-service"></div>
+            <select id="operator-choice-select" class="operator-choice-select"></select>
+            <div id="operator-choice-error" class="operator-choice-error"></div>
+            <div id="operator-choice-list" class="operator-choice-list"></div>
+            <div class="operator-choice-actions">
+                <button type="button" class="operator-choice-confirm" onclick="confirmOperatorChoice()">Подтвердить</button>
+                <button type="button" class="operator-choice-cancel" onclick="closeOperatorChoiceModal()">Отмена</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function closeOperatorChoiceModal() {
+    const overlay = document.getElementById("operator-choice-overlay");
+    if (overlay) overlay.style.display = "none";
+    window.pendingOperatorChoice = null;
+    window.selectedOperatorWindowId = null;
+}
+
+async function chooseOperator(serviceId, serviceName) {
+    const currentSession = localStorage.getItem("session_id");
+
+    if (!currentSession) {
+        showNotice("Ошибка: Сессия не найдена. Войдите заново.", 5);
+        document.getElementById("terminal-auth-overlay").style.display = "flex";
+        return;
+    }
+
+    const overlay = ensureOperatorChoiceModal();
+    const select = document.getElementById("operator-choice-select");
+    const errorEl = document.getElementById("operator-choice-error");
+    const serviceEl = document.getElementById("operator-choice-service");
+    const list = document.getElementById("operator-choice-list");
+    const confirmBtn = overlay.querySelector(".operator-choice-confirm");
+
+    window.pendingOperatorChoice = { serviceId, serviceName };
+    window.selectedOperatorWindowId = null;
+    serviceEl.textContent = serviceName;
+    errorEl.textContent = "";
+    list.innerHTML = "";
+    select.innerHTML = `<option value="">Загрузка операторов...</option>`;
+    select.disabled = true;
+    confirmBtn.disabled = true;
+    overlay.style.display = "flex";
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/services/${serviceId}/operators`, {
+            headers: { "session-id": currentSession }
+        });
+
+        const operators = await res.json().catch(() => []);
+
+        if (!res.ok) {
+            errorEl.textContent = operators.detail || "Не удалось загрузить операторов";
+            select.innerHTML = `<option value="">Нет доступных операторов</option>`;
+            return;
+        }
+
+        if (!Array.isArray(operators) || operators.length === 0) {
+            errorEl.textContent = "Нет доступных операторов для этой услуги";
+            select.innerHTML = `<option value="">Нет доступных операторов</option>`;
+            return;
+        }
+
+list.innerHTML = "";
+select.innerHTML = "";
+select.style.display = "none";
+
+confirmBtn.disabled = true;
+
+operators.forEach(operator => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "operator-choice-card";
+    card.textContent = `${operator.operator_name} — ${operator.window_name}`;
+
+    card.onclick = () => {
+        list.querySelectorAll(".operator-choice-card").forEach(el => {
+            el.classList.remove("selected");
+        });
+
+        card.classList.add("selected");
+        confirmBtn.disabled = false;
+        window.selectedOperatorWindowId = operator.window_id;
+    };
+
+    list.appendChild(card);
+});
+
+
+    } catch (error) {
+        console.error("Ошибка загрузки операторов:", error);
+        errorEl.textContent = "Сбой связи с сервером.";
+        select.innerHTML = `<option value="">Ошибка загрузки</option>`;
+    }
+}
+
+function confirmOperatorChoice() {
+    const pending = window.pendingOperatorChoice;
+    const errorEl = document.getElementById("operator-choice-error");
+
+    if (!pending) return;
+
+    const windowId = window.selectedOperatorWindowId;
+    if (!windowId) {
+        errorEl.textContent = "Выберите оператора";
+        return;
+    }
+
+    closeOperatorChoiceModal();
+    createTicket(pending.serviceId, pending.serviceName, Number(windowId));
+}
+
 // --- Создание талона ---
-async function createTicket(serviceId, serviceName) {
+async function createTicket(serviceId, serviceName, windowId = null) {
     const buttons = document.querySelectorAll(".service-btn");
     buttons.forEach(btn => btn.disabled = true);
     // Достаем токен сессии
@@ -189,7 +324,10 @@ async function createTicket(serviceId, serviceName) {
                 "Content-Type": "application/json",
                 "session-id": currentSession
             },
-            body: JSON.stringify({ service_id: serviceId })
+            body: JSON.stringify({
+                service_id: serviceId,
+                window_id: windowId
+            })
         });
 
         const data = await response.json();

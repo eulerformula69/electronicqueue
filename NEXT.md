@@ -1,0 +1,205 @@
+# Следующий этап: автоматический HTTP + HTTPS
+
+## Цель
+
+Расширить `install.sh`, чтобы он автоматически выпускал локальный TLS-сертификат через `mkcert` и настраивал одновременную работу:
+
+```text
+http://IP-СЕРВЕРА/queue/login.html
+https://IP-СЕРВЕРА/queue/login.html
+```
+
+HTTP не должен автоматически перенаправляться на HTTPS. Оба протокола должны работать независимо, как описано в инструкции `Настройка Nginx HTTP HTTPS с mkcert.md`.
+
+## Требования
+
+1. Автоматически определять основной IPv4-адрес сервера.
+2. Позволить явно передать IP установщику, если автоматическое определение ошиблось.
+3. Установить `mkcert` и необходимые системные зависимости.
+4. Создать локальный центр сертификации только при его отсутствии.
+5. Выпустить сертификат с IP сервера в `subjectAltName`.
+6. Установить сертификат и закрытый ключ в `/etc/nginx/tls`.
+7. Настроить Nginx одновременно на порты `80` и `443`.
+8. Не перенаправлять HTTP на HTTPS.
+9. Добавить HTTP- и HTTPS-origin в `CORS_ORIGINS`.
+10. Сохранить поддержку WebSocket через `ws://` и `wss://`.
+11. Не изменять текущий динамический `queue/js/config.js`.
+12. Не открывать Uvicorn наружу: приложение продолжает слушать `127.0.0.1:8000`.
+13. Сохранить один worker Uvicorn из-за хранения WebSocket-соединений в памяти.
+14. Не проксировать Grafana через Nginx: она остаётся на `http://IP:3000`.
+15. Повторный запуск `install.sh` не должен терять HTTPS-настройку.
+
+## Предлагаемый интерфейс установщика
+
+Обычная автоматическая установка:
+
+```bash
+sudo bash install.sh
+```
+
+Установка с явно заданным IP:
+
+```bash
+sudo QUEUE_SERVER_IP=192.168.0.20 bash install.sh
+```
+
+В итоговом экране необходимо показать адреса обоих протоколов:
+
+```text
+HTTP:        http://192.168.0.20/queue/login.html
+HTTPS:       https://192.168.0.20/queue/login.html
+Сертификат: /root/queue-rootCA.pem
+```
+
+## Сертификаты
+
+Предлагаемое размещение:
+
+```text
+/etc/nginx/tls/queue.pem
+/etc/nginx/tls/queue-key.pem
+/root/queue-rootCA.pem
+```
+
+Права доступа:
+
+```text
+queue.pem      root:root 0644
+queue-key.pem  root:root 0600
+```
+
+`queue-rootCA.pem` предназначен только для переноса на клиентские устройства. Закрытый ключ локального центра сертификации переносить с сервера запрещено.
+
+## Конфигурация Nginx
+
+Установщик должен генерировать единый конфигурационный файл `/etc/nginx/sites-available/queue`:
+
+```nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+
+    server_name _;
+
+    ssl_certificate /etc/nginx/tls/queue.pem;
+    ssl_certificate_key /etc/nginx/tls/queue-key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 55m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+}
+```
+
+Перед перезагрузкой Nginx обязательно выполнять:
+
+```bash
+sudo nginx -t
+```
+
+## Настройка CORS
+
+Установщик должен формировать значение с обоими протоколами:
+
+```dotenv
+CORS_ORIGINS=http://192.168.0.20,https://192.168.0.20,http://localhost,http://127.0.0.1
+```
+
+Обновление должно выполняться структурированно и не создавать несколько строк `CORS_ORIGINS` при повторном запуске.
+
+## Повторный запуск и изменение IP
+
+Установщик должен проверить, содержит ли текущий сертификат нужный IP:
+
+```bash
+openssl x509 -in /etc/nginx/tls/queue.pem -noout -ext subjectAltName
+```
+
+Если IP не изменился, сертификат не перевыпускается. Если IP изменился:
+
+1. Выпускается новый серверный сертификат.
+2. Обновляется `CORS_ORIGINS`.
+3. Проверяется конфигурация Nginx.
+4. Перезагружаются Nginx и `queue.service`.
+5. Пользователю показывается предупреждение, что новый сертификат необходимо установить на клиентских устройствах.
+
+Желательно закрепить IP виртуальной машины через DHCP reservation или статическую сетевую настройку.
+
+## Доверие на Windows
+
+Скопировать с сервера только `/root/queue-rootCA.pem`, затем открыть PowerShell от имени администратора:
+
+```powershell
+certutil -addstore -f Root "C:\путь\к\queue-rootCA.pem"
+```
+
+После установки полностью закрыть и заново открыть браузер.
+
+## Доверие на Raspberry Pi или Linux
+
+Перенести только корневой сертификат и выполнить:
+
+```bash
+sudo cp queue-rootCA.pem /usr/local/share/ca-certificates/queue-mkcert.crt
+sudo update-ca-certificates
+```
+
+После этого полностью перезапустить Chromium.
+
+## Проверки
+
+На сервере:
+
+```bash
+curl -I http://IP-СЕРВЕРА/queue/login.html
+curl -k -I https://IP-СЕРВЕРА/queue/login.html
+openssl x509 -in /etc/nginx/tls/queue.pem -noout -ext subjectAltName
+sudo nginx -t
+sudo systemctl status queue nginx
+```
+
+На клиентском устройстве после установки доверия:
+
+1. HTTP открывается без перенаправления.
+2. HTTPS открывается без предупреждения.
+3. Вход администратора и оператора работает через оба протокола.
+4. Терминал создаёт талон.
+5. Табло получает обновления через WebSocket.
+6. Озвучка работает.
+7. Видео до 50 МБ загружается и воспроизводится.
+8. После обновления страницы WebSocket переподключается.
+9. Grafana продолжает открываться отдельно на HTTP-порту `3000`.
+
+## Откат
+
+Перед изменением сохранить резервные копии:
+
+```text
+/etc/nginx/sites-available/queue
+/etc/systemd/system/queue.service
+/home/queue/queue_project/main.env
+```
+
+Если HTTPS не запустился, вернуть предыдущую конфигурацию Nginx, выполнить `nginx -t` и перезагрузить Nginx. HTTP должен оставаться рабочим на всём протяжении настройки.
+
+## Важное ограничение
+
+`mkcert` создаёт локально доверенный сертификат. Он не станет доверенным на других устройствах автоматически. Корневой сертификат необходимо установить на каждый компьютер и табло отдельно. Для публичного домена вместо `mkcert` следует использовать сертификат общедоступного центра сертификации, например Let's Encrypt.
