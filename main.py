@@ -3,7 +3,10 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Body, Header, Depends, status, Query
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP, text, func, and_, literal
+from sqlalchemy import (
+    BigInteger, CheckConstraint, Column, ForeignKey, Index, Integer, String,
+    TIMESTAMP, and_, func, literal, text
+)
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy import create_engine
@@ -255,6 +258,51 @@ def migrate_operator_choice_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_operator_status_periods_schema(engine):
+    """Create operator status history and seed the currently known state."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS operator_status_periods (
+        id bigserial PRIMARY KEY,
+        operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
+        window_id integer REFERENCES windows(id) ON DELETE SET NULL,
+        status varchar(16) NOT NULL,
+        started_at timestamptz NOT NULL DEFAULT now(),
+        ended_at timestamptz,
+        CONSTRAINT ck_operator_status_periods_status
+            CHECK (status IN ('online', 'break', 'offline')),
+        CONSTRAINT ck_operator_status_periods_dates
+            CHECK (ended_at IS NULL OR ended_at >= started_at)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_operator_current_status
+        ON operator_status_periods (operator_id)
+        WHERE ended_at IS NULL;
+
+    CREATE INDEX IF NOT EXISTS ix_operator_status_period
+        ON operator_status_periods (operator_id, started_at);
+
+    INSERT INTO operator_status_periods (operator_id, window_id, status)
+    SELECT
+        operators.id,
+        operators.window_id,
+        CASE
+            WHEN windows.status IN ('online', 'break', 'offline') THEN windows.status
+            ELSE 'offline'
+        END
+    FROM operators
+    LEFT JOIN windows ON windows.id = operators.window_id
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM operator_status_periods periods
+        WHERE periods.operator_id = operators.id
+          AND periods.ended_at IS NULL
+    );
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,  
@@ -328,6 +376,80 @@ class UserSession(Base):
     created_at = Column(TIMESTAMP, server_default=text("NOW()"), nullable=False)
     last_seen = Column(TIMESTAMP, server_default=text("NOW()"), nullable=False)
     is_expirable = Column(Integer, default=1)
+
+
+class OperatorStatusPeriod(Base):
+    __tablename__ = "operator_status_periods"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('online', 'break', 'offline')",
+            name="ck_operator_status_periods_status",
+        ),
+        CheckConstraint(
+            "ended_at IS NULL OR ended_at >= started_at",
+            name="ck_operator_status_periods_dates",
+        ),
+        Index("ix_operator_status_period", "operator_id", "started_at"),
+        Index(
+            "uq_operator_current_status",
+            "operator_id",
+            unique=True,
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    operator_id = Column(Integer, ForeignKey("operators.id", ondelete="CASCADE"), nullable=False)
+    window_id = Column(Integer, ForeignKey("windows.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(16), nullable=False)
+    started_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+
+def record_operator_status(
+    db: Session,
+    operator_id: int,
+    window_id: int | None,
+    new_status: str,
+):
+    """Close the current status period and open a new one when state changes."""
+    normalized_status = new_status.lower()
+    if normalized_status not in {"online", "break", "offline"}:
+        raise ValueError(f"Unsupported operator status: {new_status}")
+
+    # Serialize transitions for one operator, including the first inserted row.
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:operator_id)"),
+        {"operator_id": operator_id},
+    )
+    current_period = (
+        db.query(OperatorStatusPeriod)
+        .filter(
+            OperatorStatusPeriod.operator_id == operator_id,
+            OperatorStatusPeriod.ended_at.is_(None),
+        )
+        .with_for_update()
+        .first()
+    )
+
+    if (
+        current_period
+        and current_period.status == normalized_status
+        and current_period.window_id == window_id
+    ):
+        return current_period
+
+    if current_period:
+        current_period.ended_at = func.now()
+
+    new_period = OperatorStatusPeriod(
+        operator_id=operator_id,
+        window_id=window_id,
+        status=normalized_status,
+    )
+    db.add(new_period)
+    db.flush()
+    return new_period
 
 class Admin(Base):
     __tablename__ = "admins"
@@ -822,6 +944,9 @@ async def cleanup_sessions():
 
                         if window:
                             window.status = "offline"
+                            record_operator_status(
+                                db, operator.id, window.id, window.status
+                            )
                             db.flush()
 
                             if settings["active_ticket_on_operator_logout"] == "return_to_queue":
@@ -1067,6 +1192,7 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
                 window = db.query(Window).filter(Window.id == operator.window_id).first()
                 if window:
                     window.status = "offline"
+                    record_operator_status(db, operator.id, window.id, window.status)
                     db.flush()
                     await reassign_waiting_tickets_from_window(db, window.id)
                     update_services_status_for_window(db, window.id)
@@ -1954,6 +2080,13 @@ async def update_window_status(
             raise HTTPException(status_code=400, detail="Invalid status")
 
         window.status = data.status
+        assigned_operator = (
+            db.query(Operator).filter(Operator.window_id == window_id).first()
+        )
+        if assigned_operator:
+            record_operator_status(
+                db, assigned_operator.id, window.id, window.status
+            )
         db.commit()
 
         # Пересчитать статусы связанных услуг
@@ -2173,6 +2306,9 @@ async def login(data: LoginRequest):
 
                 if window:
                     window.status = settings["default_operator_status"]
+                    record_operator_status(
+                        db, operator.id, window.id, window.status
+                    )
                     db.flush()
 
                     update_services_status_for_window(db, window.id)
@@ -2225,6 +2361,7 @@ async def logout(session_id: str = Header(...)):
 
                 if window:
                     window.status = "offline"
+                    record_operator_status(db, operator.id, window.id, window.status)
                     db.flush()
 
                     await reassign_waiting_tickets_from_window(db, window.id)
@@ -2330,7 +2467,12 @@ async def update_window_status(
         if not window:
             raise HTTPException(status_code=404, detail="Window not found")
 
-        window.status = data.status.lower()
+        new_status = data.status.lower()
+        if new_status not in {"online", "offline", "break"}:
+            raise HTTPException(status_code=400, detail="Invalid status")
+
+        window.status = new_status
+        record_operator_status(db, operator.id, window.id, window.status)
         db.flush()
 
         if window.status == "online":
@@ -2453,8 +2595,17 @@ async def update_operator(operator_id: int, data: dict, admin: Admin = Depends(v
     if "window_id" in data:
 
         new_window = data["window_id"]
+        old_window_id = op.window_id
+        new_window_status = "offline"
 
         if new_window is not None:
+
+            window = db.query(Window).filter(Window.id == new_window).first()
+            if not window:
+                db.close()
+                raise HTTPException(status_code=404, detail="Window not found")
+
+            new_window_status = window.status
 
             existing = db.query(Operator).filter(
                 Operator.window_id == new_window,
@@ -2469,6 +2620,11 @@ async def update_operator(operator_id: int, data: dict, admin: Admin = Depends(v
                 )
 
         op.window_id = new_window
+
+        if old_window_id != new_window:
+            record_operator_status(
+                db, op.id, new_window, new_window_status
+            )
 
 
     await manager.broadcast({"type": "services_updated"})
@@ -2881,6 +3037,7 @@ async def get_tts_audio(text: str = Query(..., min_length=1, max_length=200)):
 async def startup():
     Base.metadata.create_all(bind=engine)
     migrate_operator_choice_schema(engine)
+    migrate_operator_status_periods_schema(engine)
     init_ticket_numbering(engine)
 
     asyncio.create_task(cleanup_sessions())
