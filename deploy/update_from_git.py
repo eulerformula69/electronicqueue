@@ -56,7 +56,10 @@ PROJECT_MARKERS = [
 
 
 def normalize_path(path: Path | str) -> str:
-    return Path(path).as_posix().replace("\\", "/").lstrip("./")
+    normalized = str(path).replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized.lstrip("/")
 
 
 def load_excludes(project_dir: Path) -> list[str]:
@@ -74,15 +77,17 @@ def load_excludes(project_dir: Path) -> list[str]:
 
 
 def is_excluded(relative_path: str, patterns: list[str]) -> bool:
-    relative_path = relative_path.replace("\\", "/").lstrip("./")
+    relative_path = normalize_path(relative_path)
 
     for pattern in patterns:
-        pattern = pattern.replace("\\", "/").lstrip("./")
+        pattern = normalize_path(pattern)
 
         # Папка: queue/tts/
         if pattern.endswith("/"):
-            folder = pattern.rstrip("/")
-            if relative_path == folder or relative_path.startswith(folder + "/"):
+            folder_pattern = pattern.rstrip("/")
+            parts = relative_path.split("/")
+            folder_prefixes = ["/".join(parts[:index]) for index in range(1, len(parts))]
+            if any(fnmatch.fnmatch(prefix, folder_pattern) for prefix in folder_prefixes):
                 return True
 
         # Обычный glob: *.db, queue/js/config.js, queue/tts/*
@@ -325,8 +330,11 @@ def collect_local_project_files(project_dir: Path, excludes: list[str]) -> list[
     return result
 
 def copy_file_with_dirs(src: Path, dst: Path) -> None:
+    destination_exists = dst.exists()
     dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
+    shutil.copyfile(src, dst)
+    if not destination_exists:
+        shutil.copymode(src, dst)
 
 def remove_empty_dirs_upwards(start_dir: Path, stop_dir: Path) -> None:
     current = start_dir
