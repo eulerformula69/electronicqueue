@@ -31,6 +31,3 @@ backup_update_*/
 # Файлы
 queue/tts/
 queue/media/
-
-# config.js
-queue/js/config.js

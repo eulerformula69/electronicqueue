@@ -139,6 +139,8 @@ log "Копирую приложение"
 install -m 0644 "${SOURCE_DIR}/main.py" "${APP_DIR}/main.py"
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
 install -m 0750 "${SOURCE_DIR}/manageAdmins.py" "${APP_DIR}/manageAdmins.py"
+install -m 0750 "${SOURCE_DIR}/update_from_git.py" "${APP_DIR}/update_from_git.py"
+install -m 0640 "${SOURCE_DIR}/update_exclude.txt" "${APP_DIR}/update_exclude.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/queue"
 rsync -a --delete \
@@ -590,7 +592,7 @@ if [[ -n "${INSTALL_USER}" && -n "${INSTALL_HOME}" ]]; then
     printf 'Открыть:    cd %s\n' "${APP_DIR}"
     printf 'Пароли:     %s/queue-credentials.txt\n' "${INSTALL_HOME}"
     printf 'Сертификат: %s/queue-rootCA.pem\n' "${INSTALL_HOME}"
-    printf '\nСкопировать сертификат на Windows:\n'
+    printf '\nКоманда для любого Windows-компьютера (источник — эта ВМ):\n'
     printf 'scp %s@%s:%s/queue-rootCA.pem .\\queue-rootCA.pem\n' \
         "${INSTALL_USER}" "${SERVER_IP}" "${INSTALL_HOME}"
     printf 'certutil -addstore -f Root .\\queue-rootCA.pem\n'

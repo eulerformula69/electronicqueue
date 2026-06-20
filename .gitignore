@@ -13,3 +13,7 @@ __pycache__
 queue/tts/cache/
 queue/media/playlist.json
 queue/media/
+
+
+NEXT.md
+README.md
