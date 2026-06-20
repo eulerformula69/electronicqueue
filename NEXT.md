@@ -50,7 +50,7 @@ sudo QUEUE_SERVER_IP=192.168.0.20 bash install.sh
 ```text
 HTTP:        http://192.168.0.20/queue/login.html
 HTTPS:       https://192.168.0.20/queue/login.html
-Сертификат: /root/queue-rootCA.pem
+Сертификат: ~/queue-rootCA.pem
 ```
 
 ## Сертификаты
@@ -61,6 +61,7 @@ HTTPS:       https://192.168.0.20/queue/login.html
 /etc/nginx/tls/queue.pem
 /etc/nginx/tls/queue-key.pem
 /root/queue-rootCA.pem
+~/queue-rootCA.pem
 ```
 
 Права доступа:
@@ -70,7 +71,7 @@ queue.pem      root:root 0644
 queue-key.pem  root:root 0600
 ```
 
-`queue-rootCA.pem` предназначен только для переноса на клиентские устройства. Закрытый ключ локального центра сертификации переносить с сервера запрещено.
+`/root/queue-rootCA.pem` является защищённым оригиналом. Установщик автоматически создаёт доступную пользователю копию `~/queue-rootCA.pem`, которую можно переносить на клиентские устройства. Закрытый ключ локального центра сертификации переносить с сервера запрещено.
 
 ## Конфигурация Nginx
 

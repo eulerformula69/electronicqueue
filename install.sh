@@ -16,6 +16,9 @@ ROOT_CA_EXPORT="/root/queue-rootCA.pem"
 FIRST_INSTALL=0
 CERT_RENEWED=0
 CA_CREATED=0
+INSTALL_USER=""
+INSTALL_HOME=""
+INSTALL_GROUP=""
 
 log() {
     printf '\n\033[1;34m[QUEUE]\033[0m %s\n' "$1"
@@ -66,6 +69,12 @@ if [[ ${EUID} -ne 0 ]]; then
     fail "запустите установщик командой: sudo ./install.sh"
 fi
 
+if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]] && id "${SUDO_USER}" >/dev/null 2>&1; then
+    INSTALL_USER="${SUDO_USER}"
+    INSTALL_HOME="$(getent passwd "${INSTALL_USER}" | cut -d: -f6)"
+    INSTALL_GROUP="$(id -gn "${INSTALL_USER}")"
+fi
+
 if [[ ! -f "${SOURCE_DIR}/main.py" || ! -d "${SOURCE_DIR}/queue" ]]; then
     fail "рядом с install.sh должны находиться main.py и папка queue"
 fi
@@ -87,7 +96,7 @@ rm -f /etc/apt/sources.list.d/grafana.list
 apt-get update
 apt-get install -y \
     python3 python3-venv python3-pip postgresql nginx rsync curl iproute2 \
-    mkcert libnss3-tools openssl
+    mkcert libnss3-tools openssl acl
 
 SERVER_IP="${QUEUE_SERVER_IP:-}"
 if [[ -z "${SERVER_IP}" ]]; then
@@ -557,18 +566,46 @@ fi
 touch "${APP_DIR}/.queue-installed"
 chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.queue-installed"
 
+if [[ -n "${INSTALL_USER}" && -n "${INSTALL_HOME}" ]]; then
+    log "Открываю доступ пользователю ${INSTALL_USER}"
+    usermod -aG "${APP_USER}" "${INSTALL_USER}"
+    setfacl -m "u:${INSTALL_USER}:rx" "${APP_HOME}"
+    setfacl -R -m "u:${INSTALL_USER}:rwX" "${APP_DIR}"
+    find "${APP_DIR}" -type d -exec setfacl -m "d:u:${INSTALL_USER}:rwx" {} +
+
+    install -o "${INSTALL_USER}" -g "${INSTALL_GROUP}" -m 0644 \
+        "${ROOT_CA_EXPORT}" "${INSTALL_HOME}/queue-rootCA.pem"
+    install -o "${INSTALL_USER}" -g "${INSTALL_GROUP}" -m 0600 \
+        /root/queue-credentials.txt "${INSTALL_HOME}/queue-credentials.txt"
+fi
+
 printf '\n\033[1;32mУстановка завершена.\033[0m\n'
 printf 'HTTP:       http://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'HTTPS:      https://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'Терминал:   http://%s/queue/terminal.html\n' "${SERVER_IP}"
 printf 'Табло:      http://%s/queue/board-media.html\n' "${SERVER_IP}"
 printf 'Статистика: http://%s:3000/d/queue-statistics/queue-statistics\n' "${SERVER_IP}"
-printf 'Пароли:     sudo cat /root/queue-credentials.txt\n'
-printf 'Сертификат: %s\n' "${ROOT_CA_EXPORT}"
+if [[ -n "${INSTALL_USER}" && -n "${INSTALL_HOME}" ]]; then
+    printf 'Проект:     %s (доступ для %s)\n' "${APP_DIR}" "${INSTALL_USER}"
+    printf 'Открыть:    cd %s\n' "${APP_DIR}"
+    printf 'Пароли:     %s/queue-credentials.txt\n' "${INSTALL_HOME}"
+    printf 'Сертификат: %s/queue-rootCA.pem\n' "${INSTALL_HOME}"
+    printf '\nСкопировать сертификат на Windows:\n'
+    printf 'scp %s@%s:%s/queue-rootCA.pem .\\queue-rootCA.pem\n' \
+        "${INSTALL_USER}" "${SERVER_IP}" "${INSTALL_HOME}"
+    printf 'certutil -addstore -f Root .\\queue-rootCA.pem\n'
+else
+    printf 'Пароли:     sudo cat /root/queue-credentials.txt\n'
+    printf 'Сертификат: %s\n' "${ROOT_CA_EXPORT}"
+fi
 printf 'Резервная копия: %s\n' "${BACKUP_DIR}"
 printf 'Grafana:    просмотр без пароля; редактирование через admin\n'
 if [[ ${CA_CREATED} -eq 1 ]]; then
-    printf '\033[1;33mУстановите %s на каждый компьютер и табло.\033[0m\n' "${ROOT_CA_EXPORT}"
+    if [[ -n "${INSTALL_USER}" && -n "${INSTALL_HOME}" ]]; then
+        printf '\033[1;33mУстановите %s/queue-rootCA.pem на каждый компьютер и табло.\033[0m\n' "${INSTALL_HOME}"
+    else
+        printf '\033[1;33mУстановите %s на каждый компьютер и табло.\033[0m\n' "${ROOT_CA_EXPORT}"
+    fi
 elif [[ ${CERT_RENEWED} -eq 1 ]]; then
     printf 'Сертификат сервера обновлён для IP %s; корневой сертификат не изменился.\n' "${SERVER_IP}"
 fi
