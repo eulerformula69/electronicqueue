@@ -9,7 +9,8 @@ DB_NAME="queue"
 DB_USER="queue_app"
 GRAFANA_DB_USER="queue_grafana"
 SERVICE_NAME="queue.service"
-SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 TLS_DIR="/etc/nginx/tls"
 MKCERT_CA_DIR="/var/lib/queue-mkcert"
 ROOT_CA_EXPORT="/root/queue-rootCA.pem"
@@ -66,7 +67,7 @@ PY
 }
 
 if [[ ${EUID} -ne 0 ]]; then
-    fail "запустите установщик командой: sudo ./install.sh"
+    fail "запустите установщик командой: sudo bash deploy/install.sh"
 fi
 
 if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]] && id "${SUDO_USER}" >/dev/null 2>&1; then
@@ -76,7 +77,7 @@ if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]] && id "${SUDO_USER}" >/
 fi
 
 if [[ ! -f "${SOURCE_DIR}/main.py" || ! -d "${SOURCE_DIR}/queue" ]]; then
-    fail "рядом с install.sh должны находиться main.py и папка queue"
+    fail "в корне проекта должны находиться main.py и папка queue"
 fi
 
 if [[ ! -f /etc/os-release ]]; then
@@ -123,6 +124,7 @@ fi
 
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/deploy"
+install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/scripts"
 
 BACKUP_DIR="/var/backups/queue-install/$(date +%Y%m%d-%H%M%S)"
 install -d -m 0700 "${BACKUP_DIR}"
@@ -138,9 +140,9 @@ fi
 log "Копирую приложение"
 install -m 0644 "${SOURCE_DIR}/main.py" "${APP_DIR}/main.py"
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
-install -m 0750 "${SOURCE_DIR}/manageAdmins.py" "${APP_DIR}/manageAdmins.py"
-install -m 0750 "${SOURCE_DIR}/update_from_git.py" "${APP_DIR}/update_from_git.py"
-install -m 0640 "${SOURCE_DIR}/update_exclude.txt" "${APP_DIR}/update_exclude.txt"
+install -m 0750 "${SOURCE_DIR}/scripts/manageAdmins.py" "${APP_DIR}/scripts/manageAdmins.py"
+install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"
+install -m 0640 "${SOURCE_DIR}/deploy/exclude_from_update.txt" "${APP_DIR}/deploy/exclude_from_update.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/queue"
 rsync -a --delete \
@@ -229,7 +231,7 @@ chmod 0600 "${APP_DIR}/main.env"
 
 cat > /usr/local/bin/queue-admin <<EOF
 #!/bin/sh
-exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/manageAdmins.py "\$@"
+exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/manageAdmins.py "\$@"
 EOF
 chmod 0755 /usr/local/bin/queue-admin
 
@@ -368,7 +370,7 @@ providers:
       path: /var/lib/grafana/dashboards
 EOF
 
-DASHBOARD_SOURCE="${SOURCE_DIR}/statistics.json"
+DASHBOARD_SOURCE="${SOURCE_DIR}/data/statistics.json"
 if [[ ! -f "${DASHBOARD_SOURCE}" ]]; then
     DASHBOARD_SOURCE="$(find "${SOURCE_DIR}" -maxdepth 1 -type f -name 'Статистика для очереди*.json' -print -quit)"
 fi

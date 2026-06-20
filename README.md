@@ -7,7 +7,7 @@
 Перенесите всю папку проекта на чистую виртуальную машину и выполните:
 
 ```bash
-sudo bash install.sh
+sudo bash deploy/install.sh
 ```
 
 Установщик настраивает PostgreSQL, приложение, Nginx, HTTP + HTTPS и Grafana. Рабочая копия размещается в:
@@ -27,7 +27,7 @@ cat ~/queue-credentials.txt
 Основной IPv4 определяется автоматически. При необходимости его можно указать явно:
 
 ```bash
-sudo QUEUE_SERVER_IP=192.168.0.20 bash install.sh
+sudo QUEUE_SERVER_IP=192.168.0.20 bash deploy/install.sh
 ```
 
 ## HTTPS
@@ -66,22 +66,22 @@ sudo update-ca-certificates
 ```text
 deploy/             служебные сценарии установки
 queue/              веб-интерфейс, модель речи и локальные медиафайлы
-install.sh          установка и повторное обновление сервера
+deploy/install.sh   установка и повторное обновление сервера
 main.py             сервер электронной очереди
-manageAdmins.py     управление администраторами и терминалами
+scripts/manageAdmins.py управление администраторами и терминалами
 main.env.example    пример локальной конфигурации
 requirements.txt    зависимости Python
-statistics.json     дашборд Grafana
-update_from_git.py  обновление существующей установки из Git
-update_exclude.txt  локальные исключения для обновления
+data/statistics.json дашборд Grafana
+deploy/update_from_git.py обновление существующей установки из Git
+deploy/exclude_from_update.txt локальные исключения для обновления
 ```
 
 После установки updater также находится в рабочем проекте:
 
 ```bash
 cd /home/queue/queue_project
-./update_from_git.py --repo https://github.com/USER/REPOSITORY.git
-./update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
 ```
 
 Первая команда только показывает будущие изменения, вторая применяет их с резервной копией.

@@ -21,8 +21,10 @@ from datetime import datetime
 from pathlib import Path
 
 
-SCRIPT_NAME = Path(__file__).name
-EXCLUDE_FILE = "update_exclude.txt"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = SCRIPT_DIR.parent
+SCRIPT_NAME = "deploy/update_from_git.py"
+EXCLUDE_FILE = "deploy/exclude_from_update.txt"
 
 
 DEFAULT_EXCLUDES = [
@@ -417,7 +419,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    project_dir = Path(__file__).resolve().parent
+    project_dir = PROJECT_DIR
 
     print(f"Папка проекта: {project_dir}")
 

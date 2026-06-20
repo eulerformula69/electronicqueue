@@ -1,8 +1,8 @@
 # Файлы и папки, которые нельзя перезаписывать при обновлении
 
 # Сам updater
-update_from_git.py
-update_exclude.txt
+deploy/update_from_git.py
+deploy/exclude_from_update.txt
 
 # Git и мусор Python
 .git/
