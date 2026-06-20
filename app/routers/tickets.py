@@ -17,7 +17,7 @@ from fastapi import (
 )
 from fastapi.params import Path
 from fastapi.responses import FileResponse
-from sqlalchemy import and_, asc, func, literal, text
+from sqlalchemy import and_, asc, func, literal
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -346,7 +346,7 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
 
     # Устанавливаем статус отмены и время завершения
     ticket.status = "cancelled"
-    ticket.finished_at = text("CURRENT_TIMESTAMP")
+    ticket.finished_at = datetime.now()
 
     db.commit()
     db.refresh(ticket)
