@@ -1,0 +1,3 @@
+"""Queue management application package."""
+
+

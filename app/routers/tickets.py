@@ -1,0 +1,638 @@
+import asyncio
+import hashlib
+import json
+import os
+import re
+import secrets
+import shutil
+import subprocess
+from datetime import datetime, timedelta
+from pathlib import Path as FilePath
+from typing import List
+
+import bcrypt
+from fastapi import (
+    APIRouter, Body, Depends, File, Header, HTTPException, Query, UploadFile,
+    WebSocket, WebSocketDisconnect, status,
+)
+from fastapi.params import Path
+from fastapi.responses import FileResponse
+from sqlalchemy import and_, asc, func, literal, text
+from sqlalchemy.orm import Session
+
+from app.config import (
+    ALLOWED_MEDIA_EXTENSIONS, BASE_DIR, DEFAULT_PAGE_LIMIT, MAX_FILE_SIZE,
+    MAX_PAGE_LIMIT, PIPER_MODEL, PIPER_PATH, SESSION_TIMEOUT_SECONDS,
+    TTS_CACHE_DIR, TTS_LENGTH_SCALE,
+    TTS_NOISE_SCALE, TTS_NOISE_W_SCALE,
+)
+from app.connections import manager, operatorManager
+from app.database import SessionLocal
+from app.dependencies import (
+    get_current_terminal, get_operator_by_session, verify_admin_session,
+    verify_session,
+)
+from app.models import Operator, Service, Ticket, Window, WindowService
+from app.schemas import (
+    CallSpecificRequest, RedirectRequest, RedirectToWindowRequest, TicketCreate,
+)
+from app.security import get_password_hash, verify_password
+from app.services.settings import get_system_settings_dict
+from app.services.tickets import (
+    assign_ticket_to_least_loaded_window, broadcast_board,
+    broadcast_ticket_called, render_ticket_template,
+)
+
+router = APIRouter()
+
+
+@router.post("/tickets/", tags=["Tickets"])
+async def create_ticket(
+    ticket: TicketCreate,
+    _auth = Depends(get_current_terminal) 
+    ):
+    db = SessionLocal()
+    try:
+        settings = get_system_settings_dict(db)
+        
+        # 1. Проверяем существование услуги
+        service = db.query(Service).filter(Service.id == ticket.service_id).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="Услуга не найдена")
+
+        # 2. Валидация доступности окон
+        if settings.get("hide_services_without_online_operators"):
+            active_windows = (
+                db.query(Window)
+                .join(WindowService, Window.id == WindowService.window_id)
+                .filter(
+                    WindowService.service_id == service.id,
+                    Window.status == "online"
+                ).first()
+            )
+            if not active_windows:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="В данный момент услуга не оказывается (нет активных окон)"
+                )
+
+        target_window_id = None
+
+        if service.operator_choice_enabled:
+            if not ticket.window_id:
+                raise HTTPException(status_code=400, detail="Выберите оператора")
+
+            selected_window = (
+                db.query(Window)
+                .join(WindowService, Window.id == WindowService.window_id)
+                .filter(
+                    Window.id == ticket.window_id,
+                    WindowService.service_id == service.id,
+                    Window.status == "online"
+                )
+                .first()
+            )
+
+            if not selected_window:
+                raise HTTPException(status_code=400, detail="Выбранный оператор сейчас недоступен")
+
+            target_window_id = ticket.window_id
+
+        # 3. Создаем тикет
+        db_ticket = Ticket(
+            service_id=service.id,
+            status="waiting",
+            target_window_id=target_window_id,
+            created_at=datetime.now()
+        )
+
+        db.add(db_ticket)
+
+        if not target_window_id and settings.get("queue_mode") == "dynamic_operator_distribution":
+            assign_ticket_to_least_loaded_window(db, db_ticket)
+
+        db.commit()
+        db.refresh(db_ticket)
+
+        # 4. Считаем людей перед талоном
+        waiting_before = db.query(Ticket).filter(
+            Ticket.status == "waiting",
+            Ticket.id < db_ticket.id
+        ).count()
+
+        # 5. Рассылка уведомлений
+        await manager.broadcast({
+            "type": "queue_updated",
+            "service_id": service.id
+        })
+
+        await broadcast_board()
+
+        return {
+            "id": db_ticket.id,
+            "number": db_ticket.number,
+            "service_name": service.name,
+            "waiting_before": waiting_before,
+            "date": datetime.now().strftime("%d.%m.%Y %H:%M")
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@router.post("/tickets/finish", tags=["Tickets"])
+async def finish_ticket(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+
+    if not operator.window_id:
+        db.close()
+        raise HTTPException(status_code=404, detail="Operator or window not found")
+    
+    ticket = db.query(Ticket).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "called"  
+    ).first()
+
+    if not ticket:
+        db.close()
+        return {"detail": "Нет текущего клиента"}
+
+    # Завершаем тикет
+    ticket.status = "finished"
+    ticket.finished_at = datetime.now() #text("CURRENT_TIMESTAMP")
+
+    db.commit()
+    db.refresh(ticket)
+
+    await broadcast_board()
+
+    db.close()
+    return ticket
+
+
+@router.post("/tickets/next", tags=["Tickets"])
+async def call_next_ticket(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            return {"detail": "Оператору не назначено окно"}
+
+        current = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called"
+        ).first()
+
+        if current:
+            return {"detail": f"Сначала завершите клиента: {current.number}"}
+
+        settings = get_system_settings_dict(db)
+
+        # Сначала всегда вызываем билеты, явно перенаправленные на это окно.
+        ticket = (
+            db.query(Ticket)
+            .filter(
+                Ticket.status == "waiting",
+                Ticket.target_window_id == operator.window_id
+            )
+            .order_by(Ticket.created_at.asc())
+            .first()
+        )
+
+        if not ticket:
+            if settings.get("queue_mode") == "dynamic_operator_distribution":
+                ticket = (
+                    db.query(Ticket)
+                    .filter(
+                        Ticket.status == "waiting",
+                        Ticket.window_id == operator.window_id,
+                        Ticket.target_window_id.is_(None)
+                    )
+                    .order_by(Ticket.created_at.asc())
+                    .first()
+                )
+            else:
+                ticket = (
+                    db.query(Ticket)
+                    .join(WindowService, Ticket.service_id == WindowService.service_id)
+                    .filter(
+                        WindowService.window_id == operator.window_id,
+                        Ticket.status == "waiting",
+                        Ticket.target_window_id.is_(None)
+                    )
+                    .order_by(
+                        WindowService.priority.asc(),
+                        Ticket.created_at.asc()
+                    )
+                    .first()
+                )
+
+        if not ticket:
+            return {"detail": "Нет ожидающих билетов"}
+
+        ticket.status = "called"
+        ticket.window_id = operator.window_id
+        ticket.target_window_id = None
+        ticket.called_at = datetime.now()
+
+        db.commit()
+        db.refresh(ticket)
+
+        window = db.query(Window).filter(Window.id == ticket.window_id).first()
+
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        if window:
+            await broadcast_ticket_called(ticket, window)
+
+        return {
+            "id": ticket.id,
+            "number": ticket.number,
+            "status": ticket.status,
+            "service_name": ticket.service.name if ticket.service else "Услуга не найдена"
+        }
+    finally:
+        db.close()
+
+
+@router.post("/tickets/call-specific", tags=["Tickets"])
+async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            return {"detail": "Оператору не назначено окно"}
+
+        # Проверяем, не обслуживается ли уже клиент
+        current = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called"
+        ).first()
+
+        if current:
+            return {"detail": f"Сначала завершите клиента: {current.number}"}
+
+        # Ищем билет по номеру со статусом "waiting" или "cancelled"
+        ticket = db.query(Ticket).filter(
+            Ticket.number == data.number,
+            Ticket.status.in_(["waiting", "cancelled"])
+        ).first()
+
+        if not ticket:
+            return {"detail": "Билет с таким номером не найден или недоступен для вызова"}
+
+        # Если билет был перенаправлен на конкретное окно, вызвать его может только это окно.
+        if ticket.target_window_id is not None and ticket.target_window_id != operator.window_id:
+            return {"detail": "Этот талон перенаправлен на другое рабочее место"}
+
+        # Обычные билеты по-прежнему можно вызвать только на окне, которое обслуживает их услугу.
+        if ticket.target_window_id is None:
+            window_service = db.query(WindowService).filter(
+                WindowService.window_id == operator.window_id,
+                WindowService.service_id == ticket.service_id
+            ).first()
+
+            if not window_service:
+                return {"detail": "Ваше окно не обслуживает услугу этого талона"}
+
+        # Обновляем статус билета и привязываем к текущему окну
+        ticket.status = "called"
+        ticket.window_id = operator.window_id
+        ticket.target_window_id = None
+        ticket.called_at = datetime.now()
+
+        db.commit()
+        db.refresh(ticket)
+
+        window = db.query(Window).filter(Window.id == ticket.window_id).first()
+
+        # Обновляем табло только после сохранения в БД
+        await broadcast_board()
+
+        if window:
+            await broadcast_ticket_called(ticket, window)
+
+        return {
+            "id": ticket.id,
+            "number": ticket.number,
+            "status": ticket.status,
+            "service_name": ticket.service.name if ticket.service else "Услуга не найдена"
+        }
+    finally:
+        db.close()
+
+
+@router.post("/tickets/cancel", tags=["Tickets"])
+async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+
+    if not operator.window_id:
+        db.close()
+        return {"detail": "Оператору не назначено окно"}
+
+    # Ищем текущий вызванный билет в этом окне
+    ticket = db.query(Ticket).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "called"
+    ).first()
+
+    if not ticket:
+        db.close()
+        return {"detail": "Нет активного билета для отмены (клиент не вызван)"}
+
+    # Устанавливаем статус отмены и время завершения
+    ticket.status = "cancelled"
+    ticket.finished_at = text("CURRENT_TIMESTAMP")
+
+    db.commit()
+    db.refresh(ticket)
+
+    # Уведомляем систему об изменениях только после сохранения в БД
+    await manager.broadcast({
+        "type": "queue_updated"
+    })
+
+    # Обновляем табло, чтобы номер исчез из списка вызванных
+    await broadcast_board()
+
+    db.close()
+
+    return {"status": "cancelled", "ticket_number": ticket.number}
+
+
+@router.get("/tickets/my-queue", tags=["Tickets"])
+def get_my_queue(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    operator: Operator = Depends(verify_session)
+    ):
+    db = SessionLocal()
+    settings = get_system_settings_dict(db)
+    try:
+        if not operator.window_id:
+            return []
+
+        # 1) Перенаправленные именно на это окно билеты всегда сверху.
+        redirected_query = (
+            db.query(
+                Ticket.id,
+                Ticket.number,
+                Ticket.service_id,
+                Ticket.created_at,
+                Ticket.target_window_id,
+                Service.name.label("service_name"),
+                literal(0).label("priority")
+            )
+            .join(Service, Service.id == Ticket.service_id)
+            .filter(
+                Ticket.status == "waiting",
+                Ticket.target_window_id == operator.window_id
+            )
+            .order_by(Ticket.created_at.asc())
+        )
+
+        # 2) Обычные билеты ниже — по текущему режиму очереди.
+        if settings.get("queue_mode") == "dynamic_operator_distribution":
+            ordinary_query = (
+                db.query(
+                    Ticket.id,
+                    Ticket.number,
+                    Ticket.service_id,
+                    Ticket.created_at,
+                    Ticket.target_window_id,
+                    Service.name.label("service_name"),
+                    literal(None).label("priority")
+                )
+                .join(Service, Service.id == Ticket.service_id)
+                .filter(
+                    Ticket.window_id == operator.window_id,
+                    Ticket.status == "waiting",
+                    Ticket.target_window_id.is_(None)
+                )
+                .order_by(Ticket.created_at.asc())
+            )
+        else:
+            ordinary_query = (
+                db.query(
+                    Ticket.id,
+                    Ticket.number,
+                    Ticket.service_id,
+                    Ticket.created_at,
+                    Ticket.target_window_id,
+                    Service.name.label("service_name"),
+                    WindowService.priority.label("priority")
+                )
+                .join(WindowService, Ticket.service_id == WindowService.service_id)
+                .join(Service, Service.id == Ticket.service_id)
+                .filter(
+                    WindowService.window_id == operator.window_id,
+                    Ticket.status == "waiting",
+                    Ticket.target_window_id.is_(None)
+                )
+                .order_by(
+                    WindowService.priority.asc(),
+                    Ticket.created_at.asc()
+                )
+            )
+
+        tickets = (redirected_query.all() + ordinary_query.all())[skip:skip + limit]
+
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        tickets_served_today = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "finished",
+            Ticket.finished_at >= today_start
+        ).count()
+
+        result = []
+        for t in tickets:
+            result.append({
+                "id": t.id,
+                "number": t.number,
+                "service_id": t.service_id,
+                "service_name": t.service_name or "Неизвестно",
+                "created_at": t.created_at.strftime("%H:%M") if t.created_at else "—",
+                "priority": getattr(t, "priority", None),
+                "target_window_id": t.target_window_id,
+                "is_redirected_to_window": t.target_window_id == operator.window_id
+            })
+
+        return {
+            "tickets": result,
+            "tickets_served_today": tickets_served_today
+        }
+    finally:
+        db.close()
+
+
+@router.post("/tickets/redirect-to-window", tags=["Tickets"])
+async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ticket = db.query(Ticket).filter(
+            Ticket.id == data.ticket_id,
+            Ticket.status == "called"
+        ).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Вызванный билет не найден")
+
+        if ticket.window_id != operator.window_id:
+            raise HTTPException(status_code=403, detail="Этот билет не является текущим билетом вашего окна")
+
+        target_window = db.query(Window).filter(Window.id == data.window_id).first()
+        if not target_window:
+            raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
+
+        ticket.status = "waiting"
+        ticket.window_id = None
+        ticket.target_window_id = target_window.id
+        ticket.created_at = datetime.now()
+        ticket.called_at = None
+
+        db.commit()
+        db.refresh(ticket)
+
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        message = f"Билет перенаправлен на рабочее место: {target_window.name}"
+        response = {"message": message, "ticket": ticket}
+        if target_window.status != "online":
+            response["warning"] = f"Рабочее место {target_window.name} сейчас не online"
+        return response
+    finally:
+        db.close()
+
+
+@router.post("/tickets/redirect", tags=["Tickets"])
+async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        settings = get_system_settings_dict(db)
+
+        ticket = db.query(Ticket).filter(
+            Ticket.id == data.ticket_id,
+            Ticket.status == "called"
+        ).first()
+        if not ticket:
+            return {"detail": "Сначала завершите текущего клиента или тикет не найден"}
+
+        service = db.query(Service).filter(Service.id == data.new_service_id).first()
+        if not service:
+            return {"detail": "Новая услуга не найдена"}
+
+        windows = (
+            db.query(Window)
+            .join(WindowService, Window.id == WindowService.window_id)
+            .filter(
+                WindowService.service_id == service.id,
+                Window.status == "online"
+            )
+            .distinct()
+            .order_by(Window.id)
+            .all()
+        )
+
+        if not windows:
+            return {"detail": "Нет доступных окон для этой услуги, Пожалуйста сообщите клиенту"}
+
+        ticket.service_id = service.id
+        ticket.status = "waiting"
+        ticket.window_id = None
+        ticket.target_window_id = None
+        ticket.created_at = datetime.now() #text("CURRENT_TIMESTAMP")
+        ticket.called_at = None
+
+        if settings.get("queue_mode") == "dynamic_operator_distribution":
+            assign_ticket_to_least_loaded_window(db, ticket)
+
+        db.commit()
+        db.refresh(ticket)
+
+        await manager.broadcast({
+            "type": "queue_updated",
+            "service_id": service.id
+        })
+
+        asyncio.create_task(broadcast_board())
+
+        return {"message": "Билет перенаправлен", "ticket": ticket}
+
+    finally:
+        db.close()
+
+
+@router.post("/tickets/recall", tags=["Tickets"])
+async def recall_ticket(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        ticket = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called"
+        ).first()
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Нет активного клиента для повторного вызова")
+
+        window = db.query(Window).filter(Window.id == operator.window_id).first()
+        if not window:
+            raise HTTPException(status_code=404, detail="Окно не найдено")
+
+        settings = get_system_settings_dict(db)
+
+        tts_text = render_ticket_template(
+            settings["call_message_template"],
+            ticket.number,
+            window.name
+        )
+
+        display_text = render_ticket_template(
+            settings["board_ticket_template"],
+            ticket.number,
+            window.name
+        )
+
+        await manager.broadcast({
+            "type": "recall_ticket",
+            "ticket_id": ticket.id,
+            "ticket_number": ticket.number,
+            "window_name": window.name,
+            "display_text": display_text,
+            "tts_text": tts_text
+        })
+
+        return {"status": "success", "message": f"Повторный вызов клиента {ticket.number}"}
+    finally:
+        db.close()
+
+
+@router.get("/tickets/current", tags=["Tickets"])
+def get_current_ticket(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            return {"ticket": None}
+
+        ticket = (
+            db.query(Ticket)
+            .filter(
+                Ticket.status == "called",
+                Ticket.window_id == operator.window_id
+            )
+            .order_by(Ticket.created_at.asc())
+            .first()
+        )
+
+        if not ticket:
+            return {"ticket": None}
+
+        return {"ticket": ticket}
+    finally:
+        db.close()

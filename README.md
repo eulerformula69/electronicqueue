@@ -65,9 +65,10 @@ sudo update-ca-certificates
 
 ```text
 deploy/             служебные сценарии установки
+app/                код FastAPI, модели, сервисы и маршруты
 queue/              веб-интерфейс, модель речи и локальные медиафайлы
 deploy/install.sh   установка и повторное обновление сервера
-main.py             сервер электронной очереди
+main.py             совместимая точка входа uvicorn main:app
 scripts/manageAdmins.py управление администраторами и терминалами
 main.env.example    пример локальной конфигурации
 requirements.txt    зависимости Python

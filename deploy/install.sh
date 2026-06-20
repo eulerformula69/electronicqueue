@@ -139,6 +139,10 @@ fi
 
 log "Копирую приложение"
 install -m 0644 "${SOURCE_DIR}/main.py" "${APP_DIR}/main.py"
+install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/app"
+rsync -a --delete \
+    --exclude '__pycache__/' \
+    "${SOURCE_DIR}/app/" "${APP_DIR}/app/"
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
 install -m 0750 "${SOURCE_DIR}/scripts/manageAdmins.py" "${APP_DIR}/scripts/manageAdmins.py"
 install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"

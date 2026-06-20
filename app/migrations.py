@@ -1,0 +1,132 @@
+from sqlalchemy import text
+
+
+def init_ticket_numbering(engine):
+    ddl = """
+    CREATE SEQUENCE IF NOT EXISTS ticket_number_seq START 1;
+
+    CREATE TABLE IF NOT EXISTS ticket_counter_state (
+        id int PRIMARY KEY DEFAULT 1,
+        current_day date NOT NULL,
+        CONSTRAINT single_row CHECK (id = 1)
+    );
+
+    INSERT INTO ticket_counter_state (id, current_day)
+    VALUES (1, CURRENT_DATE)
+    ON CONFLICT (id) DO NOTHING;
+
+    CREATE OR REPLACE FUNCTION public.ticket_number_trigger()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        v_old_day date;
+    BEGIN
+        SELECT current_day INTO v_old_day
+        FROM ticket_counter_state
+        WHERE id = 1
+        FOR UPDATE;
+
+        IF v_old_day < CURRENT_DATE THEN
+            PERFORM setval('ticket_number_seq', 1, false);
+            UPDATE ticket_counter_state
+            SET current_day = CURRENT_DATE
+            WHERE id = 1;
+        END IF;
+
+        IF NEW.number IS NULL THEN
+            NEW.number := nextval('ticket_number_seq')::text;
+        END IF;
+
+        RETURN NEW;
+    END;
+    $$;
+
+    DROP TRIGGER IF EXISTS ticket_number_before_insert ON tickets;
+
+    CREATE TRIGGER ticket_number_before_insert
+    BEFORE INSERT ON tickets
+    FOR EACH ROW
+    EXECUTE FUNCTION public.ticket_number_trigger();
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_operator_choice_schema(engine):
+    """Add operator-choice columns to databases created by older releases."""
+    ddl = """
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS operator_choice_enabled integer NOT NULL DEFAULT 0;
+
+    UPDATE services
+    SET operator_choice_enabled = 0
+    WHERE operator_choice_enabled IS NULL;
+
+    ALTER TABLE services
+        ALTER COLUMN operator_choice_enabled SET DEFAULT 0,
+        ALTER COLUMN operator_choice_enabled SET NOT NULL;
+
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS target_window_id integer REFERENCES windows(id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_operator_status_periods_schema(engine):
+    """Create operator status history and migrate older column types."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS operator_status_periods (
+        id bigserial PRIMARY KEY,
+        operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
+        window_id integer REFERENCES windows(id) ON DELETE SET NULL,
+        status varchar(16) NOT NULL,
+        started_at timestamp without time zone NOT NULL
+            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk'),
+        ended_at timestamp without time zone,
+        CONSTRAINT ck_operator_status_periods_status
+            CHECK (status IN ('online', 'break', 'offline')),
+        CONSTRAINT ck_operator_status_periods_dates
+            CHECK (ended_at IS NULL OR ended_at >= started_at)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_operator_current_status
+        ON operator_status_periods (operator_id)
+        WHERE ended_at IS NULL;
+
+    CREATE INDEX IF NOT EXISTS ix_operator_status_period
+        ON operator_status_periods (operator_id, started_at);
+
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'operator_status_periods'
+              AND column_name = 'started_at'
+              AND data_type = 'timestamp with time zone'
+        ) THEN
+            ALTER TABLE operator_status_periods
+                ALTER COLUMN started_at DROP DEFAULT,
+                ALTER COLUMN started_at TYPE timestamp without time zone
+                    USING started_at AT TIME ZONE 'Asia/Irkutsk',
+                ALTER COLUMN ended_at TYPE timestamp without time zone
+                    USING ended_at AT TIME ZONE 'Asia/Irkutsk',
+                ALTER COLUMN started_at SET DEFAULT
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
+        END IF;
+    END
+    $$;
+
+    ALTER TABLE operator_status_periods
+        ALTER COLUMN started_at SET DEFAULT
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
+
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
