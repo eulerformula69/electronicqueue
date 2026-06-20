@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-Установщик настраивает PostgreSQL, приложение, Nginx и Grafana. Рабочая копия размещается в:
+Установщик настраивает PostgreSQL, приложение, Nginx, HTTP + HTTPS и Grafana. Рабочая копия размещается в:
 
 ```text
 /home/queue/queue_project
@@ -21,6 +21,44 @@ sudo bash install.sh
 ```bash
 sudo cat /root/queue-credentials.txt
 ```
+
+Основной IPv4 определяется автоматически. При необходимости его можно указать явно:
+
+```bash
+sudo QUEUE_SERVER_IP=192.168.0.20 bash install.sh
+```
+
+## HTTPS
+
+Установщик создаёт локальный центр сертификации `mkcert`, выпускает сертификат для IP сервера и одновременно оставляет доступными HTTP и HTTPS без перенаправления.
+
+Корневой сертификат для клиентских устройств находится на сервере:
+
+```text
+/root/queue-rootCA.pem
+```
+
+Скопировать его в домашний каталог пользователя сервера можно командой:
+
+```bash
+sudo cp /root/queue-rootCA.pem ~/queue-rootCA.pem
+sudo chown "$USER:$USER" ~/queue-rootCA.pem
+```
+
+На Windows сертификат устанавливается из PowerShell администратора:
+
+```powershell
+certutil -addstore -f Root "C:\путь\к\queue-rootCA.pem"
+```
+
+На Raspberry Pi или другом Linux:
+
+```bash
+sudo cp queue-rootCA.pem /usr/local/share/ca-certificates/queue-mkcert.crt
+sudo update-ca-certificates
+```
+
+После установки сертификата браузер необходимо полностью перезапустить. Файл `rootCA-key.pem` с сервера переносить нельзя.
 
 ## Структура
 

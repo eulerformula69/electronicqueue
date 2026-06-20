@@ -10,7 +10,12 @@ DB_USER="queue_app"
 GRAFANA_DB_USER="queue_grafana"
 SERVICE_NAME="queue.service"
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+TLS_DIR="/etc/nginx/tls"
+MKCERT_CA_DIR="/var/lib/queue-mkcert"
+ROOT_CA_EXPORT="/root/queue-rootCA.pem"
 FIRST_INSTALL=0
+CERT_RENEWED=0
+CA_CREATED=0
 
 log() {
     printf '\n\033[1;34m[QUEUE]\033[0m %s\n' "$1"
@@ -19,6 +24,42 @@ log() {
 fail() {
     printf '\n\033[1;31m[QUEUE] Ошибка:\033[0m %s\n' "$1" >&2
     exit 1
+}
+
+backup_file() {
+    local source="$1"
+    local destination_name="$2"
+    if [[ -f "${source}" ]]; then
+        cp -a "${source}" "${BACKUP_DIR}/${destination_name}"
+    fi
+}
+
+set_env_value() {
+    local env_file="$1"
+    local key="$2"
+    local value="$3"
+    python3 - "${env_file}" "${key}" "${value}" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+value = sys.argv[3]
+prefix = f"{key}="
+lines = path.read_text(encoding="utf-8").splitlines()
+result = []
+replaced = False
+for line in lines:
+    if line.startswith(prefix):
+        if not replaced:
+            result.append(f"{prefix}{value}")
+            replaced = True
+    else:
+        result.append(line)
+if not replaced:
+    result.append(f"{prefix}{value}")
+path.write_text("\n".join(result) + "\n", encoding="utf-8")
+PY
 }
 
 if [[ ${EUID} -ne 0 ]]; then
@@ -44,7 +85,28 @@ export DEBIAN_FRONTEND=noninteractive
 log "Устанавливаю системные компоненты"
 rm -f /etc/apt/sources.list.d/grafana.list
 apt-get update
-apt-get install -y python3 python3-venv python3-pip postgresql nginx rsync curl
+apt-get install -y \
+    python3 python3-venv python3-pip postgresql nginx rsync curl iproute2 \
+    mkcert libnss3-tools openssl
+
+SERVER_IP="${QUEUE_SERVER_IP:-}"
+if [[ -z "${SERVER_IP}" ]]; then
+    SERVER_IP="$(ip -4 route get 1.1.1.1 2>/dev/null \
+        | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}' \
+        || true)"
+fi
+if [[ -z "${SERVER_IP}" ]]; then
+    SERVER_IP="$(hostname -I | awk '{print $1}')"
+fi
+python3 - "${SERVER_IP}" <<'PY' || fail "не удалось определить корректный IPv4; задайте QUEUE_SERVER_IP"
+import ipaddress
+import sys
+
+address = ipaddress.ip_address(sys.argv[1])
+if address.version != 4 or address.is_loopback or address.is_unspecified:
+    raise ValueError("server address must be a non-loopback IPv4")
+PY
+log "Использую адрес сервера ${SERVER_IP}"
 
 if ! id "${APP_USER}" >/dev/null 2>&1; then
     useradd --create-home --home-dir "${APP_HOME}" --shell /bin/bash "${APP_USER}"
@@ -52,6 +114,12 @@ fi
 
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}"
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/deploy"
+
+BACKUP_DIR="/var/backups/queue-install/$(date +%Y%m%d-%H%M%S)"
+install -d -m 0700 "${BACKUP_DIR}"
+backup_file "${APP_DIR}/main.env" "main.env"
+backup_file "/etc/systemd/system/${SERVICE_NAME}" "queue.service"
+backup_file "/etc/nginx/sites-available/queue" "nginx-queue.conf"
 
 if [[ ! -f "${APP_DIR}/main.env" ]] \
     || ! grep -q "^DATABASE_URL=postgresql://${DB_USER}:" "${APP_DIR}/main.env"; then
@@ -92,13 +160,10 @@ if [[ ${FIRST_INSTALL} -eq 1 ]]; then
     runuser -u postgres -- psql -v ON_ERROR_STOP=1 \
         -c "ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER}"
 
-    SERVER_IP="$(hostname -I | awk '{print $1}')"
-    [[ -n "${SERVER_IP}" ]] || SERVER_IP="127.0.0.1"
-
     cat > "${APP_DIR}/main.env" <<EOF
 DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:5432/${DB_NAME}
 GRAFANA_DB_PASSWORD=${GRAFANA_DB_PASSWORD}
-CORS_ORIGINS=http://${SERVER_IP},http://localhost,http://127.0.0.1
+CORS_ORIGINS=http://${SERVER_IP},https://${SERVER_IP},http://localhost,http://127.0.0.1
 SESSION_TIMEOUT_SECONDS=300
 PIPER_PATH=${APP_DIR}/venv/bin/piper
 PIPER_MODEL=queue/tts/ru_RU-irina-medium.onnx
@@ -124,6 +189,9 @@ Grafana: admin
 Пароль Grafana: ${GRAFANA_ADMIN_PASSWORD}
 EOF
 fi
+
+set_env_value "${APP_DIR}/main.env" "CORS_ORIGINS" \
+    "http://${SERVER_IP},https://${SERVER_IP},http://localhost,http://127.0.0.1"
 
 GRAFANA_DB_PASSWORD="$(sed -n 's/^GRAFANA_DB_PASSWORD=//p' "${APP_DIR}/main.env")"
 if [[ -z "${GRAFANA_DB_PASSWORD}" ]]; then
@@ -369,12 +437,53 @@ else
     fail "не найдена команда управления Grafana"
 fi
 
-log "Настраиваю веб-доступ"
+log "Настраиваю локальный центр сертификации и HTTPS"
+if [[ ! -s "${MKCERT_CA_DIR}/rootCA.pem" || ! -s "${MKCERT_CA_DIR}/rootCA-key.pem" ]]; then
+    CA_CREATED=1
+    rm -f "${MKCERT_CA_DIR}/rootCA.pem" "${MKCERT_CA_DIR}/rootCA-key.pem"
+fi
+install -d -m 0700 "${MKCERT_CA_DIR}"
+env CAROOT="${MKCERT_CA_DIR}" mkcert -install
+chmod 0600 "${MKCERT_CA_DIR}/rootCA-key.pem"
+chmod 0644 "${MKCERT_CA_DIR}/rootCA.pem"
+install -m 0644 "${MKCERT_CA_DIR}/rootCA.pem" "${ROOT_CA_EXPORT}"
+
+install -d -m 0700 "${TLS_DIR}"
+if [[ ${CA_CREATED} -eq 1 ]] \
+    || [[ ! -s "${TLS_DIR}/queue.pem" ]] \
+    || [[ ! -s "${TLS_DIR}/queue-key.pem" ]] \
+    || ! openssl verify -CAfile "${MKCERT_CA_DIR}/rootCA.pem" "${TLS_DIR}/queue.pem" >/dev/null 2>&1 \
+    || ! openssl x509 -in "${TLS_DIR}/queue.pem" -noout -checkend 2592000 >/dev/null 2>&1 \
+    || ! openssl x509 -in "${TLS_DIR}/queue.pem" -noout -checkip "${SERVER_IP}" >/dev/null 2>&1; then
+    CERT_RENEWED=1
+    rm -f "${TLS_DIR}/queue.pem" "${TLS_DIR}/queue-key.pem"
+    env CAROOT="${MKCERT_CA_DIR}" mkcert \
+        -cert-file "${TLS_DIR}/queue.pem" \
+        -key-file "${TLS_DIR}/queue-key.pem" \
+        "${SERVER_IP}" localhost 127.0.0.1
+fi
+chown root:root "${TLS_DIR}/queue.pem" "${TLS_DIR}/queue-key.pem"
+chmod 0644 "${TLS_DIR}/queue.pem"
+chmod 0600 "${TLS_DIR}/queue-key.pem"
+openssl x509 -in "${TLS_DIR}/queue.pem" -noout -checkip "${SERVER_IP}" >/dev/null \
+    || fail "выпущенный сертификат не содержит IP ${SERVER_IP}"
+openssl verify -CAfile "${MKCERT_CA_DIR}/rootCA.pem" "${TLS_DIR}/queue.pem" >/dev/null \
+    || fail "сертификат Nginx не подписан текущим локальным центром сертификации"
+
+log "Настраиваю веб-доступ HTTP + HTTPS"
 cat > /etc/nginx/sites-available/queue <<'EOF'
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
+
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+
     server_name _;
+
+    ssl_certificate /etc/nginx/tls/queue.pem;
+    ssl_certificate_key /etc/nginx/tls/queue-key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     client_max_body_size 55m;
 
@@ -401,7 +510,7 @@ systemctl enable --now nginx
 systemctl reload nginx
 
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q '^Status: active'; then
-    ufw allow 'Nginx HTTP'
+    ufw allow 'Nginx Full'
     ufw allow 3000/tcp
 fi
 
@@ -416,6 +525,21 @@ done
 if ! curl --fail --silent --output /dev/null http://127.0.0.1:8000/queue/login.html; then
     journalctl -u "${SERVICE_NAME}" -n 30 --no-pager >&2
     fail "приложение не ответило. Выше показан журнал ошибки"
+fi
+
+HTTP_STATUS="$(curl --silent --noproxy '*' --output /dev/null --write-out '%{http_code}' \
+    "http://${SERVER_IP}/queue/login.html" || true)"
+[[ "${HTTP_STATUS}" == "200" ]] \
+    || fail "Nginx по HTTP вернул код ${HTTP_STATUS} вместо 200"
+
+HTTPS_STATUS="$(curl --silent --insecure --noproxy '*' --output /dev/null --write-out '%{http_code}' \
+    "https://${SERVER_IP}/queue/login.html" || true)"
+[[ "${HTTPS_STATUS}" == "200" ]] \
+    || fail "Nginx по HTTPS вернул код ${HTTPS_STATUS} вместо 200"
+
+if ! openssl s_client -connect 127.0.0.1:443 -servername "${SERVER_IP}" </dev/null 2>/dev/null \
+    | openssl x509 -noout -checkip "${SERVER_IP}" >/dev/null; then
+    fail "Nginx отдаёт сертификат без IP ${SERVER_IP}"
 fi
 
 for _ in {1..30}; do
@@ -433,16 +557,21 @@ fi
 touch "${APP_DIR}/.queue-installed"
 chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.queue-installed"
 
-SERVER_IP="$(hostname -I | awk '{print $1}')"
-[[ -n "${SERVER_IP}" ]] || SERVER_IP="127.0.0.1"
-
 printf '\n\033[1;32mУстановка завершена.\033[0m\n'
-printf 'Вход:       http://%s/queue/login.html\n' "${SERVER_IP}"
+printf 'HTTP:       http://%s/queue/login.html\n' "${SERVER_IP}"
+printf 'HTTPS:      https://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'Терминал:   http://%s/queue/terminal.html\n' "${SERVER_IP}"
 printf 'Табло:      http://%s/queue/board-media.html\n' "${SERVER_IP}"
 printf 'Статистика: http://%s:3000/d/queue-statistics/queue-statistics\n' "${SERVER_IP}"
 printf 'Пароли:     sudo cat /root/queue-credentials.txt\n'
+printf 'Сертификат: %s\n' "${ROOT_CA_EXPORT}"
+printf 'Резервная копия: %s\n' "${BACKUP_DIR}"
 printf 'Grafana:    просмотр без пароля; редактирование через admin\n'
+if [[ ${CA_CREATED} -eq 1 ]]; then
+    printf '\033[1;33mУстановите %s на каждый компьютер и табло.\033[0m\n' "${ROOT_CA_EXPORT}"
+elif [[ ${CERT_RENEWED} -eq 1 ]]; then
+    printf 'Сертификат сервера обновлён для IP %s; корневой сертификат не изменился.\n' "${SERVER_IP}"
+fi
 if [[ ${FIRST_INSTALL} -ne 1 ]]; then
     printf 'Настройки и пользовательские данные сохранены.\n'
 fi
