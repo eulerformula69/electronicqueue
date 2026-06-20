@@ -259,14 +259,15 @@ def migrate_operator_choice_schema(engine):
 
 
 def migrate_operator_status_periods_schema(engine):
-    """Create operator status history and seed the currently known state."""
+    """Create operator status history and migrate older column types."""
     ddl = """
     CREATE TABLE IF NOT EXISTS operator_status_periods (
         id bigserial PRIMARY KEY,
         operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
         window_id integer REFERENCES windows(id) ON DELETE SET NULL,
         status varchar(16) NOT NULL,
-        started_at timestamp without time zone NOT NULL DEFAULT LOCALTIMESTAMP,
+        started_at timestamp without time zone NOT NULL
+            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk'),
         ended_at timestamp without time zone,
         CONSTRAINT ck_operator_status_periods_status
             CHECK (status IN ('online', 'break', 'offline')),
@@ -297,27 +298,16 @@ def migrate_operator_status_periods_schema(engine):
                     USING started_at AT TIME ZONE 'Asia/Irkutsk',
                 ALTER COLUMN ended_at TYPE timestamp without time zone
                     USING ended_at AT TIME ZONE 'Asia/Irkutsk',
-                ALTER COLUMN started_at SET DEFAULT LOCALTIMESTAMP;
+                ALTER COLUMN started_at SET DEFAULT
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
         END IF;
     END
     $$;
 
-    INSERT INTO operator_status_periods (operator_id, window_id, status)
-    SELECT
-        operators.id,
-        operators.window_id,
-        CASE
-            WHEN windows.status IN ('online', 'break', 'offline') THEN windows.status
-            ELSE 'offline'
-        END
-    FROM operators
-    LEFT JOIN windows ON windows.id = operators.window_id
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM operator_status_periods periods
-        WHERE periods.operator_id = operators.id
-          AND periods.ended_at IS NULL
-    );
+    ALTER TABLE operator_status_periods
+        ALTER COLUMN started_at SET DEFAULT
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
+
     """
 
     with engine.begin() as conn:
@@ -424,7 +414,9 @@ class OperatorStatusPeriod(Base):
     window_id = Column(Integer, ForeignKey("windows.id", ondelete="SET NULL"), nullable=True)
     status = Column(String(16), nullable=False)
     started_at = Column(
-        TIMESTAMP(timezone=False), nullable=False, server_default=text("LOCALTIMESTAMP")
+        TIMESTAMP(timezone=False),
+        nullable=False,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
     )
     ended_at = Column(TIMESTAMP(timezone=False), nullable=True)
 
@@ -463,12 +455,13 @@ def record_operator_status(
         return current_period
 
     if current_period:
-        current_period.ended_at = datetime.now()
+        current_period.ended_at = func.timezone("Asia/Irkutsk", func.current_timestamp())
 
     new_period = OperatorStatusPeriod(
         operator_id=operator_id,
         window_id=window_id,
         status=normalized_status,
+        started_at=func.timezone("Asia/Irkutsk", func.current_timestamp()),
     )
     db.add(new_period)
     db.flush()
