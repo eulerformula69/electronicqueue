@@ -266,8 +266,8 @@ def migrate_operator_status_periods_schema(engine):
         operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
         window_id integer REFERENCES windows(id) ON DELETE SET NULL,
         status varchar(16) NOT NULL,
-        started_at timestamptz NOT NULL DEFAULT now(),
-        ended_at timestamptz,
+        started_at timestamp without time zone NOT NULL DEFAULT LOCALTIMESTAMP,
+        ended_at timestamp without time zone,
         CONSTRAINT ck_operator_status_periods_status
             CHECK (status IN ('online', 'break', 'offline')),
         CONSTRAINT ck_operator_status_periods_dates
@@ -280,6 +280,27 @@ def migrate_operator_status_periods_schema(engine):
 
     CREATE INDEX IF NOT EXISTS ix_operator_status_period
         ON operator_status_periods (operator_id, started_at);
+
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'operator_status_periods'
+              AND column_name = 'started_at'
+              AND data_type = 'timestamp with time zone'
+        ) THEN
+            ALTER TABLE operator_status_periods
+                ALTER COLUMN started_at DROP DEFAULT,
+                ALTER COLUMN started_at TYPE timestamp without time zone
+                    USING started_at AT TIME ZONE 'Asia/Irkutsk',
+                ALTER COLUMN ended_at TYPE timestamp without time zone
+                    USING ended_at AT TIME ZONE 'Asia/Irkutsk',
+                ALTER COLUMN started_at SET DEFAULT LOCALTIMESTAMP;
+        END IF;
+    END
+    $$;
 
     INSERT INTO operator_status_periods (operator_id, window_id, status)
     SELECT
@@ -402,8 +423,10 @@ class OperatorStatusPeriod(Base):
     operator_id = Column(Integer, ForeignKey("operators.id", ondelete="CASCADE"), nullable=False)
     window_id = Column(Integer, ForeignKey("windows.id", ondelete="SET NULL"), nullable=True)
     status = Column(String(16), nullable=False)
-    started_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
-    ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    started_at = Column(
+        TIMESTAMP(timezone=False), nullable=False, server_default=text("LOCALTIMESTAMP")
+    )
+    ended_at = Column(TIMESTAMP(timezone=False), nullable=True)
 
 
 def record_operator_status(
@@ -440,7 +463,7 @@ def record_operator_status(
         return current_period
 
     if current_period:
-        current_period.ended_at = func.now()
+        current_period.ended_at = datetime.now()
 
     new_period = OperatorStatusPeriod(
         operator_id=operator_id,
