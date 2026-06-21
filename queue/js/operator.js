@@ -10,6 +10,17 @@ let operatorSocket = null;
 // где события по WS по какой-то причине не доходят.
 let operatorPollingTimer = null;
 let operatorPollingInProgress = false;
+const SESSION_EXPIRED_MESSAGE = "Ваша сессия истекла. Войдите в систему снова.";
+
+function handleExpiredSession(message) {
+    const alertMessage = typeof message === "string" && message.trim()
+        ? message
+        : SESSION_EXPIRED_MESSAGE;
+
+    alert(alertMessage);
+    sessionStorage.clear();
+    window.location.href = "/queue/login.html";
+}
 
 // ==================== Аудиооповещение о новом тикете ====================
 
@@ -52,6 +63,10 @@ async function init() {
         const res = await fetch(`${CONFIG.API_URL}/auth/me`, {
             headers: { "session-id": sessionToken } 
         });
+        if (res.status === 401) {
+            handleExpiredSession();
+            return;
+        }
         if (!res.ok) {
             window.location.href = "/queue/login.html";
             return;
@@ -90,9 +105,7 @@ function initWebSocket() {
     operatorSocket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         if (data.type === "session_expired") {
-            alert(data.message);
-            sessionStorage.clear();
-            window.location.href = "login.html";
+            handleExpiredSession(data.message);
             return;
         }
 

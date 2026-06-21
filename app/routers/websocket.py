@@ -89,7 +89,10 @@ async def websocket_endpoint(websocket: WebSocket):
                         manager.session_id_to_ws[session_id] = websocket
                     else:
                         # Если сессии нет в БД — уведомляем клиента и закрываем WS
-                        await websocket.send_json({"type": "session_expired"})
+                        await websocket.send_json({
+                            "type": "session_expired",
+                            "message": "Ваша сессия истекла. Войдите в систему снова.",
+                        })
                         await websocket.close()
                         break
                 except Exception:
