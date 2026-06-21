@@ -107,6 +107,8 @@ async def create_ticket(
         )
 
         db.add(db_ticket)
+        db.flush()
+        db_ticket.root_ticket_id = db_ticket.id
 
         if not target_window_id and settings.get("queue_mode") == "dynamic_operator_distribution":
             assign_ticket_to_least_loaded_window(db, db_ticket)
@@ -164,6 +166,7 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
 
     # Завершаем тикет
     ticket.status = "finished"
+    ticket.completion_reason = "completed"
     ticket.finished_at = datetime.now() #text("CURRENT_TIMESTAMP")
 
     db.commit()
@@ -235,9 +238,11 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
             return {"detail": "Нет ожидающих билетов"}
 
         ticket.status = "called"
+        ticket.completion_reason = None
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
+        ticket.finished_at = None
 
         db.commit()
         db.refresh(ticket)
@@ -301,9 +306,11 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
 
         # Обновляем статус билета и привязываем к текущему окну
         ticket.status = "called"
+        ticket.completion_reason = None
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
+        ticket.finished_at = None
 
         db.commit()
         db.refresh(ticket)
@@ -346,6 +353,7 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
 
     # Устанавливаем статус отмены и время завершения
     ticket.status = "cancelled"
+    ticket.completion_reason = "cancelled"
     ticket.finished_at = datetime.now()
 
     db.commit()
@@ -491,10 +499,12 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
 
         ticket.status = "waiting"
+        ticket.completion_reason = None
         ticket.window_id = None
         ticket.target_window_id = target_window.id
         ticket.created_at = datetime.now()
         ticket.called_at = None
+        ticket.finished_at = None
 
         db.commit()
         db.refresh(ticket)
@@ -524,6 +534,12 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
         if not ticket:
             return {"detail": "Сначала завершите текущего клиента или тикет не найден"}
 
+        if ticket.window_id != operator.window_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Этот билет не является текущим билетом вашего рабочего места",
+            )
+
         service = db.query(Service).filter(Service.id == data.new_service_id).first()
         if not service:
             return {"detail": "Новая услуга не найдена"}
@@ -543,18 +559,33 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
         if not windows:
             return {"detail": "Нет доступных окон для этой услуги, Пожалуйста сообщите клиенту"}
 
-        ticket.service_id = service.id
-        ticket.status = "waiting"
-        ticket.window_id = None
-        ticket.target_window_id = None
-        ticket.created_at = datetime.now() #text("CURRENT_TIMESTAMP")
-        ticket.called_at = None
+        redirected_at = datetime.now()
+        root_ticket_id = ticket.root_ticket_id or ticket.id
+
+        ticket.status = "finished"
+        ticket.completion_reason = "redirected"
+        ticket.finished_at = redirected_at
+
+        redirected_ticket = Ticket(
+            number=ticket.number,
+            service_id=service.id,
+            status="waiting",
+            completion_reason=None,
+            root_ticket_id=root_ticket_id,
+            window_id=None,
+            target_window_id=None,
+            created_at=redirected_at,
+            called_at=None,
+            finished_at=None,
+        )
+        db.add(redirected_ticket)
+        db.flush()
 
         if settings.get("queue_mode") == "dynamic_operator_distribution":
-            assign_ticket_to_least_loaded_window(db, ticket)
+            assign_ticket_to_least_loaded_window(db, redirected_ticket)
 
         db.commit()
-        db.refresh(ticket)
+        db.refresh(redirected_ticket)
 
         await manager.broadcast({
             "type": "queue_updated",
@@ -563,7 +594,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
 
         asyncio.create_task(broadcast_board())
 
-        return {"message": "Билет перенаправлен", "ticket": ticket}
+        return {"message": "Билет перенаправлен", "ticket": redirected_ticket}
 
     finally:
         db.close()

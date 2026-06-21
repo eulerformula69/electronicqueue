@@ -76,6 +76,58 @@ def migrate_operator_choice_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_stages_schema(engine):
+    """Add ticket-chain metadata and backfill tickets from older releases."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS completion_reason varchar(16),
+        ADD COLUMN IF NOT EXISTS root_ticket_id integer;
+
+    UPDATE tickets
+    SET completion_reason = CASE
+        WHEN status = 'finished' THEN 'completed'
+        WHEN status = 'cancelled' THEN 'cancelled'
+        ELSE NULL
+    END
+    WHERE completion_reason IS NULL;
+
+    UPDATE tickets SET root_ticket_id = id WHERE root_ticket_id IS NULL;
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'fk_tickets_root_ticket_id'
+              AND conrelid = 'tickets'::regclass
+        ) THEN
+            ALTER TABLE tickets
+                ADD CONSTRAINT fk_tickets_root_ticket_id
+                FOREIGN KEY (root_ticket_id) REFERENCES tickets(id);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'ck_tickets_completion_reason'
+              AND conrelid = 'tickets'::regclass
+        ) THEN
+            ALTER TABLE tickets
+                ADD CONSTRAINT ck_tickets_completion_reason
+                CHECK (
+                    completion_reason IS NULL OR completion_reason IN
+                    ('completed', 'redirected', 'cancelled')
+                );
+        END IF;
+    END
+    $$;
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_root_ticket_id
+        ON tickets (root_ticket_id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

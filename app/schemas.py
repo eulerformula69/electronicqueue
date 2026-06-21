@@ -1,4 +1,5 @@
-from typing import List
+from datetime import datetime
+from typing import List, Literal
 
 from pydantic import BaseModel
 
@@ -51,6 +52,23 @@ class ServiceOperatorChoiceUpdate(BaseModel):
 class TicketCreate(BaseModel):
     service_id: int
     window_id: int | None = None
+
+
+class TicketRead(BaseModel):
+    id: int
+    number: int
+    service_id: int
+    status: str
+    completion_reason: Literal["completed", "redirected", "cancelled"] | None = None
+    root_ticket_id: int | None = None
+    window_id: int | None = None
+    target_window_id: int | None = None
+    created_at: datetime | None = None
+    called_at: datetime | None = None
+    finished_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
 
 
 class OperatorCreate(BaseModel):

@@ -873,7 +873,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS served\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nJOIN operators o ON o.window_id = w.id\r\nWHERE t.finished_at IS NOT NULL\r\n  -- Используем встроенный макрос фильтрации времени\r\n  AND $__timeFilter(t.finished_at)\r\n  -- Оптимизированный фильтр по сотрудникам\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "rawSql": "SELECT count(t.id) AS served\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nJOIN operators o ON o.window_id = w.id\r\nWHERE t.completion_reason = 'completed'\r\n  -- Используем встроенный макрос фильтрации времени\r\n  AND $__timeFilter(t.finished_at)\r\n  -- Оптимизированный фильтр по сотрудникам\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
           "refId": "A",
           "sql": {
             "columns": [

@@ -22,10 +22,25 @@ class Service(Base):
 
 class Ticket(Base):
     __tablename__ = "tickets"
+    __table_args__ = (
+        CheckConstraint(
+            "completion_reason IS NULL OR completion_reason IN "
+            "('completed', 'redirected', 'cancelled')",
+            name="ck_tickets_completion_reason",
+        ),
+        Index("ix_tickets_root_ticket_id", "root_ticket_id"),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer, nullable=False)
     service_id = Column(Integer, ForeignKey("services.id"))
     status = Column(String, default="waiting")
+    completion_reason = Column(String(16), nullable=True)
+    root_ticket_id = Column(
+        Integer,
+        ForeignKey("tickets.id", name="fk_tickets_root_ticket_id"),
+        nullable=True,
+    )
     window_id = Column(Integer, nullable=True)
     target_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
