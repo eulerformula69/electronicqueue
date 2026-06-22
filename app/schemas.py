@@ -108,6 +108,7 @@ class WindowServiceCreate(BaseModel):
 class WindowServiceRead(BaseModel):
     window_id: int
     service_id: int
+    priority: int = 1
     class Config:
         from_attributes = True
 
@@ -143,7 +144,7 @@ class PlaylistUpdate(BaseModel):
 
 class MapObject(BaseModel):
     id: str
-    type: Literal["room", "workplace"]
+    type: Literal["room", "workplace", "wall", "door", "label", "zone"]
     x: int
     y: int
     width: int

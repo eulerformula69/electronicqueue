@@ -66,7 +66,15 @@ def _validate_map_geometry(data: OfficeMap) -> None:
             raise HTTPException(status_code=400, detail="Некорректный ID объекта карты")
         ids.add(item.id)
 
-        min_width, min_height = ((180, 120) if item.type == "room" else (70, 50))
+        minimum_sizes = {
+            "room": (180, 120),
+            "workplace": (70, 50),
+            "wall": (8, 8),
+            "door": (40, 12),
+            "label": (60, 24),
+            "zone": (100, 80),
+        }
+        min_width, min_height = minimum_sizes[item.type]
         if item.width < min_width or item.height < min_height:
             raise HTTPException(status_code=400, detail="Объект карты слишком мал")
         if item.x < 0 or item.y < 0:
@@ -75,8 +83,8 @@ def _validate_map_geometry(data: OfficeMap) -> None:
             raise HTTPException(status_code=400, detail="Объект выходит за границы карты")
         if len(item.label) > 100:
             raise HTTPException(status_code=400, detail="Слишком длинное название объекта")
-        if item.type == "room" and item.window_id is not None:
-            raise HTTPException(status_code=400, detail="Помещение нельзя привязать к окну")
+        if item.type != "workplace" and item.window_id is not None:
+            raise HTTPException(status_code=400, detail="Этот объект нельзя привязать к окну")
 
 
 @router.get("/admin/map", response_model=OfficeMap, tags=["Admin"])

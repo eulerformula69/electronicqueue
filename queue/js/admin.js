@@ -1164,6 +1164,7 @@ function loadStats() {
 //////// КАРТА
 let officeMap = {version: 1, width: 1200, height: 700, objects: []};
 let selectedMapObjectId = null;
+let selectedMapObjectIds = new Set();
 let mapWindows = [];
 let mapOperators = [];
 let mapServices = [];
@@ -1174,6 +1175,14 @@ let mapWorldWidth = 6000;
 let mapWorldHeight = 4000;
 const MAP_GRID_SIZE = 20;
 let mapSnapEnabled = localStorage.getItem("map_snap_enabled") === "true";
+let mapUndoStack = [];
+let mapRedoStack = [];
+let mapClipboard = [];
+let mapSearchQuery = "";
+let mapStatusFilter = "all";
+let mapOperatorFilter = "all";
+let mapServiceFilter = "all";
+let mapSmartGuides = [];
 
 async function mapRequest(url, options = {}) {
     const response = await fetch(url, {
@@ -1198,20 +1207,34 @@ async function loadMapEditor() {
 
     setForm(`<div class="map-loading">Загрузка карты...</div>`);
     try {
-        [officeMap, mapWindows, mapOperators, mapServices] = await Promise.all([
+        const [loadedMap, loadedWindows, loadedOperators, loadedServices, loadedLinks] = await Promise.all([
             mapRequest(`${API}/admin/map`),
             fetchJSON(`${API}/windows/?limit=500`),
             fetchJSON(`${API}/operators/?limit=500`),
-            fetchJSON(`${API}/services/?limit=500`)
+            fetchJSON(`${API}/services/?limit=500`),
+            fetchJSON(`${API}/window-services/?limit=500`)
         ]);
+        officeMap = loadedMap;
+        mapWindows = loadedWindows;
+        mapOperators = loadedOperators;
+        mapServices = loadedServices;
         if (!Array.isArray(mapWindows)) mapWindows = [];
         if (!Array.isArray(mapOperators)) mapOperators = [];
         if (!Array.isArray(mapServices)) mapServices = [];
         mapWindowServices = {};
+        if (Array.isArray(loadedLinks)) {
+            loadedLinks.forEach(link => {
+                (mapWindowServices[link.window_id] ||= []).push(link);
+            });
+        }
         mapWorldWidth = Math.max(6000, officeMap.width);
         mapWorldHeight = Math.max(4000, officeMap.height);
         mapZoom = 1;
         selectedMapObjectId = null;
+        selectedMapObjectIds = new Set();
+        mapUndoStack = [];
+        mapRedoStack = [];
+        mapClipboard = [];
         mapDirty = false;
         renderMapEditor();
     } catch (error) {
@@ -1225,6 +1248,23 @@ function renderMapEditor() {
             <div class="map-toolbar">
                 <button class="map-tool-room" onclick="addMapObject('room')">Добавить помещение</button>
                 <button class="map-tool-workplace" onclick="addMapObject('workplace')">Добавить физический стол</button>
+                <details class="map-tools-menu">
+                    <summary>Другие объекты</summary>
+                    <div class="map-tools-popover">
+                        <button onclick="addMapObject('wall')">Стена</button>
+                        <button onclick="addMapObject('door')">Дверь</button>
+                        <button onclick="addMapObject('label')">Подпись</button>
+                        <button onclick="addMapObject('zone')">Зона</button>
+                    </div>
+                </details>
+                <select class="map-template-select" onchange="applyMapTemplate(this.value); this.value=''">
+                    <option value="">Шаблоны размеров</option>
+                    <option value="room-small">Помещение 400 × 300</option>
+                    <option value="room-large">Помещение 800 × 600</option>
+                    <option value="workplace">Стол 120 × 80</option>
+                    <option value="wall-horizontal">Стена 400 × 12</option>
+                    <option value="wall-vertical">Стена 12 × 400</option>
+                </select>
                 <div class="map-zoom-controls">
                     <button title="Отдалить" onclick="changeMapZoom(-0.15)">−</button>
                     <button id="map-zoom-value" class="map-zoom-value" title="Вернуть масштаб 100%" onclick="resetMapZoom()">100%</button>
@@ -1235,9 +1275,45 @@ function renderMapEditor() {
                         onchange="toggleMapSnap(this.checked)">
                     <span>Привязка к сетке</span>
                 </label>
+                <button title="Отменить (Ctrl+Z)" onclick="undoMapChange()">↶</button>
+                <button title="Повторить (Ctrl+Y)" onclick="redoMapChange()">↷</button>
+                <details class="map-tools-menu">
+                    <summary>Выравнивание</summary>
+                    <div class="map-tools-popover map-align-popover">
+                        <button onclick="alignMapSelection('left')">По левому краю</button>
+                        <button onclick="alignMapSelection('center')">По центру</button>
+                        <button onclick="alignMapSelection('top')">По верхнему краю</button>
+                        <button onclick="alignMapSelection('middle')">По середине</button>
+                        <button onclick="distributeMapSelection('horizontal')">Интервалы по горизонтали</button>
+                        <button onclick="distributeMapSelection('vertical')">Интервалы по вертикали</button>
+                    </div>
+                </details>
+                <button title="Показать всё" onclick="fitMapContent()">Вся карта</button>
+                <button title="Показать выбранное" onclick="focusMapSelection()">К выбранному</button>
                 <span class="map-toolbar-spacer"></span>
                 <span id="map-save-state" class="map-save-state">Все изменения сохранены</span>
                 <button class="map-save-button" onclick="saveOfficeMap()">Сохранить карту</button>
+            </div>
+            <div class="map-filterbar">
+                <input id="map-search" placeholder="Поиск стола, рабочего места или оператора"
+                    oninput="setMapSearch(this.value)">
+                <select onchange="setMapStatusFilter(this.value)">
+                    <option value="all">Все статусы</option>
+                    <option value="online">Онлайн</option>
+                    <option value="break">Перерыв</option>
+                    <option value="offline">Офлайн</option>
+                    <option value="unconfigured">Не настроено</option>
+                    <option value="conflict">Конфликты</option>
+                </select>
+                <select onchange="setMapOperatorFilter(this.value)">
+                    <option value="all">Все операторы</option>
+                    ${mapOperators.map(item => `<option value="${item.id}">${escapeMapHtml(item.name)}</option>`).join("")}
+                </select>
+                <select onchange="setMapServiceFilter(this.value)">
+                    <option value="all">Все услуги</option>
+                    ${mapServices.map(item => `<option value="${item.id}">${escapeMapHtml(item.name)}</option>`).join("")}
+                </select>
+                <span class="map-filter-hint">Shift + клик или Shift + рамка — множественный выбор</span>
             </div>
             <div class="map-editor-body">
                 <div id="map-viewport" class="map-canvas-scroll">
@@ -1247,6 +1323,7 @@ function renderMapEditor() {
                 </div>
                 <aside id="map-properties" class="map-properties"></aside>
             </div>
+            <div id="map-minimap" class="map-minimap" title="Навигация по карте"></div>
         </div>
     `);
 
@@ -1254,7 +1331,10 @@ function renderMapEditor() {
     initializeMapViewport();
     renderMapObjects();
     renderMapProperties();
+    renderMapMinimap();
     updateMapSaveState();
+    document.removeEventListener("keydown", handleMapKeyboard);
+    document.addEventListener("keydown", handleMapKeyboard);
 }
 
 function initializeMapViewport() {
@@ -1266,8 +1346,13 @@ function initializeMapViewport() {
         event.preventDefault();
         setMapZoom(mapZoom + (event.deltaY < 0 ? 0.12 : -0.12), event.clientX, event.clientY);
     }, {passive: false});
+    viewport.addEventListener("scroll", renderMapMinimap, {passive: true});
 
     viewport.addEventListener("pointerdown", event => {
+        if (event.button === 0 && event.shiftKey && event.target === canvas) {
+            startMapMarquee(event, viewport, canvas);
+            return;
+        }
         const panRequested = event.button === 1 || (event.button === 0 && event.target === canvas);
         if (!panRequested) return;
         event.preventDefault();
@@ -1291,6 +1376,43 @@ function initializeMapViewport() {
         viewport.addEventListener("pointerup", stop, {once: true});
         viewport.addEventListener("pointercancel", stop, {once: true});
     });
+}
+
+function startMapMarquee(event, viewport, canvas) {
+    event.preventDefault();
+    const canvasRect = canvas.getBoundingClientRect();
+    const startX = (event.clientX - canvasRect.left) / mapZoom;
+    const startY = (event.clientY - canvasRect.top) / mapZoom;
+    const marquee = document.createElement("div");
+    marquee.className = "map-selection-marquee";
+    canvas.appendChild(marquee);
+    viewport.setPointerCapture(event.pointerId);
+
+    const move = moveEvent => {
+        const currentX = (moveEvent.clientX - canvasRect.left) / mapZoom;
+        const currentY = (moveEvent.clientY - canvasRect.top) / mapZoom;
+        const left = Math.min(startX, currentX);
+        const top = Math.min(startY, currentY);
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        Object.assign(marquee.style, {left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`});
+        selectedMapObjectIds = new Set(officeMap.objects.filter(item =>
+            item.x < left + width && item.x + item.width > left &&
+            item.y < top + height && item.y + item.height > top
+        ).map(item => item.id));
+        selectedMapObjectId = [...selectedMapObjectIds][0] || null;
+        document.querySelectorAll(".map-object").forEach(element => {
+            element.classList.toggle("selected", selectedMapObjectIds.has(element.dataset.objectId));
+        });
+    };
+    const stop = () => {
+        marquee.remove();
+        viewport.removeEventListener("pointermove", move);
+        renderMapProperties();
+    };
+    viewport.addEventListener("pointermove", move);
+    viewport.addEventListener("pointerup", stop, {once: true});
+    viewport.addEventListener("pointercancel", stop, {once: true});
 }
 
 function updateMapSurfaceSize() {
@@ -1341,19 +1463,171 @@ function snapMapValue(value) {
     return mapSnapEnabled ? Math.round(value / MAP_GRID_SIZE) * MAP_GRID_SIZE : value;
 }
 
+function captureMapState() {
+    return JSON.stringify({objects: officeMap.objects, width: mapWorldWidth, height: mapWorldHeight});
+}
+
+function pushMapHistory() {
+    mapUndoStack.push(captureMapState());
+    if (mapUndoStack.length > 100) mapUndoStack.shift();
+    mapRedoStack = [];
+}
+
+function restoreMapState(snapshot) {
+    const state = JSON.parse(snapshot);
+    officeMap.objects = state.objects;
+    mapWorldWidth = state.width;
+    mapWorldHeight = state.height;
+    selectedMapObjectIds = new Set(
+        [...selectedMapObjectIds].filter(id => officeMap.objects.some(item => item.id === id))
+    );
+    selectedMapObjectId = [...selectedMapObjectIds][0] || null;
+    updateMapSurfaceSize();
+    markMapDirty();
+    renderMapObjects();
+    renderMapProperties();
+    renderMapMinimap();
+}
+
+function undoMapChange() {
+    if (!mapUndoStack.length) return;
+    mapRedoStack.push(captureMapState());
+    restoreMapState(mapUndoStack.pop());
+}
+
+function redoMapChange() {
+    if (!mapRedoStack.length) return;
+    mapUndoStack.push(captureMapState());
+    restoreMapState(mapRedoStack.pop());
+}
+
+function getSelectedMapObjects() {
+    return officeMap.objects.filter(item => selectedMapObjectIds.has(item.id));
+}
+
+function copyMapSelection() {
+    mapClipboard = getSelectedMapObjects().map(item => structuredClone(item));
+}
+
+function pasteMapSelection() {
+    if (!mapClipboard.length) return;
+    pushMapHistory();
+    const copies = mapClipboard.map(item => ({
+        ...structuredClone(item),
+        id: createMapObjectId(),
+        x: clampMapValue(item.x + 30, 0, mapWorldWidth - item.width),
+        y: clampMapValue(item.y + 30, 0, mapWorldHeight - item.height)
+    }));
+    officeMap.objects.push(...copies);
+    selectedMapObjectIds = new Set(copies.map(item => item.id));
+    selectedMapObjectId = copies[0]?.id || null;
+    mapClipboard = copies.map(item => structuredClone(item));
+    markMapDirty();
+    renderMapObjects();
+    renderMapProperties();
+    renderMapMinimap();
+}
+
+function duplicateMapSelection() {
+    copyMapSelection();
+    pasteMapSelection();
+}
+
+function handleMapKeyboard(event) {
+    if (!document.getElementById("map-canvas")) return;
+    const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName) || event.target.isContentEditable;
+    if (typing && event.key !== "Escape") return;
+    const key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && key === "z") {
+        event.preventDefault();
+        event.shiftKey ? redoMapChange() : undoMapChange();
+    } else if ((event.ctrlKey || event.metaKey) && key === "y") {
+        event.preventDefault(); redoMapChange();
+    } else if ((event.ctrlKey || event.metaKey) && key === "c") {
+        event.preventDefault(); copyMapSelection();
+    } else if ((event.ctrlKey || event.metaKey) && key === "v") {
+        event.preventDefault(); pasteMapSelection();
+    } else if ((event.ctrlKey || event.metaKey) && key === "d") {
+        event.preventDefault(); duplicateMapSelection();
+    } else if ((event.key === "Delete" || event.key === "Backspace") && selectedMapObjectIds.size) {
+        event.preventDefault(); deleteSelectedMapObject();
+    } else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        const step = event.shiftKey ? MAP_GRID_SIZE : 1;
+        const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+        const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+        moveMapSelection(dx, dy);
+    } else if (event.key === "Escape") {
+        selectMapObject(null);
+    }
+}
+
+function moveMapSelection(dx, dy) {
+    const objects = getSelectedMapObjects();
+    if (!objects.length) return;
+    pushMapHistory();
+    objects.forEach(item => {
+        item.x = clampMapValue(item.x + dx, 0, mapWorldWidth - item.width);
+        item.y = clampMapValue(item.y + dy, 0, mapWorldHeight - item.height);
+    });
+    markMapDirty();
+    renderMapObjects();
+    renderMapProperties();
+}
+
+function alignMapSelection(mode) {
+    const objects = getSelectedMapObjects();
+    if (objects.length < 2) return;
+    pushMapHistory();
+    const left = Math.min(...objects.map(item => item.x));
+    const top = Math.min(...objects.map(item => item.y));
+    const right = Math.max(...objects.map(item => item.x + item.width));
+    const bottom = Math.max(...objects.map(item => item.y + item.height));
+    objects.forEach(item => {
+        if (mode === "left") item.x = left;
+        if (mode === "center") item.x = Math.round((left + right - item.width) / 2);
+        if (mode === "top") item.y = top;
+        if (mode === "middle") item.y = Math.round((top + bottom - item.height) / 2);
+    });
+    markMapDirty(); renderMapObjects(); renderMapProperties();
+}
+
+function distributeMapSelection(direction) {
+    const objects = getSelectedMapObjects();
+    if (objects.length < 3) return;
+    pushMapHistory();
+    if (direction === "horizontal") {
+        objects.sort((a, b) => a.x - b.x);
+        const total = objects.reduce((sum, item) => sum + item.width, 0);
+        const gap = (objects.at(-1).x + objects.at(-1).width - objects[0].x - total) / (objects.length - 1);
+        let x = objects[0].x;
+        objects.forEach(item => { item.x = Math.round(x); x += item.width + gap; });
+    } else {
+        objects.sort((a, b) => a.y - b.y);
+        const total = objects.reduce((sum, item) => sum + item.height, 0);
+        const gap = (objects.at(-1).y + objects.at(-1).height - objects[0].y - total) / (objects.length - 1);
+        let y = objects[0].y;
+        objects.forEach(item => { item.y = Math.round(y); y += item.height + gap; });
+    }
+    markMapDirty(); renderMapObjects(); renderMapProperties();
+}
+
 function renderMapObjects() {
     const canvas = document.getElementById("map-canvas");
     if (!canvas) return;
     canvas.innerHTML = "";
 
-    const objects = [...officeMap.objects].sort((a, b) =>
-        (a.type === "room" ? 0 : 1) - (b.type === "room" ? 0 : 1)
-    );
+    const layerOrder = {zone: 0, room: 1, wall: 2, door: 3, workplace: 4, label: 5};
+    const objects = [...officeMap.objects].sort((a, b) => layerOrder[a.type] - layerOrder[b.type]);
+    const windowUsage = getMapWindowUsage();
 
     for (const object of objects) {
         const element = document.createElement("div");
         element.className = `map-object map-${object.type}`;
-        if (object.id === selectedMapObjectId) element.classList.add("selected");
+        if (selectedMapObjectIds.has(object.id)) element.classList.add("selected");
+        if (!mapObjectMatchesFilters(object, windowUsage)) element.classList.add("map-filtered-out");
+        const status = getMapObjectStatus(object, windowUsage);
+        if (status) element.classList.add(`map-status-${status}`);
         element.dataset.objectId = object.id;
         element.style.left = `${object.x}px`;
         element.style.top = `${object.y}px`;
@@ -1365,6 +1639,15 @@ function renderMapObjects() {
         title.textContent = mapObjectTitle(object);
         element.appendChild(title);
 
+        if (object.type === "workplace" && object.window_id) {
+            const operator = mapOperators.find(item => item.window_id === object.window_id);
+            const links = mapWindowServices[object.window_id] || [];
+            const subtitle = document.createElement("span");
+            subtitle.className = "map-object-subtitle";
+            subtitle.textContent = [operator?.name, links.length ? `${links.length} усл.` : null].filter(Boolean).join(" · ");
+            element.appendChild(subtitle);
+        }
+
         const resizeHandle = document.createElement("span");
         resizeHandle.className = "map-resize-handle";
         resizeHandle.title = "Изменить размер";
@@ -1374,19 +1657,84 @@ function renderMapObjects() {
         element.addEventListener("pointerdown", event => startMapDrag(event, object));
         canvas.appendChild(element);
     }
+    renderMapGuides();
+    renderMapMinimap();
+}
+
+function getMapWindowUsage() {
+    const usage = new Map();
+    officeMap.objects.filter(item => item.type === "workplace" && item.window_id).forEach(item => {
+        usage.set(item.window_id, (usage.get(item.window_id) || 0) + 1);
+    });
+    return usage;
+}
+
+function getMapObjectStatus(object, usage = getMapWindowUsage()) {
+    if (object.type !== "workplace") return null;
+    if (!object.window_id || !mapWindows.some(item => item.id === object.window_id)) return "unconfigured";
+    if ((usage.get(object.window_id) || 0) > 1) return "conflict";
+    return mapWindows.find(item => item.id === object.window_id)?.status || "offline";
+}
+
+function mapObjectMatchesFilters(object, usage) {
+    if (mapStatusFilter !== "all" && getMapObjectStatus(object, usage) !== mapStatusFilter) return false;
+    if (mapOperatorFilter !== "all") {
+        const operator = mapOperators.find(item => item.id === Number(mapOperatorFilter));
+        if (object.window_id !== operator?.window_id) return false;
+    }
+    if (mapServiceFilter !== "all") {
+        const hasService = (mapWindowServices[object.window_id] || []).some(link => link.service_id === Number(mapServiceFilter));
+        if (!hasService) return false;
+    }
+    if (!mapSearchQuery) return true;
+    const windowItem = mapWindows.find(item => item.id === object.window_id);
+    const operator = mapOperators.find(item => item.window_id === object.window_id);
+    const serviceNames = (mapWindowServices[object.window_id] || []).map(link =>
+        mapServices.find(service => service.id === link.service_id)?.name || ""
+    );
+    return [object.label, windowItem?.name, operator?.name, ...serviceNames]
+        .some(value => String(value || "").toLowerCase().includes(mapSearchQuery));
+}
+
+function setMapSearch(value) {
+    mapSearchQuery = value.trim().toLowerCase();
+    renderMapObjects();
+}
+
+function setMapStatusFilter(value) {
+    mapStatusFilter = value;
+    renderMapObjects();
+}
+
+function setMapOperatorFilter(value) {
+    mapOperatorFilter = value;
+    renderMapObjects();
+}
+
+function setMapServiceFilter(value) {
+    mapServiceFilter = value;
+    renderMapObjects();
 }
 
 function mapObjectTitle(object) {
     if (object.type === "room") return object.label || "Помещение";
-    const windowItem = mapWindows.find(item => item.id === object.window_id);
-    return object.label || windowItem?.name || "Физический стол";
+    if (object.type === "workplace") {
+        const windowItem = mapWindows.find(item => item.id === object.window_id);
+        return object.label || windowItem?.name || "Физический стол";
+    }
+    const defaults = {wall: "Стена", door: "Дверь", label: "Подпись", zone: "Зона"};
+    return object.label || defaults[object.type] || "Объект";
 }
 
 function addMapObject(type) {
+    pushMapHistory();
     const sameTypeCount = officeMap.objects.filter(item => item.type === type).length;
-    const isRoom = type === "room";
-    const width = isRoom ? 420 : 100;
-    const height = isRoom ? 260 : 70;
+    const presets = {
+        room: [420, 260, "Помещение"], workplace: [100, 70, "Физический стол"],
+        wall: [400, 12, "Стена"], door: [80, 16, "Дверь"],
+        label: [180, 40, "Подпись"], zone: [300, 220, "Зона"]
+    };
+    const [width, height, defaultLabel] = presets[type];
     const offset = (sameTypeCount * 24) % 240;
     const object = {
         id: createMapObjectId(),
@@ -1395,11 +1743,12 @@ function addMapObject(type) {
         y: snapMapValue(Math.min(40 + offset, mapWorldHeight - height)),
         width,
         height,
-        label: `${isRoom ? "Помещение" : "Физический стол"} ${sameTypeCount + 1}`,
+        label: `${defaultLabel} ${sameTypeCount + 1}`,
         window_id: null
     };
     officeMap.objects.push(object);
     selectedMapObjectId = object.id;
+    selectedMapObjectIds = new Set([object.id]);
     markMapDirty();
     renderMapObjects();
     renderMapProperties();
@@ -1412,6 +1761,7 @@ function createMapObjectId() {
 
 function selectMapObject(id) {
     selectedMapObjectId = id;
+    selectedMapObjectIds = id ? new Set([id]) : new Set();
     renderMapObjects();
     renderMapProperties();
 }
@@ -1419,32 +1769,34 @@ function selectMapObject(id) {
 function startMapDrag(event, object) {
     if (event.button !== 0 || event.target.classList.contains("map-resize-handle")) return;
     event.preventDefault();
-    selectMapObjectFromPointer(object.id);
+    selectMapObjectFromPointer(object.id, event.shiftKey);
+    if (!selectedMapObjectIds.has(object.id)) return;
+    pushMapHistory();
     const startX = event.clientX;
     const startY = event.clientY;
-    const originalX = object.x;
-    const originalY = object.y;
+    const movingObjects = getSelectedMapObjects();
+    const origins = new Map(movingObjects.map(item => [item.id, {x: item.x, y: item.y}]));
     const target = event.currentTarget;
     target.setPointerCapture(event.pointerId);
 
     const move = moveEvent => {
-        object.x = clampMapValue(
-            snapMapValue(originalX + (moveEvent.clientX - startX) / mapZoom),
-            0,
-            mapWorldWidth - object.width
-        );
-        object.y = clampMapValue(
-            snapMapValue(originalY + (moveEvent.clientY - startY) / mapZoom),
-            0,
-            mapWorldHeight - object.height
-        );
-        ensureMapWorldSpace(object);
-        target.style.left = `${object.x}px`;
-        target.style.top = `${object.y}px`;
+        const dx = (moveEvent.clientX - startX) / mapZoom;
+        const dy = (moveEvent.clientY - startY) / mapZoom;
+        movingObjects.forEach(item => {
+            const origin = origins.get(item.id);
+            item.x = clampMapValue(snapMapValue(origin.x + dx), 0, mapWorldWidth - item.width);
+            item.y = clampMapValue(snapMapValue(origin.y + dy), 0, mapWorldHeight - item.height);
+            ensureMapWorldSpace(item);
+            const element = document.querySelector(`[data-object-id="${item.id}"]`);
+            if (element) { element.style.left = `${item.x}px`; element.style.top = `${item.y}px`; }
+        });
+        if (movingObjects.length === 1) updateMapSmartGuides(object);
         markMapDirty();
     };
     const stop = () => {
         target.removeEventListener("pointermove", move);
+        mapSmartGuides = [];
+        renderMapObjects();
         renderMapProperties();
     };
     target.addEventListener("pointermove", move);
@@ -1455,13 +1807,17 @@ function startMapDrag(event, object) {
 function startMapResize(event, object) {
     event.preventDefault();
     event.stopPropagation();
-    selectMapObjectFromPointer(object.id);
+    selectMapObjectFromPointer(object.id, event.shiftKey);
+    pushMapHistory();
     const startX = event.clientX;
     const startY = event.clientY;
     const originalWidth = object.width;
     const originalHeight = object.height;
-    const baseMinWidth = object.type === "room" ? 180 : 70;
-    const baseMinHeight = object.type === "room" ? 120 : 50;
+    const minimumSizes = {
+        room: [180, 120], workplace: [70, 50], wall: [8, 8],
+        door: [40, 12], label: [60, 24], zone: [100, 80]
+    };
+    const [baseMinWidth, baseMinHeight] = minimumSizes[object.type];
     const minWidth = mapSnapEnabled
         ? Math.ceil(baseMinWidth / MAP_GRID_SIZE) * MAP_GRID_SIZE
         : baseMinWidth;
@@ -1497,10 +1853,15 @@ function startMapResize(event, object) {
     target.addEventListener("pointercancel", stop, {once: true});
 }
 
-function selectMapObjectFromPointer(id) {
-    selectedMapObjectId = id;
+function selectMapObjectFromPointer(id, additive = false) {
+    if (additive) {
+        selectedMapObjectIds.has(id) ? selectedMapObjectIds.delete(id) : selectedMapObjectIds.add(id);
+    } else if (!selectedMapObjectIds.has(id)) {
+        selectedMapObjectIds = new Set([id]);
+    }
+    selectedMapObjectId = selectedMapObjectIds.has(id) ? id : ([...selectedMapObjectIds][0] || null);
     document.querySelectorAll(".map-object").forEach(element => {
-        element.classList.toggle("selected", element.dataset.objectId === id);
+        element.classList.toggle("selected", selectedMapObjectIds.has(element.dataset.objectId));
     });
     renderMapProperties();
 }
@@ -1522,9 +1883,127 @@ function ensureMapWorldSpace(object) {
     if (expanded) updateMapSurfaceSize();
 }
 
+function updateMapSmartGuides(object) {
+    const threshold = 6 / mapZoom;
+    mapSmartGuides = [];
+    const candidates = officeMap.objects.filter(item => item.id !== object.id && !selectedMapObjectIds.has(item.id));
+    const ownX = [object.x, object.x + object.width / 2, object.x + object.width];
+    const ownY = [object.y, object.y + object.height / 2, object.y + object.height];
+    for (const other of candidates) {
+        const otherX = [other.x, other.x + other.width / 2, other.x + other.width];
+        const otherY = [other.y, other.y + other.height / 2, other.y + other.height];
+        for (let i = 0; i < ownX.length; i++) {
+            for (const targetX of otherX) {
+                if (Math.abs(ownX[i] - targetX) <= threshold) {
+                    object.x += targetX - ownX[i];
+                    mapSmartGuides.push({axis: "x", value: targetX});
+                    break;
+                }
+            }
+        }
+        for (let i = 0; i < ownY.length; i++) {
+            for (const targetY of otherY) {
+                if (Math.abs(ownY[i] - targetY) <= threshold) {
+                    object.y += targetY - ownY[i];
+                    mapSmartGuides.push({axis: "y", value: targetY});
+                    break;
+                }
+            }
+        }
+        if (mapSmartGuides.length) break;
+    }
+    const element = document.querySelector(`[data-object-id="${object.id}"]`);
+    if (element) { element.style.left = `${object.x}px`; element.style.top = `${object.y}px`; }
+    renderMapGuides();
+}
+
+function renderMapGuides() {
+    const canvas = document.getElementById("map-canvas");
+    if (!canvas) return;
+    canvas.querySelectorAll(".map-smart-guide").forEach(item => item.remove());
+    mapSmartGuides.forEach(guide => {
+        const element = document.createElement("div");
+        element.className = `map-smart-guide map-guide-${guide.axis}`;
+        if (guide.axis === "x") element.style.left = `${guide.value}px`;
+        else element.style.top = `${guide.value}px`;
+        canvas.appendChild(element);
+    });
+}
+
+function applyMapTemplate(template) {
+    if (!template) return;
+    const templates = {
+        "room-small": ["room", 400, 300], "room-large": ["room", 800, 600],
+        workplace: ["workplace", 120, 80], "wall-horizontal": ["wall", 400, 12],
+        "wall-vertical": ["wall", 12, 400]
+    };
+    const [type, width, height] = templates[template];
+    const selected = getSelectedMapObjects()[0];
+    if (!selected || selected.type !== type) {
+        addMapObject(type);
+        const created = getSelectedMapObjects()[0];
+        if (created) { created.width = width; created.height = height; renderMapObjects(); renderMapProperties(); }
+        return;
+    }
+    pushMapHistory();
+    selected.width = width; selected.height = height;
+    markMapDirty(); renderMapObjects(); renderMapProperties();
+}
+
+function getMapContentBounds(objects = officeMap.objects) {
+    if (!objects.length) return {left: 0, top: 0, right: 1200, bottom: 700};
+    return {
+        left: Math.min(...objects.map(item => item.x)), top: Math.min(...objects.map(item => item.y)),
+        right: Math.max(...objects.map(item => item.x + item.width)),
+        bottom: Math.max(...objects.map(item => item.y + item.height))
+    };
+}
+
+function focusMapBounds(bounds) {
+    const viewport = document.getElementById("map-viewport");
+    const stage = document.getElementById("map-canvas-stage");
+    if (!viewport || !stage) return;
+    const width = Math.max(100, bounds.right - bounds.left);
+    const height = Math.max(100, bounds.bottom - bounds.top);
+    const zoom = Math.max(0.25, Math.min(1.5, Math.min((viewport.clientWidth - 100) / width, (viewport.clientHeight - 100) / height)));
+    setMapZoom(zoom);
+    viewport.scrollLeft = stage.offsetLeft + (bounds.left + width / 2) * mapZoom - viewport.clientWidth / 2;
+    viewport.scrollTop = stage.offsetTop + (bounds.top + height / 2) * mapZoom - viewport.clientHeight / 2;
+    renderMapMinimap();
+}
+
+function fitMapContent() { focusMapBounds(getMapContentBounds()); }
+function focusMapSelection() {
+    const objects = getSelectedMapObjects();
+    if (objects.length) focusMapBounds(getMapContentBounds(objects));
+}
+
+function renderMapMinimap() {
+    const minimap = document.getElementById("map-minimap");
+    const viewport = document.getElementById("map-viewport");
+    if (!minimap || !viewport) return;
+    const bounds = getMapContentBounds();
+    const worldWidth = Math.max(1200, bounds.right + 200);
+    const worldHeight = Math.max(700, bounds.bottom + 200);
+    minimap.innerHTML = officeMap.objects.map(item =>
+        `<span class="mini-${item.type}" style="left:${item.x / worldWidth * 100}%;top:${item.y / worldHeight * 100}%;width:${Math.max(1, item.width / worldWidth * 100)}%;height:${Math.max(1, item.height / worldHeight * 100)}%"></span>`
+    ).join("") + `<i style="left:${viewport.scrollLeft / mapZoom / worldWidth * 100}%;top:${viewport.scrollTop / mapZoom / worldHeight * 100}%;width:${viewport.clientWidth / mapZoom / worldWidth * 100}%;height:${viewport.clientHeight / mapZoom / worldHeight * 100}%"></i>`;
+    minimap.onclick = event => {
+        const rect = minimap.getBoundingClientRect();
+        viewport.scrollLeft = ((event.clientX - rect.left) / rect.width * worldWidth) * mapZoom - viewport.clientWidth / 2;
+        viewport.scrollTop = ((event.clientY - rect.top) / rect.height * worldHeight) * mapZoom - viewport.clientHeight / 2;
+        renderMapMinimap();
+    };
+}
+
 function renderMapProperties() {
     const panel = document.getElementById("map-properties");
     if (!panel) return;
+    const selectedObjects = getSelectedMapObjects();
+    if (selectedObjects.length > 1) {
+        renderMapMultiProperties(panel, selectedObjects);
+        return;
+    }
     const object = officeMap.objects.find(item => item.id === selectedMapObjectId);
     if (!object) {
         panel.innerHTML = `
@@ -1541,8 +2020,10 @@ function renderMapProperties() {
     const windowSettings = object.type === "workplace" && object.window_id
         ? renderMapWindowSettings(object.window_id)
         : "";
+    const objectStatus = getMapObjectStatus(object);
     panel.innerHTML = `
-        <h3>${object.type === "room" ? "Помещение" : "Физический стол"}</h3>
+        <h3>${mapObjectTypeName(object.type)}</h3>
+        ${objectStatus ? `<div class="map-property-status status-${objectStatus}">${mapStatusName(objectStatus)}</div>` : ""}
         <label class="map-property-field">
             <span>Название</span>
             <input id="map-object-label" maxlength="100" value="${escapeMapHtml(object.label)}">
@@ -1559,6 +2040,7 @@ function renderMapProperties() {
         ` : ""}
         <div class="map-object-size">${object.width} × ${object.height}, позиция ${object.x} × ${object.y}</div>
         ${windowSettings}
+        ${object.type === "workplace" ? `<button class="map-duplicate-settings" onclick="duplicateMapWorkplaceWithSettings()">Копировать стол и настройки</button>` : ""}
         <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить объект</button>
     `;
 
@@ -1568,7 +2050,9 @@ function renderMapProperties() {
         if (title) title.textContent = mapObjectTitle(object);
         markMapDirty();
     });
+    document.getElementById("map-object-label").addEventListener("focus", pushMapHistory, {once: true});
     document.getElementById("map-object-window")?.addEventListener("change", event => {
+        pushMapHistory();
         object.window_id = event.target.value ? Number(event.target.value) : null;
         renderMapObjects();
         markMapDirty();
@@ -1585,6 +2069,95 @@ function renderMapProperties() {
     if (object.window_id && mapWindowServices[object.window_id] === undefined) {
         loadMapWindowServices(object.window_id, object.id);
     }
+}
+
+async function duplicateMapWorkplaceWithSettings() {
+    const object = officeMap.objects.find(item => item.id === selectedMapObjectId);
+    if (!object || object.type !== "workplace") return;
+    pushMapHistory();
+    const copy = {...structuredClone(object), id: createMapObjectId(), x: object.x + 30, y: object.y + 30};
+    try {
+        if (object.window_id) {
+            const sourceWindow = mapWindows.find(item => item.id === object.window_id);
+            const newWindow = await mapRequest(`${API}/windows/`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({name: `${sourceWindow?.name || "Рабочее место"} копия`})
+            });
+            if (sourceWindow?.status && sourceWindow.status !== "offline") {
+                await mapRequest(`${API}/windows/${newWindow.id}/status`, {
+                    method: "PATCH", headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({status: sourceWindow.status})
+                });
+                newWindow.status = sourceWindow.status;
+            }
+            const links = structuredClone(mapWindowServices[object.window_id] || []);
+            await mapRequest(`${API}/window-services/${newWindow.id}`, {
+                method: "PUT", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({services: links.map(link => ({service_id: link.service_id, priority: link.priority || 1}))})
+            });
+            mapWindows.push(newWindow);
+            mapWindowServices[newWindow.id] = links.map(link => ({...link, window_id: newWindow.id}));
+            copy.window_id = newWindow.id;
+        }
+        copy.label = `${object.label || "Физический стол"} копия`;
+        officeMap.objects.push(copy);
+        selectedMapObjectIds = new Set([copy.id]);
+        selectedMapObjectId = copy.id;
+        markMapDirty(); renderMapObjects(); renderMapProperties();
+    } catch (error) {
+        mapUndoStack.pop();
+        alert(error.message);
+    }
+}
+
+function mapObjectTypeName(type) {
+    return {room: "Помещение", workplace: "Физический стол", wall: "Стена", door: "Дверь", label: "Подпись", zone: "Зона"}[type] || "Объект";
+}
+
+function mapStatusName(status) {
+    return {online: "Онлайн", break: "Перерыв", offline: "Офлайн", unconfigured: "Не настроено", conflict: "Конфликт привязки"}[status] || status;
+}
+
+function renderMapMultiProperties(panel, objects) {
+    const workplaces = objects.filter(item => item.type === "workplace" && item.window_id);
+    const conflicts = objects.filter(item => getMapObjectStatus(item) === "conflict").length;
+    panel.innerHTML = `
+        <h3>Выбрано: ${objects.length}</h3>
+        ${conflicts ? `<div class="map-conflict-message">Конфликтов привязки: ${conflicts}</div>` : ""}
+        <div class="map-multi-actions">
+            <button onclick="duplicateMapSelection()">Создать копии</button>
+            <button onclick="alignMapSelection('left')">Выровнять слева</button>
+            <button onclick="alignMapSelection('top')">Выровнять сверху</button>
+            <button onclick="distributeMapSelection('horizontal')">Равные интервалы →</button>
+            <button onclick="distributeMapSelection('vertical')">Равные интервалы ↓</button>
+        </div>
+        ${workplaces.length ? `
+            <section class="map-window-settings">
+                <h4>Массовое назначение услуг (${workplaces.length})</h4>
+                <div class="map-bulk-services">
+                    ${mapServices.map(service => `
+                        <label><input type="checkbox" value="${service.id}"><span>${escapeMapHtml(service.name)}</span></label>
+                    `).join("")}
+                </div>
+                <button onclick="saveBulkMapServices()">Назначить выбранные услуги</button>
+            </section>
+        ` : ""}
+        <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить выбранные объекты</button>
+    `;
+}
+
+async function saveBulkMapServices() {
+    const panel = document.getElementById("map-properties");
+    const serviceIds = [...panel.querySelectorAll(".map-bulk-services input:checked")].map(input => Number(input.value));
+    const windowIds = [...new Set(getSelectedMapObjects().filter(item => item.type === "workplace" && item.window_id).map(item => item.window_id))];
+    const services = serviceIds.map(serviceId => ({service_id: serviceId, priority: 1}));
+    try {
+        await Promise.all(windowIds.map(windowId => mapRequest(`${API}/window-services/${windowId}`, {
+            method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify({services})
+        })));
+        windowIds.forEach(windowId => { mapWindowServices[windowId] = structuredClone(services); });
+        renderMapObjects(); renderMapProperties();
+    } catch (error) { alert(error.message); }
 }
 
 function renderMapWindowSettings(windowId) {
@@ -1685,6 +2258,7 @@ async function createMapWindowForSelected() {
             body: JSON.stringify({name})
         });
         mapWindows.push(windowItem);
+        pushMapHistory();
         object.window_id = windowItem.id;
         markMapDirty();
         renderMapObjects();
@@ -1864,12 +2438,18 @@ async function renameMapService(serviceId) {
 }
 
 function deleteSelectedMapObject() {
-    if (!selectedMapObjectId) return;
-    officeMap.objects = officeMap.objects.filter(item => item.id !== selectedMapObjectId);
+    if (!selectedMapObjectIds.size) return;
+    const objects = getSelectedMapObjects();
+    if ((objects.length > 1 || objects.some(item => item.window_id)) &&
+        !confirm(`Удалить с карты объектов: ${objects.length}? Связанные записи в БД останутся.`)) return;
+    pushMapHistory();
+    officeMap.objects = officeMap.objects.filter(item => !selectedMapObjectIds.has(item.id));
     selectedMapObjectId = null;
+    selectedMapObjectIds = new Set();
     markMapDirty();
     renderMapObjects();
     renderMapProperties();
+    renderMapMinimap();
 }
 
 function markMapDirty() {
