@@ -2024,24 +2024,30 @@ function renderMapProperties() {
     panel.innerHTML = `
         <h3>${mapObjectTypeName(object.type)}</h3>
         ${objectStatus ? `<div class="map-property-status status-${objectStatus}">${mapStatusName(objectStatus)}</div>` : ""}
-        <label class="map-property-field">
-            <span>Название</span>
-            <input id="map-object-label" maxlength="100" value="${escapeMapHtml(object.label)}">
-        </label>
-        ${object.type === "workplace" ? `
+        <details class="map-settings-details">
+            <summary>Параметры ${mapObjectTypeName(object.type).toLowerCase()}</summary>
             <label class="map-property-field">
-                <span>Рабочее место</span>
-                <select id="map-object-window">
-                    <option value="">Не привязано</option>
-                    ${windowOptions}
-                </select>
-                <button class="map-inline-create" onclick="createMapWindowForSelected()">Создать рабочее место</button>
+                <span>Название</span>
+                <input id="map-object-label" maxlength="100" value="${escapeMapHtml(object.label)}">
             </label>
-        ` : ""}
-        <div class="map-object-size">${object.width} × ${object.height}, позиция ${object.x} × ${object.y}</div>
+            ${object.type === "workplace" ? `
+                <label class="map-property-field">
+                    <span>Рабочее место</span>
+                    <select id="map-object-window">
+                        <option value="">Не привязано</option>
+                        ${windowOptions}
+                    </select>
+                    <button class="map-inline-create" onclick="createMapWindowForSelected()">Создать рабочее место</button>
+                </label>
+            ` : ""}
+            <div class="map-object-size">${object.width} × ${object.height}, позиция ${object.x} × ${object.y}</div>
+        </details>
         ${windowSettings}
-        ${object.type === "workplace" ? `<button class="map-duplicate-settings" onclick="duplicateMapWorkplaceWithSettings()">Копировать стол и настройки</button>` : ""}
-        <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить объект</button>
+        <details class="map-settings-details map-danger-details">
+            <summary>Копирование и удаление</summary>
+            ${object.type === "workplace" ? `<button class="map-duplicate-settings" onclick="duplicateMapWorkplaceWithSettings()">Копировать стол и настройки</button>` : ""}
+            <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить объект</button>
+        </details>
     `;
 
     document.getElementById("map-object-label").addEventListener("input", event => {
@@ -2124,25 +2130,31 @@ function renderMapMultiProperties(panel, objects) {
     panel.innerHTML = `
         <h3>Выбрано: ${objects.length}</h3>
         ${conflicts ? `<div class="map-conflict-message">Конфликтов привязки: ${conflicts}</div>` : ""}
-        <div class="map-multi-actions">
-            <button onclick="duplicateMapSelection()">Создать копии</button>
-            <button onclick="alignMapSelection('left')">Выровнять слева</button>
-            <button onclick="alignMapSelection('top')">Выровнять сверху</button>
-            <button onclick="distributeMapSelection('horizontal')">Равные интервалы →</button>
-            <button onclick="distributeMapSelection('vertical')">Равные интервалы ↓</button>
-        </div>
+        <details class="map-settings-details">
+            <summary>Расположение и копирование</summary>
+            <div class="map-multi-actions">
+                <button onclick="duplicateMapSelection()">Создать копии</button>
+                <button onclick="alignMapSelection('left')">Выровнять слева</button>
+                <button onclick="alignMapSelection('top')">Выровнять сверху</button>
+                <button onclick="distributeMapSelection('horizontal')">Равные интервалы →</button>
+                <button onclick="distributeMapSelection('vertical')">Равные интервалы ↓</button>
+            </div>
+        </details>
         ${workplaces.length ? `
-            <section class="map-window-settings">
-                <h4>Массовое назначение услуг (${workplaces.length})</h4>
+            <details class="map-window-settings map-settings-details">
+                <summary>Массовое назначение услуг (${workplaces.length})</summary>
                 <div class="map-bulk-services">
                     ${mapServices.map(service => `
                         <label><input type="checkbox" value="${service.id}"><span>${escapeMapHtml(service.name)}</span></label>
                     `).join("")}
                 </div>
                 <button onclick="saveBulkMapServices()">Назначить выбранные услуги</button>
-            </section>
+            </details>
         ` : ""}
-        <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить выбранные объекты</button>
+        <details class="map-settings-details map-danger-details">
+            <summary>Удаление</summary>
+            <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить выбранные объекты</button>
+        </details>
     `;
 }
 
@@ -2194,8 +2206,8 @@ function renderMapWindowSettings(windowId) {
     }
 
     return `
-        <section class="map-window-settings">
-            <h4>Настройка рабочего места</h4>
+        <details class="map-window-settings map-settings-details">
+            <summary>Настройка рабочего места</summary>
             <label class="map-settings-field">
                 <span>Название рабочего места в БД</span>
                 <input id="map-window-name" value="${escapeMapHtml(windowItem?.name || "")}" placeholder="Название">
@@ -2209,9 +2221,9 @@ function renderMapWindowSettings(windowId) {
             </select>
             </label>
             <button onclick="saveMapWindow(${windowId})">Сохранить рабочее место</button>
-        </section>
-        <section class="map-window-settings">
-            <h4>Оператор окна</h4>
+        </details>
+        <details class="map-window-settings map-settings-details">
+            <summary>Оператор окна</summary>
             <select id="map-window-operator">
                 <option value="">Не назначен</option>
                 ${operatorOptions}
@@ -2232,9 +2244,9 @@ function renderMapWindowSettings(windowId) {
                 <input id="map-new-operator-password" type="password" placeholder="Пароль">
                 <button onclick="createMapOperator(${windowId})">Создать и назначить</button>
             </details>
-        </section>
-        <section class="map-window-settings">
-            <h4>Услуги окна</h4>
+        </details>
+        <details class="map-window-settings map-settings-details">
+            <summary>Услуги окна</summary>
             <div class="map-services-list">${servicesHtml}</div>
             ${Array.isArray(linkedServices) ? `<button onclick="saveMapWindowServices(${windowId})">Сохранить услуги</button>` : ""}
             <details class="map-create-details">
@@ -2242,7 +2254,7 @@ function renderMapWindowSettings(windowId) {
                 <input id="map-new-service-name" placeholder="Название услуги">
                 <button onclick="createMapService()">Создать услугу</button>
             </details>
-        </section>
+        </details>
     `;
 }
 

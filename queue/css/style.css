@@ -1431,6 +1431,51 @@ body.admin-page .map-property-field{
     margin-bottom: 18px;
 }
 
+body.admin-page .map-settings-details{
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+body.admin-page .map-settings-details > summary{
+    position: relative;
+    display: block;
+    padding: 15px 24px 15px 0;
+    color: var(--primary);
+    font-size: 0.86rem;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+body.admin-page .map-settings-details > summary::-webkit-details-marker{
+    display: none;
+}
+
+body.admin-page .map-settings-details > summary::after{
+    content: ">";
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    color: #75879a;
+    font-size: 1rem;
+    transform: translateY(-50%);
+    transition: transform .16s ease;
+}
+
+body.admin-page .map-settings-details[open] > summary::after{
+    transform: translateY(-50%) rotate(90deg);
+}
+
+body.admin-page .map-settings-details[open] > summary{
+    margin-bottom: 12px;
+}
+
+body.admin-page .map-settings-details > :last-child{
+    margin-bottom: 16px;
+}
+
 body.admin-page .map-property-field span{
     display: block;
     margin-bottom: 7px;
@@ -1475,9 +1520,8 @@ body.admin-page .map-properties .map-duplicate-settings{
 }
 
 body.admin-page .map-window-settings{
-    margin: 22px -2px;
-    padding-top: 18px;
-    border-top: 1px solid #e2e8f0;
+    margin: 0;
+    padding-top: 0;
 }
 
 body.admin-page .map-window-settings h4{
@@ -1628,7 +1672,11 @@ body.admin-page .map-multi-actions{
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
+}
+
+body.admin-page .map-danger-details > summary{
+    color: #9f2d2d;
 }
 
 body.admin-page .map-multi-actions button{
