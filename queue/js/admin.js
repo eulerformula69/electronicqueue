@@ -2129,6 +2129,7 @@ function mapStatusName(status) {
 
 function renderMapMultiProperties(panel, objects) {
     const workplaces = objects.filter(item => item.type === "workplace" && item.window_id);
+    const uniqueWindowCount = new Set(workplaces.map(item => item.window_id)).size;
     const conflicts = objects.filter(item => getMapObjectStatus(item) === "conflict").length;
     panel.innerHTML = `
         <h3>Выбрано: ${objects.length}</h3>
@@ -2145,6 +2146,15 @@ function renderMapMultiProperties(panel, objects) {
         </details>
         ${workplaces.length ? `
             <details class="map-window-settings map-settings-details">
+                <summary>Массовая смена статуса (${uniqueWindowCount})</summary>
+                <select id="map-bulk-window-status">
+                    <option value="online">online</option>
+                    <option value="break">break</option>
+                    <option value="offline">offline</option>
+                </select>
+                <button onclick="saveBulkMapWindowStatus()">Применить статус</button>
+            </details>
+            <details class="map-window-settings map-settings-details">
                 <summary>Массовое назначение услуг (${workplaces.length})</summary>
                 <div class="map-bulk-services">
                     ${mapServices.map(service => `
@@ -2159,6 +2169,28 @@ function renderMapMultiProperties(panel, objects) {
             <button class="map-delete-button" onclick="deleteSelectedMapObject()">Удалить выбранные объекты</button>
         </details>
     `;
+}
+
+async function saveBulkMapWindowStatus() {
+    const status = document.getElementById("map-bulk-window-status")?.value;
+    const windowIds = [...new Set(getSelectedMapObjects()
+        .filter(item => item.type === "workplace" && item.window_id)
+        .map(item => item.window_id))];
+    if (!status || !windowIds.length) return;
+    try {
+        await Promise.all(windowIds.map(windowId => mapRequest(`${API}/windows/${windowId}/status`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({status})
+        })));
+        mapWindows.forEach(windowItem => {
+            if (windowIds.includes(windowItem.id)) windowItem.status = status;
+        });
+        renderMapObjects();
+        renderMapProperties();
+    } catch (error) {
+        alert(error.message);
+    }
 }
 
 async function saveBulkMapServices() {
