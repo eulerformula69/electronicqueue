@@ -1295,7 +1295,10 @@ function renderMapEditor() {
                 <button class="map-save-button" onclick="saveOfficeMap()">Сохранить карту</button>
             </div>
             <div class="map-filterbar">
-                <input id="map-search" placeholder="Поиск стола, рабочего места или оператора"
+                <input id="map-search" type="search" name="map_object_search"
+                    role="searchbox" autocomplete="off" autocapitalize="off" spellcheck="false"
+                    data-lpignore="true" data-1p-ignore="true"
+                    placeholder="Поиск стола, рабочего места или оператора"
                     oninput="setMapSearch(this.value)">
                 <select onchange="setMapStatusFilter(this.value)">
                     <option value="all">Все статусы</option>
@@ -2231,17 +2234,21 @@ function renderMapWindowSettings(windowId) {
             <button onclick="saveMapWindowOperator(${windowId})">Сохранить оператора</button>
             ${assignedOperator ? `
                 <div class="map-entity-editor">
-                    <input id="map-operator-name" value="${escapeMapHtml(assignedOperator.name)}" placeholder="Имя">
-                    <input id="map-operator-login" value="${escapeMapHtml(assignedOperator.login || "")}" placeholder="Логин">
-                    <input id="map-operator-password" type="password" placeholder="Новый пароль (необязательно)">
+                    <input id="map-operator-name" name="map_operator_name" autocomplete="off"
+                        value="${escapeMapHtml(assignedOperator.name)}" placeholder="Имя">
+                    <input id="map-operator-login" name="map_operator_login" autocomplete="username"
+                        value="${escapeMapHtml(assignedOperator.login || "")}" placeholder="Логин">
+                    <input id="map-operator-password" name="map_operator_new_password" type="password"
+                        autocomplete="new-password" placeholder="Новый пароль (необязательно)">
                     <button onclick="saveMapOperator(${assignedOperator.id})">Сохранить данные оператора</button>
                 </div>
             ` : ""}
             <details class="map-create-details">
                 <summary>Создать оператора</summary>
-                <input id="map-new-operator-name" placeholder="Имя">
-                <input id="map-new-operator-login" placeholder="Логин">
-                <input id="map-new-operator-password" type="password" placeholder="Пароль">
+                <input id="map-new-operator-name" name="map_new_operator_name" autocomplete="off" placeholder="Имя">
+                <input id="map-new-operator-login" name="map_new_operator_login" autocomplete="off" placeholder="Логин">
+                <input id="map-new-operator-password" name="map_new_operator_password" type="password"
+                    autocomplete="new-password" placeholder="Пароль">
                 <button onclick="createMapOperator(${windowId})">Создать и назначить</button>
             </details>
         </details>
