@@ -372,6 +372,44 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
     return {"status": "cancelled", "ticket_number": ticket.number}
 
 
+@router.post("/tickets/return-to-queue", tags=["Tickets"])
+async def return_current_ticket_to_queue(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ticket = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called"
+        ).first()
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Нет активного билета для возврата в очередь")
+
+        settings = get_system_settings_dict(db)
+
+        ticket.status = "waiting"
+        ticket.completion_reason = None
+        ticket.window_id = None
+        ticket.target_window_id = None
+        ticket.called_at = None
+        ticket.finished_at = None
+
+        if settings.get("queue_mode") == "dynamic_operator_distribution":
+            assign_ticket_to_least_loaded_window(db, ticket)
+
+        db.commit()
+        db.refresh(ticket)
+
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        return {"status": "waiting", "ticket_number": ticket.number}
+    finally:
+        db.close()
+
+
 @router.get("/tickets/my-queue", tags=["Tickets"])
 def get_my_queue(
     skip: int = Query(0, ge=0),

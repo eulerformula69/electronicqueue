@@ -568,6 +568,8 @@ function showToast(message, type = "danger") {
     // Меняем цвет в зависимости от ситуации
     if (type === "warning") {
         toast.style.background = "var(--warning)"; // Оранжевый для "Очередь пуста"
+    } else if (type === "success") {
+        toast.style.background = "var(--success)";
     } else {
         toast.style.background = "var(--danger)";  // Красный для ошибок работы
     }
@@ -1118,6 +1120,44 @@ async function cancelCurrent() {
     } catch (e) {
         console.error("Критическая ошибка в cancelCurrent:", e);
         alert("Произошла ошибка при выполнении запроса.");
+    }
+}
+
+async function returnCurrentToQueue() {
+    if (!currentTicketId) {
+        alert("Нет активного клиента для возврата в очередь.");
+        return;
+    }
+
+    if (!confirm("Вернуть текущего клиента обратно в очередь?")) return;
+
+    const button = document.getElementById("return-to-queue-btn");
+    if (button) button.disabled = true;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/return-to-queue`, {
+            method: "POST",
+            headers: { "session-id": sessionId }
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(data.detail || "Не удалось вернуть клиента в очередь");
+        }
+
+        currentTicketId = null;
+        document.getElementById("current").textContent = "Рабочее место свободно";
+        document.getElementById("current-service").textContent = "";
+        showToast(
+            data.ticket_number ? `Билет ${data.ticket_number} возвращён в очередь` : "Билет возвращён в очередь",
+            "success"
+        );
+        await loadQueue();
+    } catch (e) {
+        console.error("Ошибка возврата билета в очередь:", e);
+        alert(e.message || "Не удалось вернуть клиента в очередь");
+    } finally {
+        if (button) button.disabled = false;
     }
 }
 
