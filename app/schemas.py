@@ -49,6 +49,10 @@ class ServiceOperatorChoiceUpdate(BaseModel):
     operator_choice_enabled: bool
 
 
+class ServiceOrderUpdate(BaseModel):
+    service_ids: List[int]
+
+
 class TicketCreate(BaseModel):
     service_id: int
     window_id: int | None = None

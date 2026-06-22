@@ -13,6 +13,7 @@ class Service(Base):
     __tablename__ = "services"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    display_order = Column(Integer, nullable=False, default=0, server_default=text("0"))
     status = Column(String, default="inactive")
     last_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
     operator_choice_enabled = Column(

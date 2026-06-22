@@ -34,7 +34,7 @@ from app.dependencies import (
 )
 from app.models import Admin, Operator, Service, Window, WindowService
 from app.schemas import (
-    ServiceCreate, ServiceOperatorChoiceUpdate, ServiceRename,
+    ServiceCreate, ServiceOperatorChoiceUpdate, ServiceOrderUpdate, ServiceRename,
     ServiceStatusUpdate,
 )
 from app.security import get_password_hash, verify_password
@@ -46,8 +46,10 @@ router = APIRouter()
 async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
     try:
+        next_order = db.query(func.coalesce(func.max(Service.display_order), -1)).scalar() + 1
         db_service = Service(
             name=service.name.strip(),
+            display_order=next_order,
             operator_choice_enabled=1 if service.operator_choice_enabled else 0
         )
         db.add(db_service)
@@ -76,9 +78,50 @@ def list_services(
     limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT)
     ):
     db = SessionLocal()
-    services = db.query(Service).order_by(Service.id).offset(skip).limit(limit).all()
+    services = (
+        db.query(Service)
+        .order_by(Service.display_order, Service.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     db.close()
     return services
+
+
+@router.put("/services/order", tags=["Services"])
+async def update_services_order(
+    data: ServiceOrderUpdate,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        services = db.query(Service).with_for_update().all()
+        existing_ids = {service.id for service in services}
+
+        if len(data.service_ids) != len(set(data.service_ids)):
+            raise HTTPException(status_code=400, detail="Service IDs must be unique")
+        if set(data.service_ids) != existing_ids:
+            raise HTTPException(status_code=400, detail="The order must include all services")
+
+        order_by_id = {
+            service_id: position
+            for position, service_id in enumerate(data.service_ids)
+        }
+        for service in services:
+            service.display_order = order_by_id[service.id]
+
+        db.commit()
+        await manager.broadcast({"type": "services_updated"})
+        return {"service_ids": data.service_ids}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 @router.patch("/services/{service_id}", tags=["Services"])

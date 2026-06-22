@@ -138,7 +138,7 @@ async function loadServices() {
     // 1. Берем ID сессии из хранилища браузера
     const sessionId = sessionStorage.getItem("session_id");
     // 2. Делаем запрос с заголовком
-    const res = await fetch(`${API}/services`, {
+    const res = await fetch(`${API}/services?limit=500`, {
         method: "GET",
         headers: {
             "session-id": sessionId // Передаем тот самый ID
@@ -149,23 +149,31 @@ async function loadServices() {
         window.location.href = "login.html";
         return;
     }
-    const services = await res.json();
+    services = await res.json();
 
   let html = `<tr>
     <th>ID</th>
     <th>Название</th>
     <th>Статус</th>
     <th>Выбор оператора</th>
+    <th>Порядок</th>
     <th>Действия</th>
   </tr>`;
 
-  for(let s of services){
+  for(let index = 0; index < services.length; index++){
+    const s = services[index];
     html += `
     <tr id="service-${s.id}">
       <td>${s.id}</td>
       <td>${s.name}</td>
       <td>${s.status}</td>
       <td>${s.operator_choice_enabled ? "Да" : "Нет"}</td>
+      <td>
+        <button title="Переместить выше" aria-label="Переместить услугу выше"
+          onclick="moveService(${s.id}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button title="Переместить ниже" aria-label="Переместить услугу ниже"
+          onclick="moveService(${s.id}, 1)" ${index === services.length - 1 ? "disabled" : ""}>↓</button>
+      </td>
       <td>
         <button onclick="editService(${s.id},'${s.name}')">Название</button>
         <button onclick="editServiceStatus(${s.id}, '${s.status}')">Статус</button>
@@ -187,6 +195,25 @@ async function loadServices() {
   `);
 }
 
+async function moveService(serviceId, direction) {
+  const currentIndex = services.findIndex(service => service.id === serviceId);
+  const targetIndex = currentIndex + direction;
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= services.length) return;
+
+  const reordered = [...services];
+  [reordered[currentIndex], reordered[targetIndex]] = [
+    reordered[targetIndex], reordered[currentIndex]
+  ];
+
+  const result = await fetchJSON(`${API}/services/order`, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({service_ids: reordered.map(service => service.id)})
+  });
+
+  if (result) loadServices();
+}
+
 function editServiceStatus(id, currentStatus) {
   // если уже открыто для этой услуги — закрываем
   if(openedServices && openedServices.dataset.type === "serviceStatus" && openedServices.dataset.serviceId == id){
@@ -201,6 +228,7 @@ function editServiceStatus(id, currentStatus) {
   let row = document.getElementById(`service-${id}`);
 
   let html = `<tr class="serviceRow" data-service-id="${id}" data-type="serviceStatus">
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -298,6 +326,7 @@ function editService(id, name) {
 
   let row = document.getElementById(`service-${id}`);
   let html = `<tr class="serviceRow" data-service-id="${id}" data-type="service">
+    <td></td>
     <td></td>
     <td></td>
     <td></td>

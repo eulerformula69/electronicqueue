@@ -76,6 +76,34 @@ def migrate_operator_choice_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_service_order_schema(engine):
+    """Add a stable display order and preserve the existing ID-based order."""
+    ddl = """
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS display_order integer;
+
+    WITH ordered_services AS (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 AS new_order
+        FROM services
+    )
+    UPDATE services
+    SET display_order = ordered_services.new_order
+    FROM ordered_services
+    WHERE services.id = ordered_services.id
+      AND services.display_order IS NULL;
+
+    ALTER TABLE services
+        ALTER COLUMN display_order SET DEFAULT 0,
+        ALTER COLUMN display_order SET NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS ix_services_display_order
+        ON services (display_order, id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_ticket_stages_schema(engine):
     """Add ticket-chain metadata and backfill tickets from older releases."""
     ddl = """
