@@ -145,6 +145,7 @@ rsync -a --delete \
     "${SOURCE_DIR}/app/" "${APP_DIR}/app/"
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
 install -m 0750 "${SOURCE_DIR}/scripts/manageAdmins.py" "${APP_DIR}/scripts/manageAdmins.py"
+install -m 0750 "${SOURCE_DIR}/scripts/closeDay.py" "${APP_DIR}/scripts/closeDay.py"
 install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"
 install -m 0640 "${SOURCE_DIR}/deploy/exclude_from_update.txt" "${APP_DIR}/deploy/exclude_from_update.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
@@ -182,6 +183,7 @@ DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:5432/${DB_NAME}
 GRAFANA_DB_PASSWORD=${GRAFANA_DB_PASSWORD}
 CORS_ORIGINS=http://${SERVER_IP},https://${SERVER_IP},http://localhost,http://127.0.0.1
 SESSION_TIMEOUT_SECONDS=300
+CLOSE_DAY_WS_URL=ws://127.0.0.1:8000/ws/terminal
 PIPER_PATH=${APP_DIR}/venv/bin/piper
 PIPER_MODEL=queue/tts/ru_RU-irina-medium.onnx
 TTS_CACHE_DIR=queue/tts/cache
@@ -238,6 +240,12 @@ cat > /usr/local/bin/queue-admin <<EOF
 exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/manageAdmins.py "\$@"
 EOF
 chmod 0755 /usr/local/bin/queue-admin
+
+cat > /usr/local/bin/queue-close-day <<EOF
+#!/bin/sh
+exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/closeDay.py "\$@"
+EOF
+chmod 0755 /usr/local/bin/queue-close-day
 
 log "Проверяю подключение к базе данных"
 runuser -u "${APP_USER}" -- "${APP_DIR}/venv/bin/python" - "${APP_DIR}/main.env" <<'PY'

@@ -39,7 +39,9 @@ from app.models import (
 from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state, update_services_status_for_window
 from app.services.settings import get_system_settings_dict
-from app.services.tickets import get_board_state, reassign_waiting_tickets_from_window
+from app.services.tickets import (
+    broadcast_board, get_board_state, reassign_waiting_tickets_from_window,
+)
 
 router = APIRouter()
 
@@ -104,6 +106,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 await manager.broadcast({"type": "queue_updated"})
             elif msg_type == "services_updated":
                 await manager.broadcast({"type": "services_updated"})
+            elif msg_type == "close_day_updated":
+                await manager.broadcast({"type": "services_updated"})
+                await manager.broadcast({"type": "queue_updated"})
+                await broadcast_board()
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

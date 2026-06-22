@@ -11,6 +11,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost:5432/postgres")
 raw_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost,http://127.0.0.1")
 CORS_ORIGINS = [origin.strip() for origin in raw_cors_origins.split(",") if origin.strip()]
 SESSION_TIMEOUT_SECONDS = int(os.getenv("SESSION_TIMEOUT_SECONDS", "30"))
+CLOSE_DAY_WS_URL = os.getenv(
+    "CLOSE_DAY_WS_URL", "ws://127.0.0.1:8000/ws/terminal"
+)
 
 MAX_FILE_SIZE = 50 * 1024 * 1024
 DEFAULT_PAGE_LIMIT = 100
