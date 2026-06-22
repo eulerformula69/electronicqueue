@@ -31,3 +31,4 @@ backup_update_*/
 # Файлы
 queue/tts/
 queue/media/
+data/map.json

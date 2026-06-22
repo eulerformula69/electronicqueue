@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ServiceRename(BaseModel):
@@ -86,6 +86,10 @@ class WindowCreate(BaseModel):
     name: str
 
 
+class WindowOperatorUpdate(BaseModel):
+    operator_id: int | None = None
+
+
 class RedirectRequest(BaseModel):
     ticket_id: int
     new_service_id: int
@@ -135,6 +139,24 @@ class PlaylistUpdate(BaseModel):
     path: str = None
     index: int = None
     action: str
+
+
+class MapObject(BaseModel):
+    id: str
+    type: Literal["room", "workplace"]
+    x: int
+    y: int
+    width: int
+    height: int
+    label: str = ""
+    window_id: int | None = None
+
+
+class OfficeMap(BaseModel):
+    version: int = 1
+    width: int = 1200
+    height: int = 700
+    objects: List[MapObject] = Field(default_factory=list)
 
 
 class SystemSettingsUpdate(BaseModel):

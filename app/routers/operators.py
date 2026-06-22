@@ -35,7 +35,7 @@ from app.dependencies import (
 from app.models import (
     Admin, Operator, Service, Window, WindowService, record_operator_status,
 )
-from app.schemas import OperatorCreate, OperatorLoginUpdate
+from app.schemas import OperatorCreate, OperatorLoginUpdate, WindowOperatorUpdate
 from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state
 
@@ -144,6 +144,68 @@ async def list_operators(
         return safe_operators
     finally:
         # Блок finally гарантирует, что база закроется даже при ошибке
+        db.close()
+
+
+@router.put("/windows/{window_id}/operator", tags=["Operators"])
+async def assign_window_operator(
+    window_id: int,
+    data: WindowOperatorUpdate,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        window = db.query(Window).filter(Window.id == window_id).first()
+        if not window:
+            raise HTTPException(status_code=404, detail="Рабочее место не найдено")
+
+        selected_operator = None
+        if data.operator_id is not None:
+            selected_operator = (
+                db.query(Operator)
+                .filter(Operator.id == data.operator_id)
+                .first()
+            )
+            if not selected_operator:
+                raise HTTPException(status_code=404, detail="Оператор не найден")
+            if selected_operator.window_id not in (None, window_id):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Оператор уже назначен на другое рабочее место",
+                )
+
+        current_operators = (
+            db.query(Operator)
+            .filter(Operator.window_id == window_id)
+            .all()
+        )
+        for operator in current_operators:
+            if not selected_operator or operator.id != selected_operator.id:
+                operator.window_id = None
+                record_operator_status(db, operator.id, None, "offline")
+
+        # Освобождаем уникальную привязку окна до назначения нового оператора.
+        db.flush()
+
+        if selected_operator and selected_operator.window_id != window_id:
+            selected_operator.window_id = window_id
+            record_operator_status(
+                db, selected_operator.id, window_id, window.status
+            )
+
+        db.commit()
+        await manager.broadcast({"type": "services_updated", "window_id": window_id})
+        return {
+            "window_id": window_id,
+            "operator_id": selected_operator.id if selected_operator else None,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
         db.close()
 
 

@@ -118,6 +118,7 @@ sudo queue-admin delete new_admin
 - `PostgreSQL/`;
 - `queue/media/`;
 - `queue/tts/cache/`;
+- `data/map.json`;
 - `__pycache__/`.
 
 Они могут содержать пароли, рабочие данные или локальные установочные файлы.

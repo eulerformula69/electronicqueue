@@ -34,7 +34,7 @@ from app.dependencies import (
 )
 from app.models import Admin, Service, Window, record_queue_mode
 from app.schemas import (
-    PlaylistUpdate, PublicSettingsResponse, SystemSettingsResponse,
+    OfficeMap, PlaylistUpdate, PublicSettingsResponse, SystemSettingsResponse,
     SystemSettingsUpdate,
 )
 from app.security import get_password_hash, verify_password
@@ -46,6 +46,72 @@ from app.services.settings import (
 from app.services.tickets import broadcast_board
 
 router = APIRouter()
+
+MAP_FILE = BASE_DIR / "data" / "map.json"
+
+
+def _default_map() -> dict:
+    return {"version": 1, "width": 1200, "height": 700, "objects": []}
+
+
+def _validate_map_geometry(data: OfficeMap) -> None:
+    if data.width < 400 or data.width > 50000 or data.height < 300 or data.height > 50000:
+        raise HTTPException(status_code=400, detail="Некорректный размер карты")
+    if len(data.objects) > 1000:
+        raise HTTPException(status_code=400, detail="На карте слишком много объектов")
+
+    ids = set()
+    for item in data.objects:
+        if not item.id or len(item.id) > 100 or item.id in ids:
+            raise HTTPException(status_code=400, detail="Некорректный ID объекта карты")
+        ids.add(item.id)
+
+        min_width, min_height = ((180, 120) if item.type == "room" else (70, 50))
+        if item.width < min_width or item.height < min_height:
+            raise HTTPException(status_code=400, detail="Объект карты слишком мал")
+        if item.x < 0 or item.y < 0:
+            raise HTTPException(status_code=400, detail="Объект выходит за границы карты")
+        if item.x + item.width > data.width or item.y + item.height > data.height:
+            raise HTTPException(status_code=400, detail="Объект выходит за границы карты")
+        if len(item.label) > 100:
+            raise HTTPException(status_code=400, detail="Слишком длинное название объекта")
+        if item.type == "room" and item.window_id is not None:
+            raise HTTPException(status_code=400, detail="Помещение нельзя привязать к окну")
+
+
+@router.get("/admin/map", response_model=OfficeMap, tags=["Admin"])
+async def get_office_map(admin: Admin = Depends(verify_admin_session)):
+    if not MAP_FILE.exists():
+        return _default_map()
+    try:
+        with MAP_FILE.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(status_code=500, detail="Не удалось прочитать карту")
+
+
+@router.put("/admin/map", response_model=OfficeMap, tags=["Admin"])
+async def update_office_map(
+    data: OfficeMap,
+    admin: Admin = Depends(verify_admin_session),
+):
+    _validate_map_geometry(data)
+    MAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = MAP_FILE.with_name(
+        f".{MAP_FILE.name}.{secrets.token_hex(8)}.tmp"
+    )
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    try:
+        with temp_file.open("w", encoding="utf-8") as file:
+            json.dump(payload, file, ensure_ascii=False, indent=2)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp_file, MAP_FILE)
+    except OSError:
+        if temp_file.exists():
+            temp_file.unlink()
+        raise HTTPException(status_code=500, detail="Не удалось сохранить карту")
+    return payload
 
 
 @router.post("/admin/media/upload", tags=["Admin"])

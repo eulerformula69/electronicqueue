@@ -1028,6 +1028,457 @@ body.admin-page .btn-edit{ background: var(--accent); color: white; margin-right
 body.admin-page .btn-delete{ background: var(--danger); color: white; }
 body.admin-page .btn-add{ background: var(--success); color: white; margin-top: 10px; }
 
+/* --- Редактор карты --- */
+body.admin-page #form:has(.map-editor){
+    padding: 0;
+    overflow: hidden;
+}
+
+body.admin-page .map-editor{
+    min-width: 0;
+}
+
+body.admin-page .map-toolbar{
+    min-height: 66px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    box-sizing: border-box;
+}
+
+body.admin-page .map-toolbar-spacer{
+    flex: 1;
+}
+
+body.admin-page .map-zoom-controls{
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+    border: 1px solid #dce4ec;
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+body.admin-page .map-zoom-controls button{
+    min-width: 38px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 0;
+    background: white;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+body.admin-page .map-zoom-controls button + button{
+    border-left: 1px solid #dce4ec;
+}
+
+body.admin-page .map-zoom-controls .map-zoom-value{
+    min-width: 64px;
+    font-size: 0.8rem;
+}
+
+body.admin-page .map-toolbar .map-tool-room{
+    background: #e8f2ff;
+    color: #245ca6;
+}
+
+body.admin-page .map-toolbar .map-tool-workplace{
+    background: #e9f9ee;
+    color: #18723b;
+}
+
+body.admin-page .map-toolbar .map-save-button{
+    background: var(--primary);
+    color: white;
+}
+
+body.admin-page .map-save-state{
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+body.admin-page .map-save-state.dirty{
+    color: #9a6500;
+}
+
+body.admin-page .map-editor-body{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 390px);
+    align-items: start;
+    min-width: 0;
+}
+
+body.admin-page .map-canvas-scroll{
+    padding: 28px;
+    height: clamp(520px, calc(100vh - 220px), 780px);
+    min-width: 0;
+    overflow: auto;
+    background: #eef2f6;
+    cursor: grab;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+body.admin-page .map-canvas-scroll::-webkit-scrollbar{
+    display: none;
+}
+
+body.admin-page .map-canvas-scroll.panning{
+    cursor: grabbing;
+}
+
+body.admin-page .map-canvas-stage{
+    position: relative;
+}
+
+body.admin-page .map-canvas{
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    overflow: hidden;
+    background-color: white;
+    background-image:
+        linear-gradient(#edf1f5 1px, transparent 1px),
+        linear-gradient(90deg, #edf1f5 1px, transparent 1px);
+    background-size: 20px 20px;
+    box-shadow: 0 6px 24px rgba(15, 34, 58, 0.12);
+    user-select: none;
+    touch-action: none;
+}
+
+body.admin-page .map-object{
+    position: absolute;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    box-sizing: border-box;
+    cursor: move;
+    touch-action: none;
+}
+
+body.admin-page .map-room{
+    z-index: 1;
+    border: 3px solid #4384c4;
+    background: rgba(104, 167, 225, 0.09);
+    color: #245b91;
+}
+
+body.admin-page .map-workplace{
+    z-index: 2;
+    align-items: center;
+    border: 3px solid #35a85c;
+    border-radius: 6px;
+    background: #effaf2;
+    color: #176832;
+}
+
+body.admin-page .map-object.selected{
+    outline: 3px solid #f3a712;
+    outline-offset: 2px;
+}
+
+body.admin-page .map-object-title{
+    max-width: calc(100% - 14px);
+    padding: 5px 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+body.admin-page .map-resize-handle{
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 8px 0 3px 0;
+    background: #f3a712;
+    cursor: nwse-resize;
+}
+
+body.admin-page .map-properties{
+    padding: 24px 20px;
+    border-left: 1px solid #e2e8f0;
+    background: white;
+    box-sizing: border-box;
+    min-width: 0;
+    height: clamp(520px, calc(100vh - 220px), 780px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #9aabbc #edf2f7;
+}
+
+body.admin-page .map-properties::-webkit-scrollbar{
+    width: 9px;
+}
+
+body.admin-page .map-properties::-webkit-scrollbar-track{
+    background: #edf2f7;
+}
+
+body.admin-page .map-properties::-webkit-scrollbar-thumb{
+    background: #9aabbc;
+    border: 2px solid #edf2f7;
+    border-radius: 999px;
+}
+
+body.admin-page .map-properties h3{
+    margin: 0 0 20px;
+    color: var(--primary);
+}
+
+body.admin-page .map-properties p{
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+body.admin-page .map-properties-hint{
+    font-size: 0.85rem;
+}
+
+body.admin-page .map-property-field{
+    display: block;
+    margin-bottom: 18px;
+}
+
+body.admin-page .map-property-field span{
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+body.admin-page .map-property-field input,
+body.admin-page .map-property-field select{
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body.admin-page .map-property-field .map-inline-create{
+    width: 100%;
+    height: auto;
+    margin-top: 9px;
+    background: #eef5fc;
+    color: #245ca6;
+}
+
+body.admin-page .map-object-size{
+    margin: 8px 0 24px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+body.admin-page .map-properties .map-delete-button{
+    width: 100%;
+    background: #fff0ef;
+    color: var(--danger);
+}
+
+body.admin-page .map-window-settings{
+    margin: 22px -2px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+body.admin-page .map-window-settings h4{
+    margin: 0 0 12px;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+body.admin-page .map-window-settings > select{
+    width: 100%;
+    margin: 0 0 10px;
+    box-sizing: border-box;
+}
+
+body.admin-page #form .map-window-settings > input,
+body.admin-page #form .map-window-settings > select,
+body.admin-page #form .map-settings-field input,
+body.admin-page #form .map-settings-field select,
+body.admin-page #form .map-entity-editor input,
+body.admin-page #form .map-create-details input{
+    width: 100%;
+    margin: 0 0 10px;
+    box-sizing: border-box;
+}
+
+body.admin-page .map-settings-field{
+    display: block;
+    margin-bottom: 10px;
+}
+
+body.admin-page .map-settings-field span{
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+body.admin-page .map-window-settings > button{
+    width: 100%;
+    background: #e8f2ff;
+    color: #245ca6;
+}
+
+body.admin-page .map-entity-editor{
+    display: grid;
+    gap: 0;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #d8e1ea;
+}
+
+body.admin-page .map-entity-editor button,
+body.admin-page .map-create-details button{
+    width: 100%;
+    background: #eef5fc;
+    color: #245ca6;
+}
+
+body.admin-page .map-create-details{
+    margin-top: 14px;
+}
+
+body.admin-page .map-create-details summary{
+    margin-bottom: 10px;
+    color: #245ca6;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+body.admin-page .map-services-list{
+    margin-bottom: 12px;
+    overflow: visible;
+}
+
+body.admin-page .map-service-row{
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) 58px;
+    align-items: start;
+    column-gap: 8px;
+    padding: 6px 0;
+    min-width: 0;
+}
+
+body.admin-page .map-service-checkbox{
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 22px;
+    min-width: 22px;
+    padding: 0;
+    margin: 0;
+}
+
+body.admin-page .map-service-name{
+    display: block;
+    min-width: 0;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-main);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+body.admin-page #form .map-service-checkbox .map-service-check{
+    display: block;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    padding: 0;
+}
+
+body.admin-page #form .map-service-row .map-service-priority{
+    width: 58px;
+    min-width: 58px;
+    margin: 0;
+    padding: 7px 5px;
+    box-sizing: border-box;
+}
+
+body.admin-page .map-window-loading{
+    padding: 8px 0 14px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+body.admin-page .map-loading,
+body.admin-page .map-error{
+    padding: 24px;
+}
+
+body.admin-page .map-error{
+    color: var(--danger);
+}
+
+@media (max-width: 1100px){
+    body.admin-page .map-editor-body{
+        grid-template-columns: minmax(0, 1fr) 320px;
+    }
+
+    body.admin-page .map-save-state{
+        display: none;
+    }
+}
+
+@media (max-width: 850px){
+    body.admin-page .content{
+        margin-left: 12px;
+        margin-right: 12px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    body.admin-page .map-toolbar{
+        flex-wrap: wrap;
+    }
+
+    body.admin-page .map-toolbar-spacer{
+        display: none;
+    }
+
+    body.admin-page .map-editor-body{
+        grid-template-columns: 1fr;
+    }
+
+    body.admin-page .map-canvas-scroll{
+        height: 60vh;
+        min-height: 420px;
+    }
+
+    body.admin-page .map-properties{
+        border-top: 1px solid #e2e8f0;
+        border-left: 0;
+        height: auto;
+        overflow: visible;
+        scrollbar-gutter: auto;
+    }
+}
+
 
 /* --- Поля ввода в формах --- */
 body.admin-page input,
