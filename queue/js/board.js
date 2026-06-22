@@ -19,16 +19,39 @@ let waitingCurrentPage = 0;
 let calledPages = [];
 let waitingPages = [];
 let pageTimer = null;
+let boardTicketTemplate = "Билет <number> -> Окно <window>";
 
 // Старые имена оставлены как алиасы, чтобы внешний код/настройки не ломались.
 let currentPage = 0;
 let pages = [];
 
 document.addEventListener("DOMContentLoaded", () => {
+    loadBoardSettings();
     connectWS();
     updateClock();
     setInterval(updateClock, 1000);
 });
+
+async function loadBoardSettings() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/settings/public`);
+        if (!response.ok) return;
+
+        const settings = await response.json();
+        if (settings.board_ticket_template) {
+            boardTicketTemplate = settings.board_ticket_template;
+            renderLatestTickets();
+        }
+    } catch (error) {
+        console.error("Не удалось загрузить настройки табло:", error);
+    }
+}
+
+function getTicketLabel() {
+    const numberMarkerIndex = boardTicketTemplate.indexOf("<number>");
+    if (numberMarkerIndex === -1) return "Билет";
+    return boardTicketTemplate.slice(0, numberMarkerIndex).trim() || "Билет";
+}
 
 function connectWS() {
     ws = new WebSocket(CONFIG.WS_BOARD_URL);
@@ -90,6 +113,11 @@ function renderLatestTickets() {
 
 function handleMessage(event) {
     const data = JSON.parse(event.data);
+
+    if (data.type === "settings_updated") {
+        loadBoardSettings();
+        return;
+    }
 
     const isDuplicate = (ticket) => {
         const ticketId = getTicketId(ticket);
@@ -262,7 +290,7 @@ function splitDisplayText(ticket) {
     const windowName = String(ticket.window_name ?? "");
 
     const fallback = {
-        left: `ТАЛОН ${number}`,
+        left: `${getTicketLabel()} ${number}`,
         middle: "→",
         right: `ОКНО ${windowName}`
     };
@@ -380,7 +408,7 @@ function renderWaitingPage(waitingBoard, currentTickets) {
         const number = t.number ?? t.ticket_number ?? "";
         card.innerHTML = `
             <div class="line waiting-line">
-                <span class="ticket">Талон ${escapeHtml(number)}</span>
+                <span class="ticket">${escapeHtml(getTicketLabel())} ${escapeHtml(number)}</span>
             </div>
         `;
 

@@ -32,7 +32,7 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Service, Window
+from app.models import Admin, Service, Window, record_queue_mode
 from app.schemas import (
     PlaylistUpdate, PublicSettingsResponse, SystemSettingsResponse,
     SystemSettingsUpdate,
@@ -207,6 +207,7 @@ async def update_admin_settings(
         settings.hide_services_without_online_operators = _bool_to_str(
             data.hide_services_without_online_operators
         )
+        record_queue_mode(db, data.queue_mode)
         settings.queue_mode = data.queue_mode
         settings.call_message_template = data.call_message_template
         settings.board_ticket_template = data.board_ticket_template        
@@ -236,7 +237,8 @@ async def get_public_settings():
         settings = get_system_settings_dict(db)
         return {
             "print_ticket": settings["print_ticket"],
-            "show_print_badge": settings["show_print_badge"]
+            "show_print_badge": settings["show_print_badge"],
+            "board_ticket_template": settings["board_ticket_template"],
         }
     finally:
         db.close()

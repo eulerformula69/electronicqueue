@@ -158,3 +158,4 @@ class SystemSettingsResponse(BaseModel):
 class PublicSettingsResponse(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    board_ticket_template: str

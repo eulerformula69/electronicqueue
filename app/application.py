@@ -8,7 +8,8 @@ from app.config import BASE_DIR, CORS_ORIGINS
 from app.database import Base, engine
 from app.migrations import (
     init_ticket_numbering, migrate_operator_choice_schema,
-    migrate_operator_status_periods_schema, migrate_ticket_stages_schema,
+    migrate_operator_status_periods_schema, migrate_queue_mode_periods_schema,
+    migrate_ticket_stages_schema,
 )
 from app.routers import admin, auth, operators, services, tickets, tts, websocket, windows
 from app.services.operators import cleanup_sessions
@@ -37,5 +38,6 @@ async def startup():
     migrate_operator_choice_schema(engine)
     migrate_ticket_stages_schema(engine)
     migrate_operator_status_periods_schema(engine)
+    migrate_queue_mode_periods_schema(engine)
     init_ticket_numbering(engine)
     asyncio.create_task(cleanup_sessions())

@@ -196,3 +196,59 @@ class SystemSettings(Base):
         String,
         default="Билет <number> -> Окно <window>"
     )
+
+
+class QueueModePeriod(Base):
+    __tablename__ = "queue_mode_periods"
+    __table_args__ = (
+        CheckConstraint(
+            "queue_mode IN ('priority_fifo', 'dynamic_operator_distribution')",
+            name="ck_queue_mode_periods_mode",
+        ),
+        CheckConstraint(
+            "ended_at IS NULL OR ended_at >= started_at",
+            name="ck_queue_mode_periods_dates",
+        ),
+        Index("ix_queue_mode_periods_started_at", "started_at"),
+        Index(
+            "uq_queue_mode_current_period",
+            "current_period_key",
+            unique=True,
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    queue_mode = Column(String(40), nullable=False)
+    started_at = Column(
+        TIMESTAMP(timezone=False),
+        nullable=False,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
+    )
+    ended_at = Column(TIMESTAMP(timezone=False), nullable=True)
+    current_period_key = Column(Integer, nullable=False, default=1, server_default=text("1"))
+
+
+def record_queue_mode(db: Session, new_mode: str):
+    """Close the current queue-mode period and open one when the mode changes."""
+    if new_mode not in {"priority_fifo", "dynamic_operator_distribution"}:
+        raise ValueError(f"Unsupported queue mode: {new_mode}")
+
+    db.execute(text("SELECT pg_advisory_xact_lock(71756575655)"))
+    current_period = (
+        db.query(QueueModePeriod)
+        .filter(QueueModePeriod.ended_at.is_(None))
+        .with_for_update()
+        .first()
+    )
+    if current_period and current_period.queue_mode == new_mode:
+        return current_period
+
+    now = func.timezone("Asia/Irkutsk", func.current_timestamp())
+    if current_period:
+        current_period.ended_at = now
+
+    new_period = QueueModePeriod(queue_mode=new_mode, started_at=now)
+    db.add(new_period)
+    db.flush()
+    return new_period
