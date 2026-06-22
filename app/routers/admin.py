@@ -276,6 +276,8 @@ async def update_admin_settings(
         settings = get_or_create_system_settings(db)
         settings.print_ticket = _bool_to_str(data.print_ticket)
         settings.show_print_badge = _bool_to_str(data.show_print_badge)
+        settings.ticket_notice_duration_printed_seconds = data.ticket_notice_duration_printed_seconds
+        settings.ticket_notice_duration_unprinted_seconds = data.ticket_notice_duration_unprinted_seconds
         settings.default_operator_status = data.default_operator_status
         settings.active_ticket_on_operator_logout = data.active_ticket_on_operator_logout
         settings.hide_services_without_online_operators = _bool_to_str(
@@ -312,6 +314,8 @@ async def get_public_settings():
         return {
             "print_ticket": settings["print_ticket"],
             "show_print_badge": settings["show_print_badge"],
+            "ticket_notice_duration_printed_seconds": settings["ticket_notice_duration_printed_seconds"],
+            "ticket_notice_duration_unprinted_seconds": settings["ticket_notice_duration_unprinted_seconds"],
             "board_ticket_template": settings["board_ticket_template"],
         }
     finally:

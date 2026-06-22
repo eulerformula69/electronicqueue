@@ -163,6 +163,8 @@ class OfficeMap(BaseModel):
 class SystemSettingsUpdate(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_notice_duration_printed_seconds: int = Field(ge=1, le=300)
+    ticket_notice_duration_unprinted_seconds: int = Field(ge=1, le=300)
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
@@ -174,6 +176,8 @@ class SystemSettingsUpdate(BaseModel):
 class SystemSettingsResponse(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_notice_duration_printed_seconds: int
+    ticket_notice_duration_unprinted_seconds: int
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
@@ -185,4 +189,6 @@ class SystemSettingsResponse(BaseModel):
 class PublicSettingsResponse(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_notice_duration_printed_seconds: int
+    ticket_notice_duration_unprinted_seconds: int
     board_ticket_template: str

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Терминал очереди</title>
     <!--- <link rel="stylesheet" href="/queue/css/terminal.css?v=1.1"> --->
-    <link rel="stylesheet" href="/queue/css/style.css?v=1.1">
+    <link rel="stylesheet" href="/queue/css/style.css?v=1.2">
 	
 <style>
         /* Стили только для таллона, почему-то через .css не хочет работать */
@@ -155,6 +155,7 @@
     <div id="services">Загрузка услуг...</div>
 
     <div id="ticket-notice">
+        <button id="ticket-notice-close" type="button" aria-label="Закрыть уведомление" title="Закрыть">&times;</button>
         <span id="ticket-message"></span>
         <div class="timer" id="ticket-timer"></div>
     </div>
@@ -179,6 +180,6 @@
 
 
     <script src="/queue/js/config.js"></script>
-    <script src="/queue/js/terminal.js"></script>
+    <script src="/queue/js/terminal.js?v=1.3"></script>
 </body>
 </html>

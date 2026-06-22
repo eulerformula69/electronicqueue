@@ -1043,6 +1043,30 @@ async function loadExtraSettings() {
                     <input type="checkbox" id="setting-hide-services-without-online" ${settings.hide_services_without_online_operators ? "checked" : ""}>
                     Скрывать услуги на терминале, если по ним нет активных операторов 
                 </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Показ номера с печатью талона, секунд:</span>
+                    <input
+                        type="number"
+                        id="setting-ticket-notice-duration-printed"
+                        class="settings-input"
+                        min="1"
+                        max="300"
+                        value="${settings.ticket_notice_duration_printed_seconds || 7}"
+                    >
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Показ номера без печати талона, секунд:</span>
+                    <input
+                        type="number"
+                        id="setting-ticket-notice-duration-unprinted"
+                        class="settings-input"
+                        min="1"
+                        max="300"
+                        value="${settings.ticket_notice_duration_unprinted_seconds || 45}"
+                    >
+                </label>
             </section>
 
             <section class="settings-section">
@@ -1124,6 +1148,8 @@ async function saveExtraSettings() {
 	const payload = {
 		print_ticket: document.getElementById("setting-print-ticket").checked,
 		show_print_badge: document.getElementById("setting-show-print-badge").checked,
+		ticket_notice_duration_printed_seconds: Number(document.getElementById("setting-ticket-notice-duration-printed").value),
+		ticket_notice_duration_unprinted_seconds: Number(document.getElementById("setting-ticket-notice-duration-unprinted").value),
 		default_operator_status: document.getElementById("setting-default-operator-status").value,
 		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
 		hide_services_without_online_operators: document.getElementById("setting-hide-services-without-online").checked,
@@ -1132,6 +1158,18 @@ async function saveExtraSettings() {
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim()
 	};
+
+    if (
+        !Number.isInteger(payload.ticket_notice_duration_printed_seconds) ||
+        !Number.isInteger(payload.ticket_notice_duration_unprinted_seconds) ||
+        payload.ticket_notice_duration_printed_seconds < 1 ||
+        payload.ticket_notice_duration_printed_seconds > 300 ||
+        payload.ticket_notice_duration_unprinted_seconds < 1 ||
+        payload.ticket_notice_duration_unprinted_seconds > 300
+    ) {
+        alert("Время показа номера должно быть целым числом от 1 до 300 секунд");
+        return;
+    }
 
     if (!payload.call_message_template.includes("<number>") || !payload.call_message_template.includes("<window>")) {
         alert("Шаблон озвучки должен содержать <number> и <window>");

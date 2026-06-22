@@ -30,6 +30,8 @@ def get_system_settings_dict(db: Session) -> dict:
     return {
         "print_ticket": _str_to_bool(settings.print_ticket, default=True),
         "show_print_badge": _str_to_bool(settings.show_print_badge, default=True),
+        "ticket_notice_duration_printed_seconds": settings.ticket_notice_duration_printed_seconds or 7,
+        "ticket_notice_duration_unprinted_seconds": settings.ticket_notice_duration_unprinted_seconds or 45,
         "default_operator_status": settings.default_operator_status or "online",
         "active_ticket_on_operator_logout": settings.active_ticket_on_operator_logout or "return_to_queue",
         "hide_services_without_online_operators": _str_to_bool(

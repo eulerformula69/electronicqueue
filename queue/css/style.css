@@ -715,6 +715,21 @@ body.terminal-page #ticket-notice{
     justify-content: center;
     align-items: center;
 }
+body.terminal-page #ticket-notice-close{
+    position: absolute;
+    top: 28px;
+    right: 36px;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 58px;
+    line-height: 60px;
+    cursor: pointer;
+}
 body.terminal-page #ticket-notice span{
     display: block;
     background: var(--card-bg);
@@ -731,6 +746,7 @@ body.terminal-page #ticket-notice span{
     text-align: center;
     max-width: 85%;
     box-sizing: border-box;
+    white-space: pre-line;
 }
 body.terminal-page #ticket-notice .timer{
     font-size: 42px;    

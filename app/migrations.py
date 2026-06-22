@@ -248,3 +248,19 @@ def migrate_queue_mode_periods_schema(engine):
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_ticket_notice_settings_schema(engine):
+    """Add configurable terminal notice durations to existing installations."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS ticket_notice_duration_printed_seconds integer DEFAULT 7,
+        ADD COLUMN IF NOT EXISTS ticket_notice_duration_unprinted_seconds integer DEFAULT 45;
+
+    UPDATE system_settings
+    SET ticket_notice_duration_printed_seconds = COALESCE(ticket_notice_duration_printed_seconds, 7),
+        ticket_notice_duration_unprinted_seconds = COALESCE(ticket_notice_duration_unprinted_seconds, 45);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

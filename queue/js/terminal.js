@@ -90,7 +90,9 @@ function connectSocket() {
 let socket = connectSocket();
 let terminalSettings = {
     print_ticket: true,
-    show_print_badge: true
+    show_print_badge: true,
+    ticket_notice_duration_printed_seconds: 7,
+    ticket_notice_duration_unprinted_seconds: 45
 };
 
 function renderPrintModeBadge() {
@@ -122,6 +124,10 @@ async function loadTerminalSettings() {
         const data = await res.json();
         terminalSettings.print_ticket = data.print_ticket !== false;
         terminalSettings.show_print_badge = data.show_print_badge !== false;
+        terminalSettings.ticket_notice_duration_printed_seconds =
+            Number(data.ticket_notice_duration_printed_seconds) || 7;
+        terminalSettings.ticket_notice_duration_unprinted_seconds =
+            Number(data.ticket_notice_duration_unprinted_seconds) || 45;
         renderPrintModeBadge();
     } catch (error) {
         console.warn("Не удалось загрузить публичные настройки терминала:", error);
@@ -373,7 +379,17 @@ async function createTicket(serviceId, serviceName, windowId = null) {
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: "queue_updated" }));
         }
-        showNotice(`Ваш номер: ${data.number}`, CONFIG.NOTICE_DURATION);
+        if (terminalSettings.print_ticket) {
+            showNotice(
+                `Ваш номер: ${data.number}`,
+                terminalSettings.ticket_notice_duration_printed_seconds
+            );
+        } else {
+            showNotice(
+                `Пожалуйста, запомните свой номер:\n${data.number}`,
+                terminalSettings.ticket_notice_duration_unprinted_seconds
+            );
+        }
 
     } catch (error) {
         console.error("Ошибка при создании билета:", error);
@@ -411,6 +427,16 @@ function showNotice(message, duration) {
         }
     }, 1000);
 }
+
+function closeNotice() {
+    if (window.noticeInterval) {
+        clearInterval(window.noticeInterval);
+        window.noticeInterval = null;
+    }
+    document.getElementById("ticket-notice").style.display = "none";
+}
+
+document.getElementById("ticket-notice-close").addEventListener("click", closeNotice);
 
 // Оставляем только ОДНУ функцию printTicket
 function printTicket() {
