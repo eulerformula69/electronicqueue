@@ -1172,6 +1172,8 @@ let mapDirty = false;
 let mapZoom = 1;
 let mapWorldWidth = 6000;
 let mapWorldHeight = 4000;
+const MAP_GRID_SIZE = 20;
+let mapSnapEnabled = localStorage.getItem("map_snap_enabled") === "true";
 
 async function mapRequest(url, options = {}) {
     const response = await fetch(url, {
@@ -1228,6 +1230,11 @@ function renderMapEditor() {
                     <button id="map-zoom-value" class="map-zoom-value" title="Вернуть масштаб 100%" onclick="resetMapZoom()">100%</button>
                     <button title="Приблизить" onclick="changeMapZoom(0.15)">+</button>
                 </div>
+                <label class="map-snap-toggle">
+                    <input type="checkbox" ${mapSnapEnabled ? "checked" : ""}
+                        onchange="toggleMapSnap(this.checked)">
+                    <span>Привязка к сетке</span>
+                </label>
                 <span class="map-toolbar-spacer"></span>
                 <span id="map-save-state" class="map-save-state">Все изменения сохранены</span>
                 <button class="map-save-button" onclick="saveOfficeMap()">Сохранить карту</button>
@@ -1325,6 +1332,15 @@ function resetMapZoom() {
     setMapZoom(1);
 }
 
+function toggleMapSnap(enabled) {
+    mapSnapEnabled = enabled;
+    localStorage.setItem("map_snap_enabled", String(enabled));
+}
+
+function snapMapValue(value) {
+    return mapSnapEnabled ? Math.round(value / MAP_GRID_SIZE) * MAP_GRID_SIZE : value;
+}
+
 function renderMapObjects() {
     const canvas = document.getElementById("map-canvas");
     if (!canvas) return;
@@ -1375,8 +1391,8 @@ function addMapObject(type) {
     const object = {
         id: createMapObjectId(),
         type,
-        x: Math.min(40 + offset, mapWorldWidth - width),
-        y: Math.min(40 + offset, mapWorldHeight - height),
+        x: snapMapValue(Math.min(40 + offset, mapWorldWidth - width)),
+        y: snapMapValue(Math.min(40 + offset, mapWorldHeight - height)),
         width,
         height,
         label: `${isRoom ? "Помещение" : "Физический стол"} ${sameTypeCount + 1}`,
@@ -1412,8 +1428,16 @@ function startMapDrag(event, object) {
     target.setPointerCapture(event.pointerId);
 
     const move = moveEvent => {
-        object.x = clampMapValue(originalX + (moveEvent.clientX - startX) / mapZoom, 0, mapWorldWidth - object.width);
-        object.y = clampMapValue(originalY + (moveEvent.clientY - startY) / mapZoom, 0, mapWorldHeight - object.height);
+        object.x = clampMapValue(
+            snapMapValue(originalX + (moveEvent.clientX - startX) / mapZoom),
+            0,
+            mapWorldWidth - object.width
+        );
+        object.y = clampMapValue(
+            snapMapValue(originalY + (moveEvent.clientY - startY) / mapZoom),
+            0,
+            mapWorldHeight - object.height
+        );
         ensureMapWorldSpace(object);
         target.style.left = `${object.x}px`;
         target.style.top = `${object.y}px`;
@@ -1436,15 +1460,29 @@ function startMapResize(event, object) {
     const startY = event.clientY;
     const originalWidth = object.width;
     const originalHeight = object.height;
-    const minWidth = object.type === "room" ? 180 : 70;
-    const minHeight = object.type === "room" ? 120 : 50;
+    const baseMinWidth = object.type === "room" ? 180 : 70;
+    const baseMinHeight = object.type === "room" ? 120 : 50;
+    const minWidth = mapSnapEnabled
+        ? Math.ceil(baseMinWidth / MAP_GRID_SIZE) * MAP_GRID_SIZE
+        : baseMinWidth;
+    const minHeight = mapSnapEnabled
+        ? Math.ceil(baseMinHeight / MAP_GRID_SIZE) * MAP_GRID_SIZE
+        : baseMinHeight;
     const target = event.currentTarget;
     const objectElement = target.parentElement;
     target.setPointerCapture(event.pointerId);
 
     const move = moveEvent => {
-        object.width = clampMapValue(originalWidth + (moveEvent.clientX - startX) / mapZoom, minWidth, mapWorldWidth - object.x);
-        object.height = clampMapValue(originalHeight + (moveEvent.clientY - startY) / mapZoom, minHeight, mapWorldHeight - object.y);
+        object.width = clampMapValue(
+            snapMapValue(originalWidth + (moveEvent.clientX - startX) / mapZoom),
+            minWidth,
+            mapWorldWidth - object.x
+        );
+        object.height = clampMapValue(
+            snapMapValue(originalHeight + (moveEvent.clientY - startY) / mapZoom),
+            minHeight,
+            mapWorldHeight - object.y
+        );
         ensureMapWorldSpace(object);
         objectElement.style.width = `${object.width}px`;
         objectElement.style.height = `${object.height}px`;
