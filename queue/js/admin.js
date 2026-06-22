@@ -2209,7 +2209,7 @@ function renderMapWindowSettings(windowId) {
         <details class="map-window-settings map-settings-details">
             <summary>Настройка рабочего места</summary>
             <label class="map-settings-field">
-                <span>Название рабочего места в БД</span>
+                <span>Название рабочего места</span>
                 <input id="map-window-name" value="${escapeMapHtml(windowItem?.name || "")}" placeholder="Название">
             </label>
             <label class="map-settings-field">
