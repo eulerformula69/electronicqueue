@@ -45,7 +45,10 @@ class Ticket(Base):
     operator_id = Column(Integer, ForeignKey("operators.id"), nullable=True)
     window_id = Column(Integer, nullable=True)
     target_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
-    created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
+    created_at = Column(
+        TIMESTAMP,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
+    )
     called_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.config import SESSION_TIMEOUT_SECONDS
+from app.config import OPERATOR_SESSION_AUTO_CLEANUP_ENABLED, SESSION_TIMEOUT_SECONDS
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
 from app.models import (
@@ -139,12 +139,13 @@ async def cleanup_sessions():
                 ws_alive_admin_ids = {row[0] for row in ws_admin_rows if row and row[0] is not None}
 
             # --- ЧАСТЬ 1: ОПЕРАТОРЫ ---
-            # Добавляем фильтр .filter(UserSession.is_expirable == 1)
-            # Сессии с is_expirable=0 (терминалы) база просто не вернет в этом списке
-            dead_sessions = db.query(UserSession).filter(
-                UserSession.last_seen < timeout_datetime,
-                UserSession.is_expirable == 1  # <--- Игнорируем вечные сессии
-            ).all()
+            # Автоочистку можно выключить флагом, оставив ручной logout и closeDay.
+            dead_sessions = []
+            if OPERATOR_SESSION_AUTO_CLEANUP_ENABLED:
+                dead_sessions = db.query(UserSession).filter(
+                    UserSession.last_seen < timeout_datetime,
+                    UserSession.is_expirable == 1  # <--- Игнорируем вечные сессии
+                ).all()
             
             if dead_sessions:
                 print(f"\n[Cleanup] Найдено мертвых сессий операторов: {len(dead_sessions)}")

@@ -22,8 +22,8 @@ from sqlalchemy.orm import Session
 
 from app.config import (
     ALLOWED_MEDIA_EXTENSIONS, BASE_DIR, DEFAULT_PAGE_LIMIT, MAX_FILE_SIZE,
-    MAX_PAGE_LIMIT, PIPER_MODEL, PIPER_PATH, SESSION_TIMEOUT_SECONDS,
-    TTS_CACHE_DIR, TTS_LENGTH_SCALE,
+    MAX_PAGE_LIMIT, OPERATOR_SESSION_AUTO_CLEANUP_ENABLED, PIPER_MODEL,
+    PIPER_PATH, SESSION_TIMEOUT_SECONDS, TTS_CACHE_DIR, TTS_LENGTH_SCALE,
     TTS_NOISE_SCALE, TTS_NOISE_W_SCALE,
 )
 from app.connections import manager, operatorManager
@@ -121,7 +121,14 @@ async def login(data: LoginRequest):
                 .first()
             )
 
-            if existing_session and existing_session.last_seen and existing_session.last_seen >= timeout_datetime:
+            if (
+                existing_session
+                and existing_session.last_seen
+                and (
+                    existing_session.last_seen >= timeout_datetime
+                    or not OPERATOR_SESSION_AUTO_CLEANUP_ENABLED
+                )
+            ):
                 token = existing_session.session_id
 
                 existing_session.last_seen = now
