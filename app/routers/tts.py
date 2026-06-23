@@ -1,83 +1,105 @@
 import asyncio
 import hashlib
-import json
 import os
-import re
-import secrets
-import shutil
-import subprocess
-from datetime import datetime, timedelta
-from pathlib import Path as FilePath
-from typing import List
 
-import bcrypt
-from fastapi import (
-    APIRouter, Body, Depends, File, Header, HTTPException, Query, UploadFile,
-    WebSocket, WebSocketDisconnect, status,
-)
-from fastapi.params import Path
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import and_, asc, func, literal, text
-from sqlalchemy.orm import Session
 
 from app.config import (
-    ALLOWED_MEDIA_EXTENSIONS, BASE_DIR, DEFAULT_PAGE_LIMIT, MAX_FILE_SIZE,
-    MAX_PAGE_LIMIT, PIPER_MODEL, PIPER_PATH, SESSION_TIMEOUT_SECONDS,
-    TTS_CACHE_DIR, TTS_LENGTH_SCALE,
-    TTS_NOISE_SCALE, TTS_NOISE_W_SCALE,
+    PIPER_MODEL,
+    TTS_CACHE_DIR,
+    TTS_LENGTH_SCALE,
+    TTS_NOISE_SCALE,
+    TTS_NOISE_W_SCALE,
+    TTS_OUTPUT_SAMPLE_RATE,
 )
-from app.connections import manager, operatorManager
-from app.database import SessionLocal
-from app.dependencies import (
-    get_current_terminal, get_operator_by_session, verify_admin_session,
-    verify_session,
+from app.services.tts import (
+    get_tts_lock,
+    normalize_tts_input,
+    resample_wav_to_sample_rate,
+    run_piper_sync,
 )
-from app.security import get_password_hash, verify_password
-from app.services.tts import get_tts_lock, normalize_tts_input, run_piper_sync
+
 
 router = APIRouter()
+
+
 @router.get("/tts/audio", tags=["TTS"])
 async def get_tts_audio(text: str = Query(..., min_length=1, max_length=200)):
     text = normalize_tts_input(text)
 
     os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
-    file_hash = hashlib.md5(text.encode("utf-8")).hexdigest()
+    cache_key = "|".join([
+        text,
+        str(PIPER_MODEL),
+        TTS_LENGTH_SCALE,
+        TTS_NOISE_SCALE,
+        TTS_NOISE_W_SCALE,
+        str(TTS_OUTPUT_SAMPLE_RATE),
+    ])
+    file_hash = hashlib.md5(cache_key.encode("utf-8")).hexdigest()
     output_path = os.path.join(TTS_CACHE_DIR, f"{file_hash}.wav")
+    raw_output_path = os.path.join(TTS_CACHE_DIR, f"{file_hash}.raw.wav")
 
-    # Если файл уже есть — сразу отдаём
     if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-        return FileResponse(
-            output_path,
-            media_type="audio/wav",
-            filename="tts.wav"
-        )
+        return FileResponse(output_path, media_type="audio/wav", filename="tts.wav")
 
     async with get_tts_lock(file_hash):
-        # Повторная проверка после ожидания lock
         if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-            return FileResponse(
-                output_path,
-                media_type="audio/wav",
-                filename="tts.wav"
-            )
+            return FileResponse(output_path, media_type="audio/wav", filename="tts.wav")
 
-        result = await asyncio.to_thread(run_piper_sync, text, output_path)
+        if os.path.exists(raw_output_path):
+            os.remove(raw_output_path)
 
-        if result.returncode != 0:
+        try:
+            result = await asyncio.to_thread(run_piper_sync, text, raw_output_path)
+        except OSError as exc:
+            if os.path.exists(raw_output_path):
+                os.remove(raw_output_path)
             raise HTTPException(
                 status_code=500,
-                detail=f"Piper error: {result.stderr}"
+                detail=f"Piper execution error: {exc}",
+            ) from exc
+
+        if result.returncode != 0:
+            if os.path.exists(raw_output_path):
+                os.remove(raw_output_path)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Piper error: {result.stderr}",
             )
+
+        if not os.path.exists(raw_output_path) or os.path.getsize(raw_output_path) == 0:
+            if os.path.exists(raw_output_path):
+                os.remove(raw_output_path)
+            raise HTTPException(
+                status_code=500,
+                detail="TTS file was not created or is empty",
+            )
+
+        try:
+            await asyncio.to_thread(
+                resample_wav_to_sample_rate,
+                raw_output_path,
+                output_path,
+                TTS_OUTPUT_SAMPLE_RATE,
+            )
+        except Exception as exc:
+            if isinstance(exc, HTTPException):
+                raise
+            raise HTTPException(
+                status_code=500,
+                detail=f"TTS resampling error: {exc}",
+            ) from exc
+        finally:
+            if os.path.exists(raw_output_path):
+                os.remove(raw_output_path)
 
         if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
             raise HTTPException(
                 status_code=500,
-                detail="TTS файл не создан или пустой"
+                detail="TTS file was not created or is empty after resampling",
             )
 
-    return FileResponse(
-        output_path,
-        media_type="audio/wav",
-        filename="tts.wav"
-    )
+    return FileResponse(output_path, media_type="audio/wav", filename="tts.wav")

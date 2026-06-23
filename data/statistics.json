@@ -791,7 +791,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH base_stats AS (\r\n\r\n    SELECT\r\n\r\n        o.name AS operator_name,\r\n\r\n        COUNT(t.id) AS served_count,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS p90_wait,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS p90_service,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS p90_total\r\n\r\n    FROM tickets t\r\n\r\n    JOIN windows w ON t.window_id = w.id\r\n\r\n    LEFT JOIN operators o ON o.id = t.operator_id\r\n\r\n    WHERE t.called_at IS NOT NULL\r\n\r\n      AND t.finished_at IS NOT NULL\r\n\r\n      -- Глобальный фильтр времени Grafana (заменяет весь блок с day/week/month)\r\n\r\n      AND $__timeFilter(t.finished_at)\r\n\r\n      -- Фильтр по сотрудникам\r\n\r\n      AND (\r\n\r\n          'All' IN (${operator_name:sqlstring})\r\n\r\n          OR o.name IN (${operator_name:sqlstring})\r\n\r\n      )\r\n\r\n    GROUP BY o.name\r\n\r\n)\r\n\r\nSELECT\r\n\r\n    operator_name AS \"Сотрудник\",\r\n\r\n    served_count AS \"Обслужено\",\r\n\r\n    ROUND(p90_wait::numeric, 2) AS \"p90 ожид. (мин)\",\r\n\r\n    ROUND(p90_service::numeric, 2) AS \"p90 обслуж. (мин)\",\r\n\r\n    ROUND(p90_total::numeric, 2) AS \"p90 сумм. (мин)\",\r\n\r\n    -- KPI оставляем на переменных, так как это ручной ввод лимитов\r\n\r\n    CASE WHEN p90_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\r\n\r\n    CASE WHEN p90_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\r\n\r\n    CASE WHEN p90_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\r\n\r\nFROM base_stats\r\n\r\nORDER BY \"Обслужено\" DESC;",
+          "rawSql": "WITH base_stats AS (\r\n\r\n    SELECT\r\n\r\n        o.name AS operator_name,\r\n\r\n        COUNT(t.id) AS served_count,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS p90_wait,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS p90_service,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS p90_total\r\n\r\n    FROM tickets t\r\n\r\n    JOIN windows w ON t.window_id = w.id\r\n\r\n    LEFT JOIN operators o ON o.id = t.operator_id\r\n\r\n    WHERE t.called_at IS NOT NULL\r\n\r\n      AND t.finished_at IS NOT NULL\r\n\r\n      AND t.completion_reason = 'completed'\r\n\r\n      -- Глобальный фильтр времени Grafana (заменяет весь блок с day/week/month)\r\n\r\n      AND $__timeFilter(t.finished_at)\r\n\r\n      -- Фильтр по сотрудникам\r\n\r\n      AND (\r\n\r\n          'All' IN (${operator_name:sqlstring})\r\n\r\n          OR o.name IN (${operator_name:sqlstring})\r\n\r\n      )\r\n\r\n    GROUP BY o.name\r\n\r\n)\r\n\r\nSELECT\r\n\r\n    operator_name AS \"Сотрудник\",\r\n\r\n    served_count AS \"Обслужено\",\r\n\r\n    ROUND(p90_wait::numeric, 2) AS \"p90 ожид. (мин)\",\r\n\r\n    ROUND(p90_service::numeric, 2) AS \"p90 обслуж. (мин)\",\r\n\r\n    ROUND(p90_total::numeric, 2) AS \"p90 сумм. (мин)\",\r\n\r\n    -- KPI оставляем на переменных, так как это ручной ввод лимитов\r\n\r\n    CASE WHEN p90_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\r\n\r\n    CASE WHEN p90_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\r\n\r\n    CASE WHEN p90_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\r\n\r\nFROM base_stats\r\n\r\nORDER BY \"Обслужено\" DESC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1119,7 +1119,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1201,7 +1201,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1361,7 +1361,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1443,7 +1443,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND $__timeFilter(t.finished_at)\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [

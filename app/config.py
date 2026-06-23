@@ -39,3 +39,4 @@ if not TTS_CACHE_DIR.is_absolute():
 TTS_LENGTH_SCALE = os.getenv("TTS_LENGTH_SCALE", "1.25")
 TTS_NOISE_SCALE = os.getenv("TTS_NOISE_SCALE", "0.65")
 TTS_NOISE_W_SCALE = os.getenv("TTS_NOISE_W_SCALE", "0.75")
+TTS_OUTPUT_SAMPLE_RATE = int(os.getenv("TTS_OUTPUT_SAMPLE_RATE", "48000"))
