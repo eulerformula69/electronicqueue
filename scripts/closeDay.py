@@ -51,6 +51,18 @@ def close_day(db) -> CloseDayResult:
     )
 
     now = func.timezone("Asia/Irkutsk", func.current_timestamp())
+    db.execute(
+        text(
+            """
+            UPDATE tickets t
+            SET operator_id = o.id
+            FROM operators o
+            WHERE t.status = 'called'
+              AND t.operator_id IS NULL
+              AND t.window_id = o.window_id
+            """
+        )
+    )
     tickets_finished = (
         db.query(Ticket)
         .filter(Ticket.status == "called")

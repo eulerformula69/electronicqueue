@@ -10,7 +10,7 @@ from app.migrations import (
     init_ticket_numbering, migrate_operator_choice_schema,
     migrate_operator_status_periods_schema, migrate_queue_mode_periods_schema,
     migrate_service_order_schema, migrate_ticket_notice_settings_schema,
-    migrate_ticket_stages_schema,
+    migrate_ticket_operator_schema, migrate_ticket_stages_schema,
 )
 from app.routers import admin, auth, operators, services, tickets, tts, websocket, windows
 from app.services.operators import cleanup_sessions
@@ -40,6 +40,7 @@ async def startup():
     migrate_service_order_schema(engine)
     migrate_ticket_stages_schema(engine)
     migrate_operator_status_periods_schema(engine)
+    migrate_ticket_operator_schema(engine)
     migrate_queue_mode_periods_schema(engine)
     migrate_ticket_notice_settings_schema(engine)
     init_ticket_numbering(engine)

@@ -156,6 +156,72 @@ def migrate_ticket_stages_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_operator_schema(engine):
+    """Store the operator who called/served each ticket."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS operator_id integer;
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            JOIN pg_attribute
+              ON pg_attribute.attrelid = pg_constraint.conrelid
+             AND pg_attribute.attnum = ANY(pg_constraint.conkey)
+            WHERE pg_constraint.conrelid = 'tickets'::regclass
+              AND pg_constraint.contype = 'f'
+              AND pg_constraint.confrelid = 'operators'::regclass
+              AND pg_attribute.attname = 'operator_id'
+        ) THEN
+            ALTER TABLE tickets
+                ADD CONSTRAINT fk_tickets_operator_id
+                FOREIGN KEY (operator_id) REFERENCES operators(id)
+                ON DELETE SET NULL;
+        END IF;
+    END
+    $$;
+
+    WITH matched_periods AS (
+        SELECT DISTINCT ON (t.id)
+            t.id AS ticket_id,
+            osp.operator_id
+        FROM tickets t
+        JOIN operator_status_periods osp
+          ON osp.window_id = t.window_id
+         AND COALESCE(t.called_at, t.finished_at, t.created_at) >= osp.started_at
+         AND (
+             osp.ended_at IS NULL
+             OR COALESCE(t.called_at, t.finished_at, t.created_at) < osp.ended_at
+         )
+        WHERE t.operator_id IS NULL
+          AND t.window_id IS NOT NULL
+          AND (t.called_at IS NOT NULL OR t.finished_at IS NOT NULL)
+        ORDER BY t.id, osp.started_at DESC
+    )
+    UPDATE tickets t
+    SET operator_id = matched_periods.operator_id
+    FROM matched_periods
+    WHERE t.id = matched_periods.ticket_id
+      AND t.operator_id IS NULL;
+
+    UPDATE tickets t
+    SET operator_id = o.id
+    FROM operators o
+    WHERE t.operator_id IS NULL
+      AND t.window_id = o.window_id
+      AND (t.called_at IS NOT NULL OR t.finished_at IS NOT NULL);
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_operator_id
+        ON tickets (operator_id);
+    CREATE INDEX IF NOT EXISTS ix_tickets_operator_finished_at
+        ON tickets (operator_id, finished_at);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

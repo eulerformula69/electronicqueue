@@ -65,6 +65,7 @@ class TicketRead(BaseModel):
     status: str
     completion_reason: Literal["completed", "redirected", "cancelled"] | None = None
     root_ticket_id: int | None = None
+    operator_id: int | None = None
     window_id: int | None = None
     target_window_id: int | None = None
     created_at: datetime | None = None

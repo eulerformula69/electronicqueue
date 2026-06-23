@@ -167,6 +167,8 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     # Завершаем тикет
     ticket.status = "finished"
     ticket.completion_reason = "completed"
+    if ticket.operator_id is None:
+        ticket.operator_id = operator.id
     ticket.finished_at = datetime.now() #text("CURRENT_TIMESTAMP")
 
     db.commit()
@@ -239,6 +241,7 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
 
         ticket.status = "called"
         ticket.completion_reason = None
+        ticket.operator_id = operator.id
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
@@ -307,6 +310,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         # Обновляем статус билета и привязываем к текущему окну
         ticket.status = "called"
         ticket.completion_reason = None
+        ticket.operator_id = operator.id
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
@@ -354,6 +358,8 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
     # Устанавливаем статус отмены и время завершения
     ticket.status = "cancelled"
     ticket.completion_reason = "cancelled"
+    if ticket.operator_id is None:
+        ticket.operator_id = operator.id
     ticket.finished_at = datetime.now()
 
     db.commit()
@@ -391,6 +397,7 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
 
         ticket.status = "waiting"
         ticket.completion_reason = None
+        ticket.operator_id = None
         ticket.window_id = None
         ticket.target_window_id = None
         ticket.called_at = None
@@ -538,6 +545,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
 
         ticket.status = "waiting"
         ticket.completion_reason = None
+        ticket.operator_id = None
         ticket.window_id = None
         ticket.target_window_id = target_window.id
         ticket.created_at = datetime.now()
@@ -602,6 +610,8 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
 
         ticket.status = "finished"
         ticket.completion_reason = "redirected"
+        if ticket.operator_id is None:
+            ticket.operator_id = operator.id
         ticket.finished_at = redirected_at
 
         redirected_ticket = Ticket(
@@ -610,6 +620,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
             status="waiting",
             completion_reason=None,
             root_ticket_id=root_ticket_id,
+            operator_id=None,
             window_id=None,
             target_window_id=None,
             created_at=redirected_at,

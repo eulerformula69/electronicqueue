@@ -42,6 +42,7 @@ class Ticket(Base):
         ForeignKey("tickets.id", name="fk_tickets_root_ticket_id"),
         nullable=True,
     )
+    operator_id = Column(Integer, ForeignKey("operators.id"), nullable=True)
     window_id = Column(Integer, nullable=True)
     target_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
