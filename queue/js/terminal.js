@@ -97,6 +97,116 @@ let terminalSettings = {
     ticket_notice_unprinted_text: "Пожалуйста, запомните свой номер:\n<number>"
 };
 
+const TERMINAL_SERVICE_GESTURE = {
+    corners: ["top-left", "top-right", "bottom-right", "bottom-left"],
+    hitSize: 120,
+    timeoutMs: 6000,
+    step: 0,
+    startedAt: 0
+};
+
+function detectTerminalCorner(event) {
+    const point = event.changedTouches ? event.changedTouches[0] : event;
+    const x = point.clientX;
+    const y = point.clientY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const hit = TERMINAL_SERVICE_GESTURE.hitSize;
+
+    if (x <= hit && y <= hit) return "top-left";
+    if (x >= width - hit && y <= hit) return "top-right";
+    if (x >= width - hit && y >= height - hit) return "bottom-right";
+    if (x <= hit && y >= height - hit) return "bottom-left";
+    return null;
+}
+
+function resetTerminalServiceGesture() {
+    TERMINAL_SERVICE_GESTURE.step = 0;
+    TERMINAL_SERVICE_GESTURE.startedAt = 0;
+}
+
+function handleTerminalServiceGesture(event) {
+    if (document.getElementById("terminal-service-overlay")?.style.display === "flex") {
+        return;
+    }
+
+    const corner = detectTerminalCorner(event);
+    if (!corner) {
+        resetTerminalServiceGesture();
+        return;
+    }
+
+    const now = Date.now();
+    const expected = TERMINAL_SERVICE_GESTURE.corners[TERMINAL_SERVICE_GESTURE.step];
+
+    if (
+        TERMINAL_SERVICE_GESTURE.step > 0 &&
+        now - TERMINAL_SERVICE_GESTURE.startedAt > TERMINAL_SERVICE_GESTURE.timeoutMs
+    ) {
+        resetTerminalServiceGesture();
+    }
+
+    if (corner === TERMINAL_SERVICE_GESTURE.corners[0] && TERMINAL_SERVICE_GESTURE.step === 0) {
+        TERMINAL_SERVICE_GESTURE.startedAt = now;
+        TERMINAL_SERVICE_GESTURE.step = 1;
+        return;
+    }
+
+    if (corner !== expected) {
+        resetTerminalServiceGesture();
+        return;
+    }
+
+    TERMINAL_SERVICE_GESTURE.step += 1;
+
+    if (TERMINAL_SERVICE_GESTURE.step >= TERMINAL_SERVICE_GESTURE.corners.length) {
+        resetTerminalServiceGesture();
+        openTerminalServiceModal();
+    }
+}
+
+function ensureTerminalServiceModal() {
+    let overlay = document.getElementById("terminal-service-overlay");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "terminal-service-overlay";
+    overlay.className = "terminal-service-overlay";
+    overlay.style.display = "none";
+    overlay.innerHTML = `
+        <div class="terminal-service-modal" role="dialog" aria-modal="true">
+            <h2>\u0421\u0435\u0440\u0432\u0438\u0441\u043d\u043e\u0435 \u043c\u0435\u043d\u044e</h2>
+            <div class="terminal-service-actions">
+                <button type="button" class="terminal-service-refresh">\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0432\u043a\u043b\u0430\u0434\u043a\u0443</button>
+                <button type="button" class="terminal-service-cancel">\u041e\u0442\u043c\u0435\u043d\u0430</button>
+            </div>
+        </div>
+    `;
+
+    overlay.querySelector(".terminal-service-refresh").addEventListener("click", () => {
+        window.location.reload();
+    });
+    overlay.querySelector(".terminal-service-cancel").addEventListener("click", closeTerminalServiceModal);
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeTerminalServiceModal();
+    });
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function openTerminalServiceModal() {
+    const overlay = ensureTerminalServiceModal();
+    overlay.style.display = "flex";
+}
+
+function closeTerminalServiceModal() {
+    const overlay = document.getElementById("terminal-service-overlay");
+    if (overlay) overlay.style.display = "none";
+}
+
+document.addEventListener("pointerup", handleTerminalServiceGesture, true);
+
 function renderPrintModeBadge() {
     const badge = document.getElementById("print-mode-badge");
     if (!badge) return;

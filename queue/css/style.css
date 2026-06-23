@@ -778,6 +778,52 @@ body.terminal-page .print-mode-badge{
     box-shadow: var(--shadow);
     user-select: none;
 }
+body.terminal-page .terminal-service-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    background: rgba(0, 0, 0, 0.72);
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+body.terminal-page .terminal-service-modal{
+    width: min(620px, 88vw);
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px;
+    box-sizing: border-box;
+    box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+body.terminal-page .terminal-service-modal h2{
+    margin: 0 0 28px 0;
+    color: var(--primary);
+    font-size: 34px;
+    line-height: 1.15;
+    font-weight: 800;
+}
+body.terminal-page .terminal-service-actions{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+body.terminal-page .terminal-service-actions button{
+    min-height: 72px;
+    border: none;
+    border-radius: 16px;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    background: var(--primary);
+}
+body.terminal-page .terminal-service-actions button:active{
+    transform: translateY(2px);
+}
+body.terminal-page .terminal-service-cancel{
+    background: #6c757d !important;
+}
 body.terminal-page #vkb{
     max-width: 700px;
     margin: 0 auto;
