@@ -518,7 +518,7 @@
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT \r\n    t.number AS \"Номер билета\",\r\n    s.name AS \"Сервис\",\r\n    t.created_at AS \"Время создания\",\r\n    ROUND(EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk') - t.created_at))/60, 2) AS \"Ожидание (мин)\"\r\nFROM tickets t\r\nLEFT JOIN services s ON t.service_id = s.id\r\nLEFT JOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.status = 'waiting'\r\nORDER BY t.created_at ASC;",
+              "rawSql": "SELECT \r\n    t.number AS \"Номер билета\",\r\n    s.name AS \"Сервис\",\r\n    to_char(t.created_at, 'YYYY-MM-DD HH24:MI:SS') AS \"Время создания\",\r\n    ROUND(EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk') - t.created_at))/60, 2) AS \"Ожидание (мин)\"\r\nFROM tickets t\r\nLEFT JOIN services s ON t.service_id = s.id\r\nLEFT JOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.status = 'waiting'\r\nORDER BY t.created_at ASC;",
               "refId": "A",
               "sql": {
                 "columns": [
