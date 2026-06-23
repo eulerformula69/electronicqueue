@@ -92,7 +92,9 @@ let terminalSettings = {
     print_ticket: true,
     show_print_badge: true,
     ticket_notice_duration_printed_seconds: 7,
-    ticket_notice_duration_unprinted_seconds: 45
+    ticket_notice_duration_unprinted_seconds: 45,
+    ticket_notice_printed_text: "Ваш номер: <number>",
+    ticket_notice_unprinted_text: "Пожалуйста, запомните свой номер:\n<number>"
 };
 
 function renderPrintModeBadge() {
@@ -128,6 +130,10 @@ async function loadTerminalSettings() {
             Number(data.ticket_notice_duration_printed_seconds) || 7;
         terminalSettings.ticket_notice_duration_unprinted_seconds =
             Number(data.ticket_notice_duration_unprinted_seconds) || 45;
+        terminalSettings.ticket_notice_printed_text =
+            data.ticket_notice_printed_text || "Ваш номер: <number>";
+        terminalSettings.ticket_notice_unprinted_text =
+            data.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>";
         renderPrintModeBadge();
     } catch (error) {
         console.warn("Не удалось загрузить публичные настройки терминала:", error);
@@ -381,12 +387,12 @@ async function createTicket(serviceId, serviceName, windowId = null) {
         }
         if (terminalSettings.print_ticket) {
             showNotice(
-                `Ваш номер: ${data.number}`,
+                renderTicketNoticeText(terminalSettings.ticket_notice_printed_text, data.number),
                 terminalSettings.ticket_notice_duration_printed_seconds
             );
         } else {
             showNotice(
-                `Пожалуйста, запомните свой номер:\n${data.number}`,
+                renderTicketNoticeText(terminalSettings.ticket_notice_unprinted_text, data.number),
                 terminalSettings.ticket_notice_duration_unprinted_seconds
             );
         }
@@ -402,6 +408,10 @@ async function createTicket(serviceId, serviceName, windowId = null) {
             }
         });
     }
+}
+
+function renderTicketNoticeText(template, ticketNumber) {
+    return String(template || "<number>").replaceAll("<number>", String(ticketNumber));
 }
 
 function showNotice(message, duration) {

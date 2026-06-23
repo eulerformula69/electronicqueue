@@ -1057,6 +1057,15 @@ async function loadExtraSettings() {
                 </label>
 
                 <label class="settings-field-row">
+                    <span class="settings-label">Текст на терминале, когда талон печатается:</span>
+                    <textarea
+                        id="setting-ticket-notice-printed-text"
+                        class="settings-input settings-textarea"
+                        maxlength="500"
+                    >${escapeMapHtml(settings.ticket_notice_printed_text || "Ваш номер: <number>")}</textarea>
+                </label>
+
+                <label class="settings-field-row">
                     <span class="settings-label">Показ номера без печати талона, секунд:</span>
                     <input
                         type="number"
@@ -1067,6 +1076,19 @@ async function loadExtraSettings() {
                         value="${settings.ticket_notice_duration_unprinted_seconds || 45}"
                     >
                 </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Текст на терминале, когда талон не печатается:</span>
+                    <textarea
+                        id="setting-ticket-notice-unprinted-text"
+                        class="settings-input settings-textarea"
+                        maxlength="500"
+                    >${escapeMapHtml(settings.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>")}</textarea>
+                </label>
+
+                <small class="settings-hint">
+                    В обоих текстах оставьте <b>&lt;number&gt;</b> - туда подставится номер талона.
+                </small>
             </section>
 
             <section class="settings-section">
@@ -1150,6 +1172,8 @@ async function saveExtraSettings() {
 		show_print_badge: document.getElementById("setting-show-print-badge").checked,
 		ticket_notice_duration_printed_seconds: Number(document.getElementById("setting-ticket-notice-duration-printed").value),
 		ticket_notice_duration_unprinted_seconds: Number(document.getElementById("setting-ticket-notice-duration-unprinted").value),
+		ticket_notice_printed_text: document.getElementById("setting-ticket-notice-printed-text").value.trim(),
+		ticket_notice_unprinted_text: document.getElementById("setting-ticket-notice-unprinted-text").value.trim(),
 		default_operator_status: document.getElementById("setting-default-operator-status").value,
 		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
 		hide_services_without_online_operators: document.getElementById("setting-hide-services-without-online").checked,
@@ -1168,6 +1192,11 @@ async function saveExtraSettings() {
         payload.ticket_notice_duration_unprinted_seconds > 300
     ) {
         alert("Время показа номера должно быть целым числом от 1 до 300 секунд");
+        return;
+    }
+
+    if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
+        alert("Текст уведомления на терминале должен содержать <number>");
         return;
     }
 

@@ -187,6 +187,8 @@ class SystemSettings(Base):
     show_print_badge = Column(String, default="false")
     ticket_notice_duration_printed_seconds = Column(Integer, default=7)
     ticket_notice_duration_unprinted_seconds = Column(Integer, default=45)
+    ticket_notice_printed_text = Column(String, default="Ваш номер: <number>")
+    ticket_notice_unprinted_text = Column(String, default="Пожалуйста, запомните свой номер:\n<number>")
     default_operator_status = Column(String, default="online")
     active_ticket_on_operator_logout = Column(String, default="return_to_queue")
     hide_services_without_online_operators = Column(String, default="true")

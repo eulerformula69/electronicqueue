@@ -258,6 +258,12 @@ async def update_admin_settings(
 
     if data.queue_mode not in {"priority_fifo", "dynamic_operator_distribution"}:
         raise HTTPException(status_code=400, detail="Некорректный queue_mode")
+
+    if "<number>" not in data.ticket_notice_printed_text or "<number>" not in data.ticket_notice_unprinted_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Текст уведомления должен содержать <number>"
+        )
         
     if "<number>" not in data.call_message_template or "<window>" not in data.call_message_template:
         raise HTTPException(
@@ -278,6 +284,8 @@ async def update_admin_settings(
         settings.show_print_badge = _bool_to_str(data.show_print_badge)
         settings.ticket_notice_duration_printed_seconds = data.ticket_notice_duration_printed_seconds
         settings.ticket_notice_duration_unprinted_seconds = data.ticket_notice_duration_unprinted_seconds
+        settings.ticket_notice_printed_text = data.ticket_notice_printed_text.strip()
+        settings.ticket_notice_unprinted_text = data.ticket_notice_unprinted_text.strip()
         settings.default_operator_status = data.default_operator_status
         settings.active_ticket_on_operator_logout = data.active_ticket_on_operator_logout
         settings.hide_services_without_online_operators = _bool_to_str(
@@ -316,6 +324,8 @@ async def get_public_settings():
             "show_print_badge": settings["show_print_badge"],
             "ticket_notice_duration_printed_seconds": settings["ticket_notice_duration_printed_seconds"],
             "ticket_notice_duration_unprinted_seconds": settings["ticket_notice_duration_unprinted_seconds"],
+            "ticket_notice_printed_text": settings["ticket_notice_printed_text"],
+            "ticket_notice_unprinted_text": settings["ticket_notice_unprinted_text"],
             "board_ticket_template": settings["board_ticket_template"],
         }
     finally:

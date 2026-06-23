@@ -166,6 +166,8 @@ class SystemSettingsUpdate(BaseModel):
     show_print_badge: bool
     ticket_notice_duration_printed_seconds: int = Field(ge=1, le=300)
     ticket_notice_duration_unprinted_seconds: int = Field(ge=1, le=300)
+    ticket_notice_printed_text: str = Field(default="Ваш номер: <number>", min_length=1, max_length=500)
+    ticket_notice_unprinted_text: str = Field(default="Пожалуйста, запомните свой номер:\n<number>", min_length=1, max_length=500)
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
@@ -179,6 +181,8 @@ class SystemSettingsResponse(BaseModel):
     show_print_badge: bool
     ticket_notice_duration_printed_seconds: int
     ticket_notice_duration_unprinted_seconds: int
+    ticket_notice_printed_text: str
+    ticket_notice_unprinted_text: str
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
@@ -192,4 +196,6 @@ class PublicSettingsResponse(BaseModel):
     show_print_badge: bool
     ticket_notice_duration_printed_seconds: int
     ticket_notice_duration_unprinted_seconds: int
+    ticket_notice_printed_text: str
+    ticket_notice_unprinted_text: str
     board_ticket_template: str

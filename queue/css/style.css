@@ -1906,6 +1906,11 @@ body.admin-page .settings-input-wide{
     min-width: 0;
     box-sizing: border-box;
 }
+body.admin-page .settings-textarea{
+    min-height: 96px;
+    resize: vertical;
+    line-height: 1.35;
+}
 body.admin-page .settings-hint{
     display: block;
     max-width: 100%;
