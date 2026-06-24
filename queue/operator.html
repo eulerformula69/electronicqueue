@@ -13,6 +13,10 @@
     Закончите с текущим клиентом!
 </div>
 
+<div id="app-update-notification" class="app-update-notification" style="display:none;">
+    Доступно обновление, пожалуйста перезапустите страницу
+</div>
+
 <header class="header-panel">
     <div class="button-group">
         <button id="btn-start" class="btn-success" onclick="changeWindowStatus('online')">ОНЛАЙН</button>
@@ -78,14 +82,14 @@
 		<div id="current-service" class="current-service">—</div>
         
 		
-        <div class="button-group" style="margin-top: 40px; justify-content: center;">
-            <button id="next-btn" class="btn-primary" onclick="callNext()" style="padding: 20px 40px; font-size: 1.1rem;">ВЫЗВАТЬ СЛЕДУЮЩЕГО</button>
-            <button class="btn-danger" onclick="finishCurrent()">ЗАВЕРШИТЬ ОБСЛУЖИВАНИЕ</button>
+        <div class="button-group primary-actions" style="margin-top: 40px; justify-content: center;">
+            <button id="next-btn" class="btn-primary" onclick="callNext()" style="padding: 20px 40px; font-size: 1.1rem;">ВЫЗВАТЬ КЛИЕНТА</button>
+            <button class="btn-danger" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
+            <button class="btn-outline" id="cancel-btn" onclick="cancelCurrent()">КЛИЕНТ НЕ ЯВИЛСЯ</button>
         </div>
 
         <div class="button-group" style="margin-top: 15px; justify-content: center;">
             <button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-            <button class="btn-outline" id="cancel-btn" onclick="cancelCurrent()">ОТМЕНИТЬ ВЫЗОВ</button>
 			<button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
 			<button class="btn-outline" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
             <button class="btn-outline" onclick="showRedirectToService()">ПЕРЕНАПРАВИТЬ НА УСЛУГУ</button>
@@ -129,6 +133,7 @@
 </main>
 
 <script src="/queue/js/config.js"></script>
+<script src="/queue/js/app-version.js"></script>
 <script src="/queue/js/operator.js"></script>
 
 </body>

@@ -14,7 +14,7 @@ from app.migrations import (
     migrate_ticket_operator_schema, migrate_ticket_stages_schema,
     migrate_service_terminal_visibility_schema,
 )
-from app.routers import admin, auth, operators, services, tickets, tts, websocket, windows
+from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
 from app.services.operators import cleanup_sessions
 
@@ -31,7 +31,7 @@ app.mount("/queue", StaticFiles(directory=BASE_DIR / "queue"), name="queue")
 
 for router in (
     websocket.router, services.router, tickets.router, operators.router,
-    windows.router, auth.router, admin.router, tts.router,
+    windows.router, auth.router, admin.router, tts.router, system.router,
 ):
     app.include_router(router)
 

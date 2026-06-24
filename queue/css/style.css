@@ -247,6 +247,26 @@ body.operator-page .button-group{
     gap: 12px;
 }
 
+body.operator-page .app-update-notification{
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    background: var(--warning);
+    color: var(--text-main);
+    border: 1px solid rgba(0, 51, 102, 0.16);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 14px 24px;
+    max-width: min(720px, calc(100vw - 32px));
+    box-sizing: border-box;
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+}
+
 
 /* Основной контейнер */
 body.operator-page .main-layout{
@@ -390,6 +410,12 @@ body.operator-page .btn-primary{ background: var(--primary); color: white; }
 body.operator-page .btn-primary:hover{ background: var(--primary-hover); }
 body.operator-page .btn-success{ background: var(--success); color: white; }
 body.operator-page .btn-danger{ background: var(--danger); color: white; }
+body.operator-page .primary-actions{
+    flex-wrap: wrap;
+}
+body.operator-page .primary-actions button{
+    min-height: 62px;
+}
 body.operator-page .btn-success.status-active{
     background-color: var(--success) !important;
     box-shadow: 0 0 10px rgba(46, 196, 182, 0.5);
