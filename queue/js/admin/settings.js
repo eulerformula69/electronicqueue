@@ -33,9 +33,12 @@ export async function loadExtraSettings() {
                     <input type="checkbox" id="setting-show-print-badge" ${settings.show_print_badge ? "checked" : ""}>
                     Показывать режим печати на терминале
                 </label>
-                <label class="settings-checkbox-row">
-                    <input type="checkbox" id="setting-hide-services-without-online" ${settings.hide_services_without_online_operators ? "checked" : ""}>
-                    Скрывать услуги на терминале, если по ним нет активных операторов 
+                <label class="settings-field-row">
+                    <span class="settings-label">Услуги без активных операторов на терминале:</span>
+                    <select id="setting-unavailable-services-mode" class="settings-select settings-select-wide">
+                        <option value="hide" ${settings.hide_services_without_online_operators ? "selected" : ""}>Скрывать услуги</option>
+                        <option value="show_inactive" ${!settings.hide_services_without_online_operators ? "selected" : ""}>Показывать как неактивные</option>
+                    </select>
                 </label>
 
                 <label class="settings-field-row">
@@ -170,7 +173,7 @@ export async function saveExtraSettings() {
 		ticket_notice_unprinted_text: document.getElementById("setting-ticket-notice-unprinted-text").value.trim(),
 		default_operator_status: document.getElementById("setting-default-operator-status").value,
 		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
-		hide_services_without_online_operators: document.getElementById("setting-hide-services-without-online").checked,
+		hide_services_without_online_operators: document.getElementById("setting-unavailable-services-mode").value === "hide",
 		queue_mode: document.getElementById("setting-queue-mode").value,
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),

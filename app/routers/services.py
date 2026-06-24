@@ -91,12 +91,10 @@ def list_services(
 
         if not include_hidden:
             settings = get_system_settings_dict(db)
-            query = query.filter(
-                Service.visible_on_terminal == 1,
-                Service.status == "active",
-            )
+            query = query.filter(Service.visible_on_terminal == 1)
             if settings["hide_services_without_online_operators"]:
                 query = query.filter(
+                    Service.status == "active",
                     db.query(WindowService.service_id)
                     .join(Window, WindowService.window_id == Window.id)
                     .filter(

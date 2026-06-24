@@ -19,28 +19,6 @@ from app.services.tickets import (
 
 
 def update_services_status_for_window(db: Session, window_id: int):
-    settings = get_system_settings_dict(db)
-
-    # Если скрытие услуг отключено, услуги остаются доступными на терминале.
-    if not settings["hide_services_without_online_operators"]:
-        service_ids = [
-            row[0]
-            for row in db.query(WindowService.service_id)
-            .filter(WindowService.window_id == window_id)
-            .all()
-        ]
-        if service_ids:
-            db.query(Service).filter(
-                Service.id.in_(service_ids),
-                Service.is_archived == 0,
-            ).update(
-                {Service.status: "active"},
-                synchronize_session=False
-            )
-        db.commit()
-        return
-
-    # Получаем все услуги окна одним запросом.
     service_ids = [
         row[0]
         for row in db.query(WindowService.service_id)

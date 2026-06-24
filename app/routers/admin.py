@@ -30,7 +30,7 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Service, Window, record_queue_mode
+from app.models import Admin, Window, record_queue_mode
 from app.schemas import (
     OfficeMap, PlaylistUpdate, PublicSettingsResponse, SystemSettingsResponse,
     SystemSettingsUpdate,
@@ -363,13 +363,9 @@ async def update_admin_settings(
         settings.board_ticket_template = data.board_ticket_template        
         db.commit()
 
-        if data.hide_services_without_online_operators:
-            all_window_ids = [row[0] for row in db.query(Window.id).all()]
-            for window_id in all_window_ids:
-                update_services_status_for_window(db, window_id)
-        else:
-            db.query(Service).filter(Service.is_archived == 0).update({Service.status: "active"})
-            db.commit()
+        all_window_ids = [row[0] for row in db.query(Window.id).all()]
+        for window_id in all_window_ids:
+            update_services_status_for_window(db, window_id)
 
         await manager.broadcast({"type": "services_updated"})
         await manager.broadcast({"type": "settings_updated"})
