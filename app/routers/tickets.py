@@ -288,14 +288,19 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         if current:
             return {"detail": f"Сначала завершите клиента: {current.number}"}
 
-        # Ищем билет по номеру со статусом "waiting" или "cancelled"
+        # Ищем билет по номеру только за сегодняшний день
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
+
         ticket = db.query(Ticket).filter(
             Ticket.number == data.number,
-            Ticket.status.in_(["waiting", "cancelled"])
-        ).first()
+            Ticket.status.in_(["waiting", "cancelled"]),
+            Ticket.created_at >= today_start,
+            Ticket.created_at < tomorrow_start
+        ).order_by(Ticket.created_at.desc()).first()
 
         if not ticket:
-            return {"detail": "Билет с таким номером не найден или недоступен для вызова"}
+            return {"detail": "Билет с таким номером за сегодня не найден или недоступен для вызова"}
 
         # Если билет был перенаправлен на конкретное окно, вызвать его может только это окно.
         if ticket.target_window_id is not None and ticket.target_window_id != operator.window_id:
