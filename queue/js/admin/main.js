@@ -20,6 +20,7 @@ import {
     retryMediaJob,
     toggleInPlaylist,
     toggleMedia,
+    updateProcessVideoControls,
     uploadVideoFile,
 } from "./media.js";
 
@@ -32,6 +33,7 @@ Object.assign(window, {
     retryMediaJob,
     toggleInPlaylist,
     toggleMedia,
+    updateProcessVideoControls,
     loadExtraSettings,
     loadStats,
     saveExtraSettings,

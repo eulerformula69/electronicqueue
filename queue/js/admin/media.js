@@ -2,6 +2,8 @@ import { fetchJSON, readResponseData } from "./api.js";
 import { resetOpened, setActiveTab, setForm, setTable } from "./dom.js";
 
 const API = CONFIG.API_URL;
+let mediaProcessingWatchActive = false;
+let mediaLastUploadMessage = "";
 
 /// MEDIA FILES 
 // In admin.js
@@ -70,10 +72,19 @@ export async function loadMedia() {
         });
 
         setTable(html);
+        const hasProcessingMedia = items.some(item => item.status === "pending" || item.status === "processing");
+        if (mediaProcessingWatchActive && !hasProcessingMedia) {
+            mediaLastUploadMessage = "Обработка завершена. Файл готов.";
+            mediaProcessingWatchActive = false;
+        }
         setForm(`
             <div class="form">
                 <h3>Загрузить видео: MP4, WebM, MOV, MKV, AVI, M4V, WMV, MPG, MPEG, 3GP (до 300MB)</h3>
                 <input type="file" id="videoFileInput" accept=".mp4,.webm,.mov,.mkv,.avi,.m4v,.wmv,.mpg,.mpeg,.3gp,video/*">
+                <label>
+                    <input type="checkbox" id="processVideoCheckbox" checked onchange="updateProcessVideoControls()">
+                    Обрабатывать видео
+                </label>
                 <select id="compressionMode">
                     <option value="normal" selected>Обычное качество</option>
                     <option value="high">Высокое качество</option>
@@ -83,7 +94,11 @@ export async function loadMedia() {
                 <div id="uploadStatus"></div>
             </div>
         `);
-        if (items.some(item => item.status === "pending" || item.status === "processing")) {
+        updateProcessVideoControls();
+        if (mediaLastUploadMessage) {
+            document.getElementById("uploadStatus").textContent = mediaLastUploadMessage;
+        }
+        if (hasProcessingMedia) {
             setTimeout(() => {
                 if (document.getElementById("tab-media")?.classList.contains("active")) {
                     loadMedia();
@@ -94,6 +109,13 @@ export async function loadMedia() {
         console.error("Ошибка загрузки медиа:", e);
         setTable("<tr><td>Ошибка связи с сервером</td></tr>");
     }
+}
+
+export function updateProcessVideoControls() {
+    const checkbox = document.getElementById("processVideoCheckbox");
+    const mode = document.getElementById("compressionMode");
+    if (!checkbox || !mode) return;
+    mode.disabled = !checkbox.checked;
 }
 
 function getMediaStatusText(status, isIncluded, error) {
@@ -211,7 +233,9 @@ export async function uploadVideoFile() {
     }
 
     const formData = new FormData();
+    const processVideo = document.getElementById("processVideoCheckbox")?.checked !== false;
     formData.append("file", file);
+    formData.append("process_video", processVideo ? "true" : "false");
     formData.append("compression_mode", document.getElementById("compressionMode")?.value || "normal");
     status.textContent = "Загрузка...";
 
@@ -228,7 +252,15 @@ export async function uploadVideoFile() {
     }
 
     if (response.ok) {
-        status.textContent = "Загружено. Видео обрабатывается...";
+        const data = await readResponseData(response);
+        if (data.status === "ready") {
+            mediaLastUploadMessage = "Загружено без обработки. Файл готов.";
+            mediaProcessingWatchActive = false;
+        } else {
+            mediaLastUploadMessage = "Загружено. Видео обрабатывается...";
+            mediaProcessingWatchActive = true;
+        }
+        status.textContent = mediaLastUploadMessage;
         loadMedia();
     } else {
         const err = await readResponseData(response);

@@ -39,7 +39,7 @@ from app.security import get_password_hash, verify_password
 from app.services.media import (
     build_media_file_path, enqueue_media_processing, get_media_job_index,
     list_media_jobs, retry_media_job, sanitize_media_filename,
-    save_upload_to_originals,
+    save_upload_direct_to_media, save_upload_to_originals,
 )
 from app.services.operators import update_services_status_for_window
 from app.services.settings import (
@@ -127,6 +127,7 @@ async def update_office_map(
 @router.post("/admin/media/upload", tags=["Admin"])
 async def upload_media(
     file: UploadFile = File(...),
+    process_video: bool = Form(True),
     compression_mode: str = Form("normal"),
     admin: Admin = Depends(verify_admin_session)
     ):
@@ -143,9 +144,16 @@ async def upload_media(
             detail=f"Файл слишком большой. Максимум {max_mb}MB.",
         )
 
+    if not process_video:
+        output_filename = save_upload_direct_to_media(file.file, safe_filename)
+        return {
+            "status": "ready",
+            "filename": output_filename,
+            "job_id": None,
+        }
+
     source_path = save_upload_to_originals(file.file, safe_filename)
     job = await enqueue_media_processing(source_path, safe_filename, compression_mode)
-
     return {
         "status": "processing",
         "filename": job["filename"],

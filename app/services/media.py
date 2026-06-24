@@ -145,6 +145,23 @@ def _build_unique_output_filename(filename: str) -> str:
     return candidate
 
 
+def _build_unique_media_filename(filename: str) -> str:
+    safe_filename = sanitize_media_filename(filename)
+    stem = FilePath(safe_filename).stem.strip() or "video"
+    ext = FilePath(safe_filename).suffix.lower()
+    reserved_names = {
+        job.get("filename")
+        for job in _read_jobs_sync().values()
+        if job.get("status") in {"pending", "processing"}
+    }
+    candidate = f"{stem}{ext}"
+    counter = 2
+    while (MEDIA_DIR / candidate).exists() or candidate in reserved_names:
+        candidate = f"{stem}-{counter}{ext}"
+        counter += 1
+    return candidate
+
+
 async def enqueue_media_processing(
     source_path: str,
     original_filename: str,
@@ -363,3 +380,12 @@ def save_upload_to_originals(file_obj, filename: str) -> str:
     with source_path.open("wb") as buffer:
         shutil.copyfileobj(file_obj, buffer)
     return str(source_path)
+
+
+def save_upload_direct_to_media(file_obj, filename: str) -> str:
+    _ensure_media_dirs()
+    output_filename = _build_unique_media_filename(filename)
+    output_path = MEDIA_DIR / output_filename
+    with output_path.open("wb") as buffer:
+        shutil.copyfileobj(file_obj, buffer)
+    return output_filename
