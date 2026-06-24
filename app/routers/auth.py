@@ -174,6 +174,7 @@ async def login(data: LoginRequest):
             if operator.window_id:
                 await manager.broadcast({
                     "type": "services_updated",
+                    "target": "operator",
                     "window_id": operator.window_id
                 })
                 await manager.broadcast({
@@ -245,7 +246,7 @@ async def logout(session_id: str = Header(...)):
 
                 asyncio.create_task(broadcast_board())
                 await manager.broadcast({"type": "queue_updated"})
-                await manager.broadcast({"type": "services_updated"})
+                await manager.broadcast({"type": "services_updated", "target": "operator"})
 
            
             return {"status": "success", "role": "operator"}

@@ -103,7 +103,11 @@ async def update_window_status(
         update_services_status_for_window(db, window_id)
 
         # Бродкаст через WebSocket
-        await manager.broadcast({"type": "services_updated", "window_id": window_id})
+        await manager.broadcast({
+            "type": "services_updated",
+            "target": "operator",
+            "window_id": window_id,
+        })
 
         db.refresh(window)
         return {"id": window.id, "status": window.status}
@@ -138,7 +142,7 @@ async def create_window_service(data: WindowServiceCreate, admin: Admin = Depend
         service_id=data.service_id
     )
     
-    await manager.broadcast({"type": "services_updated"})
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.add(ws)
     db.commit()
     db.refresh(ws)
@@ -214,7 +218,7 @@ async def update_window_services(
             db.add(new_ws)
         
         db.commit()
-        await manager.broadcast({"type": "services_updated"})
+        await manager.broadcast({"type": "services_updated", "target": "operator"})
         return {"status": "ok"}
     except HTTPException:
         db.rollback()
@@ -244,7 +248,7 @@ async def delete_window_service(window_id: int, service_id: int, admin: Admin = 
         db.delete(ws)
         db.commit()
                 
-    await manager.broadcast({"type": "services_updated"})
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.close()
 
     return {"status":"ok"}
@@ -288,7 +292,7 @@ async def update_window_status(
         update_services_status_for_window(db, window.id)
 
         # уведомление фронта
-        await manager.broadcast({"type": "services_updated"})
+        await manager.broadcast({"type": "services_updated", "target": "operator"})
 
         db.refresh(window)
         return window
@@ -322,7 +326,7 @@ async def rename_window(window_id: int, data: WindowCreate, admin: Admin = Depen
     window.name = data.name
     db.commit()
     db.refresh(window)
-    await manager.broadcast({"type": "services_updated"})
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.close()
     return window
 
@@ -337,6 +341,6 @@ async def update_priority(data: PriorityUpdate, admin: Admin = Depends(verify_ad
     if ws:
         ws.priority = data.priority
         db.commit()
-    await manager.broadcast({"type": "services_updated"})
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.close()
     return {"status": "updated"}

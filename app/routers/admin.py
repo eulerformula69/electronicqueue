@@ -300,9 +300,6 @@ async def get_admin_settings(admin: Admin = Depends(verify_admin_session)):
     try:
         return get_system_settings_dict(db)
     finally:
-        await manager.broadcast({"type": "services_updated"})
-        await manager.broadcast({"type": "settings_updated"})
-        await manager.broadcast({"type": "queue_updated"})
         db.close()
 
 
@@ -369,7 +366,6 @@ async def update_admin_settings(
         await manager.broadcast({"type": "services_updated"})
         await manager.broadcast({"type": "settings_updated"})
         await broadcast_board()
-        await manager.broadcast({"type": "queue_updated"})        
         return get_system_settings_dict(db)
     finally:
         db.close()

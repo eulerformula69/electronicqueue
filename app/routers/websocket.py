@@ -192,4 +192,4 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
             db.close()
 
         # уведомляем всех терминалы
-        await manager.broadcast({"type": "services_updated"})
+        await manager.broadcast({"type": "services_updated", "target": "operator"})

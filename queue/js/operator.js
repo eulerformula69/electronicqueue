@@ -109,7 +109,7 @@ function initWebSocket() {
             return;
         }
 
-        if (data.type === "services_updated") {
+        if (data.type === "services_updated" && data.target === "operator") {
             loadOperatorInfo();
         }
 

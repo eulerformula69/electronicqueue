@@ -228,7 +228,7 @@ async def cleanup_sessions():
             db.commit()
 
             if dead_sessions:
-                await manager.broadcast({"type": "services_updated"})
+                await manager.broadcast({"type": "services_updated", "target": "operator"})
                 if need_board_update:
                     await broadcast_board()
                     await manager.broadcast({"type": "queue_updated"})

@@ -194,7 +194,11 @@ async def assign_window_operator(
             )
 
         db.commit()
-        await manager.broadcast({"type": "services_updated", "window_id": window_id})
+        await manager.broadcast({
+            "type": "services_updated",
+            "target": "operator",
+            "window_id": window_id,
+        })
         return {
             "window_id": window_id,
             "operator_id": selected_operator.id if selected_operator else None,
@@ -271,7 +275,7 @@ async def update_operator(operator_id: int, data: dict, admin: Admin = Depends(v
             )
 
 
-    await manager.broadcast({"type": "services_updated"})
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.commit()
     db.refresh(op)
     db.close()
