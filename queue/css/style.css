@@ -411,10 +411,19 @@ body.operator-page .btn-primary:hover{ background: var(--primary-hover); }
 body.operator-page .btn-success{ background: var(--success); color: white; }
 body.operator-page .btn-danger{ background: var(--danger); color: white; }
 body.operator-page .primary-actions{
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin-top: 40px;
 }
 body.operator-page .primary-actions button{
     min-height: 62px;
+    width: 100%;
+    padding: 18px 16px;
+    font-size: 1rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
 }
 body.operator-page .btn-success.status-active{
     background-color: var(--success) !important;
