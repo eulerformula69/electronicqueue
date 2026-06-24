@@ -77,9 +77,11 @@
 	</section>
 
     <section class="glass-card display-zone">
-        <div class="ticket-label">ТЕКУЩИЙ КЛИЕНТ</div>
-        <div id="current" class="ticket-number">--</div>
-		<div id="current-service" class="current-service">—</div>
+        <div class="current-client-panel">
+            <div class="ticket-label">ТЕКУЩИЙ КЛИЕНТ</div>
+            <div id="current" class="ticket-number">--</div>
+		    <div id="current-service" class="current-service">—</div>
+        </div>
         
 		
         <div class="button-group primary-actions">
@@ -88,10 +90,10 @@
             <button class="btn-outline" id="cancel-btn" onclick="cancelCurrent()">КЛИЕНТ НЕ ЯВИЛСЯ</button>
         </div>
 
-        <div class="button-group" style="margin-top: 15px; justify-content: center;">
+        <div class="button-group secondary-actions">
             <button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-			<button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
 			<button class="btn-outline" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
+			<button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
             <button class="btn-outline" onclick="showRedirectToService()">ПЕРЕНАПРАВИТЬ НА УСЛУГУ</button>
             <button class="btn-outline" onclick="showRedirectToWindow()">ПЕРЕНАПРАВИТЬ НА РАБОЧЕЕ МЕСТО</button>
         </div>

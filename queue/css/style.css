@@ -305,8 +305,17 @@ body.operator-page .display-zone{
     display: flex; /* Добавлено */
     flex-direction: column; /* Добавлено */
     align-items: center; /* Центрирование по горизонтали */
-    justify-content: center; /* Центрирование по вертикали */
+    justify-content: flex-start;
     text-align: center; /* Центрирование текста */
+}
+body.operator-page .current-client-panel{
+    flex: 0 0 315px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
 }
 body.operator-page .ticket-label{
     font-size: 1.2rem;
@@ -318,7 +327,7 @@ body.operator-page .ticket-number{
     font-weight: 800;
     color: var(--primary);
     line-height: 1;
-    margin: 10px 0 30px 0;
+    margin: 10px 0 18px 0;
     letter-spacing: -2px;
 }
 body.operator-page .services-list{
@@ -415,7 +424,7 @@ body.operator-page .primary-actions{
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     width: 100%;
-    margin-top: 40px;
+    margin-top: 0;
 }
 body.operator-page .primary-actions button{
     min-height: 62px;
@@ -424,6 +433,11 @@ body.operator-page .primary-actions button{
     font-size: 1rem;
     line-height: 1.15;
     overflow-wrap: anywhere;
+}
+body.operator-page .secondary-actions{
+    justify-content: center;
+    margin-top: 15px;
+    width: 100%;
 }
 body.operator-page .btn-success.status-active{
     background-color: var(--success) !important;
@@ -647,8 +661,15 @@ body.operator-page .current-service{
     font-size: 1.4rem;
     font-weight: 600;
     color: var(--text-muted);
-    margin-top: -10px;
-    margin-bottom: 20px;
+    width: 100%;
+    max-width: 860px;
+    min-height: 58px;
+    margin: 0;
+    line-height: 1.25;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 
