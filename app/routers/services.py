@@ -42,6 +42,7 @@ from app.schemas import (
     ServiceTerminalVisibilityUpdate,
 )
 from app.security import get_password_hash, verify_password
+from app.services.settings import get_system_settings_dict
 
 router = APIRouter()
 
@@ -55,7 +56,7 @@ async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_a
             name=service.name.strip(),
             display_order=next_order,
             operator_choice_enabled=1 if service.operator_choice_enabled else 0,
-            visible_on_terminal=1 if service.visible_on_terminal else 1
+            visible_on_terminal=1 if service.visible_on_terminal else 0
 
         )
         db.add(db_service)
@@ -85,20 +86,35 @@ def list_services(
     include_hidden: bool = Query(False),
 ):
     db = SessionLocal()
-    query = db.query(Service).filter(Service.is_archived == 0)
+    try:
+        query = db.query(Service).filter(Service.is_archived == 0)
 
-    if not include_hidden:
-        query = query.filter(Service.visible_on_terminal == 1)
+        if not include_hidden:
+            settings = get_system_settings_dict(db)
+            query = query.filter(
+                Service.visible_on_terminal == 1,
+                Service.status == "active",
+            )
+            if settings["hide_services_without_online_operators"]:
+                query = query.filter(
+                    db.query(WindowService.service_id)
+                    .join(Window, WindowService.window_id == Window.id)
+                    .filter(
+                        WindowService.service_id == Service.id,
+                        Window.status == "online",
+                    )
+                    .exists()
+                )
 
-    services = (
-        query
-        .order_by(Service.display_order, Service.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
-    db.close()
-    return services
+        return (
+            query
+            .order_by(Service.display_order, Service.id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+    finally:
+        db.close()
 
 @router.patch("/services/{service_id}/terminal-visibility", tags=["Services"])
 async def update_service_terminal_visibility(

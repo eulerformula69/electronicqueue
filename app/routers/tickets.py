@@ -64,6 +64,12 @@ async def create_ticket(
         if not service:
             raise HTTPException(status_code=404, detail="Услуга не найдена")
 
+        if not service.visible_on_terminal or service.status != "active":
+            raise HTTPException(
+                status_code=400,
+                detail="Услуга сейчас недоступна на терминале"
+            )
+
         # 2. Валидация доступности окон
         if settings.get("hide_services_without_online_operators"):
             active_windows = (

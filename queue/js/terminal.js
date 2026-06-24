@@ -259,15 +259,16 @@ async function loadServices() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         
         const services = await res.json();
+        const availableServices = services.filter(service => service.status === "active");
         const container = document.getElementById("services");
         container.innerHTML = "";
 
-        if (services.length === 0) {
+        if (availableServices.length === 0) {
             container.innerHTML = "<p>Нет доступных услуг</p>";
             return;
         }
 
-        services.forEach(service => {
+        availableServices.forEach(service => {
             const btn = document.createElement("button");
             btn.classList.add("service-btn");
 
