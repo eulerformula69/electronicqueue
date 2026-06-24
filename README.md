@@ -75,6 +75,8 @@ sudo update-ca-certificates
 deploy/             служебные сценарии установки
 app/                код FastAPI, модели, сервисы и маршруты
 queue/              веб-интерфейс, модель речи и локальные медиафайлы
+tests/              автотесты (см. TESTS.md)
+TESTS.md            как запускать тесты и что планируется добавить
 deploy/install.sh   установка и повторное обновление сервера
 main.py             совместимая точка входа uvicorn main:app
 scripts/manageAdmins.py управление администраторами и терминалами

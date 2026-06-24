@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ from app.routers import admin, auth, operators, services, system, tickets, tts, 
 from app.services.media import start_media_processor
 from app.services.operators import cleanup_sessions
 
+TESTING = os.getenv("TESTING", "").lower() in {"1", "true", "yes", "on"}
 
 app = FastAPI()
 app.add_middleware(
@@ -49,5 +51,6 @@ async def startup():
     migrate_ticket_notice_settings_schema(engine)
     init_ticket_numbering(engine)
     migrate_service_terminal_visibility_schema(engine)
-    await start_media_processor()
-    asyncio.create_task(cleanup_sessions())
+    if not TESTING:
+        await start_media_processor()
+        asyncio.create_task(cleanup_sessions())
