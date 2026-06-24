@@ -356,3 +356,21 @@ def migrate_ticket_notice_settings_schema(engine):
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+def migrate_service_terminal_visibility_schema(engine):
+    """Add service terminal visibility flag."""
+    ddl = """
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS visible_on_terminal integer NOT NULL DEFAULT 1;
+
+    UPDATE services
+    SET visible_on_terminal = 1
+    WHERE visible_on_terminal IS NULL;
+
+    ALTER TABLE services
+        ALTER COLUMN visible_on_terminal SET DEFAULT 1,
+        ALTER COLUMN visible_on_terminal SET NOT NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

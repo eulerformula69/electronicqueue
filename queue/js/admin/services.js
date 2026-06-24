@@ -23,7 +23,7 @@ export async function loadServices() {
     // 1. Берем ID сессии из хранилища браузера
     const sessionId = sessionStorage.getItem("session_id");
     // 2. Делаем запрос с заголовком
-    const res = await fetch(`${API}/services?limit=500`, {
+    const res = await fetch(`${API}/services?limit=500&include_hidden=true`, {
         method: "GET",
         headers: {
             "session-id": sessionId // Передаем тот самый ID
@@ -37,12 +37,13 @@ export async function loadServices() {
     services = await res.json();
 
   let html = `<tr>
-    <th>ID</th>
-    <th>Название</th>
-    <th>Статус</th>
-    <th>Выбор оператора</th>
-    <th>Порядок</th>
-    <th>Действия</th>
+	<th>ID</th>
+	<th>Название</th>
+	<th>Статус</th>
+	<th>Выбор оператора</th>
+	<th>На терминале</th>
+	<th>Порядок</th>
+	<th>Действия</th>
   </tr>`;
 
   for(let index = 0; index < services.length; index++){
@@ -53,6 +54,7 @@ export async function loadServices() {
       <td>${s.name}</td>
       <td>${s.status}</td>
       <td>${s.operator_choice_enabled ? "Да" : "Нет"}</td>
+	  <td>${s.visible_on_terminal ? "Показана" : "Скрыта"}</td>
       <td>
         <button title="Переместить выше" aria-label="Переместить услугу выше"
           onclick="moveService(${s.id}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
@@ -65,6 +67,9 @@ export async function loadServices() {
         <button onclick="toggleOperatorChoice(${s.id}, ${s.operator_choice_enabled ? 0 : 1})">
           ${s.operator_choice_enabled ? "Отключить выбор" : "Включить выбор"}
         </button>
+		<button onclick="toggleTerminalVisibility(${s.id}, ${s.visible_on_terminal ? 0 : 1})">
+		  ${s.visible_on_terminal ? "Скрыть на терминале" : "Показать на терминале"}
+		</button>
         <button style="background: #ffcccc;" onclick="deleteService(${s.id})">Удалить</button>
       </td>
     </tr>`;
@@ -157,6 +162,34 @@ export async function toggleOperatorChoice(id, enabled) {
   } else {
     const err = await res.json();
     alert("Ошибка: " + (err.detail || "Не удалось обновить выбор оператора"));
+  }
+}
+
+export async function toggleTerminalVisibility(id, enabled) {
+  const sessionId = sessionStorage.getItem("session_id");
+
+  if (!sessionId) {
+    alert("Ошибка: вы не авторизованы как администратор");
+    return;
+  }
+
+  const res = await fetch(`${API}/services/${id}/terminal-visibility`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "session-id": sessionId
+    },
+    body: JSON.stringify({
+      visible_on_terminal: !!enabled
+    })
+  });
+
+  if (res.ok) {
+    resetOpened();
+    loadServices();
+  } else {
+    const err = await res.json();
+    alert("Ошибка: " + (err.detail || "Не удалось обновить отображение на терминале"));
   }
 }
 

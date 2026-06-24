@@ -43,6 +43,7 @@ class PingRequest(BaseModel):
 class ServiceCreate(BaseModel):
     name: str
     operator_choice_enabled: bool = False
+    visible_on_terminal: bool = True
 
 
 class ServiceOperatorChoiceUpdate(BaseModel):
@@ -57,6 +58,8 @@ class TicketCreate(BaseModel):
     service_id: int
     window_id: int | None = None
 
+class ServiceTerminalVisibilityUpdate(BaseModel):
+    visible_on_terminal: bool
 
 class TicketRead(BaseModel):
     id: int

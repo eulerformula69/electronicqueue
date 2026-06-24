@@ -20,6 +20,9 @@ class Service(Base):
     operator_choice_enabled = Column(
         Integer, nullable=False, default=0, server_default=text("0")
     )
+    visible_on_terminal = Column(
+    Integer, nullable=False, default=1, server_default=text("1")
+    )
 
 
 class Ticket(Base):

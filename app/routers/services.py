@@ -34,8 +34,12 @@ from app.dependencies import (
 )
 from app.models import Admin, Operator, Service, Ticket, Window, WindowService
 from app.schemas import (
-    ServiceCreate, ServiceOperatorChoiceUpdate, ServiceOrderUpdate, ServiceRename,
+    ServiceCreate,
+    ServiceOperatorChoiceUpdate,
+    ServiceOrderUpdate,
+    ServiceRename,
     ServiceStatusUpdate,
+    ServiceTerminalVisibilityUpdate,
 )
 from app.security import get_password_hash, verify_password
 
@@ -50,7 +54,9 @@ async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_a
         db_service = Service(
             name=service.name.strip(),
             display_order=next_order,
-            operator_choice_enabled=1 if service.operator_choice_enabled else 0
+            operator_choice_enabled=1 if service.operator_choice_enabled else 0,
+            visible_on_terminal=1 if service.visible_on_terminal else 1
+
         )
         db.add(db_service)
         db.commit()
@@ -75,12 +81,17 @@ async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_a
 @router.get("/services/", tags=["Services"])
 def list_services(
     skip: int = Query(0, ge=0),
-    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT)
-    ):
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    include_hidden: bool = Query(False),
+):
     db = SessionLocal()
+    query = db.query(Service).filter(Service.is_archived == 0)
+
+    if not include_hidden:
+        query = query.filter(Service.visible_on_terminal == 1)
+
     services = (
-        db.query(Service)
-        .filter(Service.is_archived == 0)
+        query
         .order_by(Service.display_order, Service.id)
         .offset(skip)
         .limit(limit)
@@ -89,6 +100,34 @@ def list_services(
     db.close()
     return services
 
+@router.patch("/services/{service_id}/terminal-visibility", tags=["Services"])
+async def update_service_terminal_visibility(
+    service_id: int = Path(..., gt=0),
+    data: ServiceTerminalVisibilityUpdate = ...,
+    admin: Admin = Depends(verify_admin_session)
+):
+    db = SessionLocal()
+    try:
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        service.visible_on_terminal = 1 if data.visible_on_terminal else 0
+        db.commit()
+        db.refresh(service)
+
+        await manager.broadcast({"type": "services_updated"})
+
+        return {
+            "id": service.id,
+            "visible_on_terminal": service.visible_on_terminal
+        }
+    finally:
+        db.close()
 
 @router.put("/services/order", tags=["Services"])
 async def update_services_order(

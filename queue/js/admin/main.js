@@ -8,6 +8,7 @@ import {
     saveService,
     saveServiceStatus,
     toggleOperatorChoice,
+	toggleTerminalVisibility,
 } from "./services.js";
 import { loadExtraSettings, loadStats, saveExtraSettings } from "./settings.js";
 import {
@@ -44,4 +45,5 @@ Object.assign(window, {
     saveServiceStatus,
     toggleOperatorChoice,
     uploadVideoFile,
+	toggleTerminalVisibility,
 });
