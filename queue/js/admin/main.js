@@ -1,3 +1,28 @@
+import * as mapModule from "./map.js";
+import {
+    addOperator,
+    deleteOperator,
+    editLoginPassword,
+    editOperatorName,
+    editOperatorWindow,
+    loadOperators,
+    loadTickets,
+    saveLoginPassword,
+    saveOperatorName,
+    saveOperatorWindow,
+} from "./operators.js";
+import {
+    addWindow,
+    deleteWindow,
+    editServices,
+    editWindow,
+    editWindowStatus,
+    loadWindows,
+    saveServices,
+    saveServicesWithPriority,
+    saveWindow,
+    saveWindowStatus,
+} from "./windows.js";
 import {
     addService,
     deleteService,
@@ -24,13 +49,33 @@ import {
     uploadVideoFile,
 } from "./media.js";
 
-Object.assign(window, {
+Object.assign(window, mapModule, {
+    addOperator,
     addMedia,
+    addWindow,
+    deleteOperator,
     deleteFromServer,
     deleteMedia,
     deletePhysicalFile,
+    deleteWindow,
+    editLoginPassword,
+    editOperatorName,
+    editOperatorWindow,
+    editServices,
+    editWindow,
+    editWindowStatus,
     loadMedia,
+    loadOperators,
+    loadTickets,
+    loadWindows,
     retryMediaJob,
+    saveLoginPassword,
+    saveOperatorName,
+    saveOperatorWindow,
+    saveServices,
+    saveServicesWithPriority,
+    saveWindow,
+    saveWindowStatus,
     toggleInPlaylist,
     toggleMedia,
     updateProcessVideoControls,
