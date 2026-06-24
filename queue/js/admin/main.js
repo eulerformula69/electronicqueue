@@ -1,0 +1,47 @@
+import {
+    addService,
+    deleteService,
+    editService,
+    editServiceStatus,
+    loadServices,
+    moveService,
+    saveService,
+    saveServiceStatus,
+    toggleOperatorChoice,
+} from "./services.js";
+import { loadExtraSettings, loadStats, saveExtraSettings } from "./settings.js";
+import {
+    addMedia,
+    deleteFromServer,
+    deleteMedia,
+    deletePhysicalFile,
+    loadMedia,
+    retryMediaJob,
+    toggleInPlaylist,
+    toggleMedia,
+    uploadVideoFile,
+} from "./media.js";
+
+Object.assign(window, {
+    addMedia,
+    deleteFromServer,
+    deleteMedia,
+    deletePhysicalFile,
+    loadMedia,
+    retryMediaJob,
+    toggleInPlaylist,
+    toggleMedia,
+    loadExtraSettings,
+    loadStats,
+    saveExtraSettings,
+    addService,
+    deleteService,
+    editService,
+    editServiceStatus,
+    loadServices,
+    moveService,
+    saveService,
+    saveServiceStatus,
+    toggleOperatorChoice,
+    uploadVideoFile,
+});

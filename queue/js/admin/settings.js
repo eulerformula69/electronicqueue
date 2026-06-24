@@ -1,0 +1,234 @@
+import { fetchJSON } from "./api.js";
+import { resetOpened, setActiveTab, setForm, setTable } from "./dom.js";
+
+const API = CONFIG.API_URL;
+const GRAFANA = CONFIG.GRAFANA_URL;
+
+export async function loadExtraSettings() {
+	resetOpened();
+    document.getElementById("form").style.display = "block";
+    document.getElementById("table").style.display = "none";
+    setTable("");
+
+    const statsContainer = document.getElementById("stats-container");
+    if (statsContainer) statsContainer.remove();
+
+    setActiveTab("tab-settings");
+
+    const settings = await fetchJSON(`${API}/admin/settings`);
+    if (!settings) return;
+
+    setForm(`
+        <div class="form settings-form">
+            <h3 class="settings-title">Дополнительные настройки</h3>
+
+            <section class="settings-section">
+                <h4 class="settings-section-title">Терминал</h4>
+                <label class="settings-checkbox-row">
+                    <input type="checkbox" id="setting-print-ticket" ${settings.print_ticket ? "checked" : ""}>
+                    Печатать талон на терминале
+                </label>
+
+                <label class="settings-checkbox-row">
+                    <input type="checkbox" id="setting-show-print-badge" ${settings.show_print_badge ? "checked" : ""}>
+                    Показывать режим печати на терминале
+                </label>
+                <label class="settings-checkbox-row">
+                    <input type="checkbox" id="setting-hide-services-without-online" ${settings.hide_services_without_online_operators ? "checked" : ""}>
+                    Скрывать услуги на терминале, если по ним нет активных операторов 
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Показ номера с печатью талона, секунд:</span>
+                    <input
+                        type="number"
+                        id="setting-ticket-notice-duration-printed"
+                        class="settings-input"
+                        min="1"
+                        max="300"
+                        value="${settings.ticket_notice_duration_printed_seconds || 7}"
+                    >
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Текст на терминале, когда талон печатается:</span>
+                    <textarea
+                        id="setting-ticket-notice-printed-text"
+                        class="settings-input settings-textarea"
+                        maxlength="500"
+                    >${escapeHtml(settings.ticket_notice_printed_text || "Ваш номер: <number>")}</textarea>
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Показ номера без печати талона, секунд:</span>
+                    <input
+                        type="number"
+                        id="setting-ticket-notice-duration-unprinted"
+                        class="settings-input"
+                        min="1"
+                        max="300"
+                        value="${settings.ticket_notice_duration_unprinted_seconds || 45}"
+                    >
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Текст на терминале, когда талон не печатается:</span>
+                    <textarea
+                        id="setting-ticket-notice-unprinted-text"
+                        class="settings-input settings-textarea"
+                        maxlength="500"
+                    >${escapeHtml(settings.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>")}</textarea>
+                </label>
+
+                <small class="settings-hint">
+                    В обоих текстах оставьте <b>&lt;number&gt;</b> - туда подставится номер талона.
+                </small>
+            </section>
+
+            <section class="settings-section">
+                <h4 class="settings-section-title">Оператор</h4>
+                <label class="settings-field-row">
+                    <span class="settings-label">Статус окна по умолчанию при входе оператора:</span>
+                    <select id="setting-default-operator-status" class="settings-select">
+                        <option value="online" ${settings.default_operator_status === "online" ? "selected" : ""}>online</option>
+                        <option value="break" ${settings.default_operator_status === "break" ? "selected" : ""}>break</option>
+                        <option value="offline" ${settings.default_operator_status === "offline" ? "selected" : ""}>offline</option>
+                    </select>
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Если оператор вышел с активным тикетом:</span>
+                    <select id="setting-active-ticket-on-logout" class="settings-select settings-select-wide">
+                        <option value="return_to_queue" ${settings.active_ticket_on_operator_logout === "return_to_queue" ? "selected" : ""}>Вернуть обратно в очередь</option>
+                        <option value="keep_with_operator" ${settings.active_ticket_on_operator_logout === "keep_with_operator" ? "selected" : ""}>Оставить за оператором</option>
+					</select>
+                </label>
+            </section>
+			
+		<section class="settings-section">
+			<h4 class="settings-section-title">Очередь</h4>
+
+			<label class="settings-field-row">
+				<span class="settings-label">Режим очереди:</span>
+				<select id="setting-queue-mode" class="settings-select settings-select-wide">
+					<option value="priority_fifo" ${settings.queue_mode === "priority_fifo" ? "selected" : ""}>
+						Приоритет услуг + FIFO
+					</option>
+					<option value="dynamic_operator_distribution" ${settings.queue_mode === "dynamic_operator_distribution" ? "selected" : ""}>
+						Динамическое распределение по операторам
+					</option>
+				</select>
+			</label>
+		</section>
+
+
+        <section class="settings-section">
+            <h4 class="settings-section-title">Табло и озвучка</h4>
+
+            <label class="settings-field-row">
+                <span class="settings-label">Сообщение вызова / озвучки:</span>
+                <input
+                    id="setting-call-message-template"
+                    class="settings-input settings-input-wide"
+                    value="${settings.call_message_template || "Талон <number> подойдите к окну <window>"}"
+                >
+            </label>
+
+            <small class="settings-hint">
+                Можно менять любой текст, но оставьте <b>&lt;number&gt;</b> и <b>&lt;window&gt;</b>.
+                Например: <b>Талон &lt;number&gt;, подойдите к окну &lt;window&gt;</b>
+            </small>
+
+            <label class="settings-field-row">
+                <span class="settings-label">Отображение вызванного талона на табло:</span>
+                <input
+                    id="setting-board-ticket-template"
+                    class="settings-input settings-input-wide"
+                    value="${settings.board_ticket_template || "Билет <number> -> окно <window>"}"
+                >
+            </label>
+
+            <small class="settings-hint">
+                Например: <b>&lt;number&gt; → &lt;window&gt;</b> или <b>Билет &lt;number&gt; / окно &lt;window&gt;</b>
+            </small>
+        </section>
+
+            <div class="settings-actions">
+                <button onclick="saveExtraSettings()">Сохранить настройки</button>
+            </div>
+        </div>
+    `);
+}
+
+export async function saveExtraSettings() {
+	const payload = {
+		print_ticket: document.getElementById("setting-print-ticket").checked,
+		show_print_badge: document.getElementById("setting-show-print-badge").checked,
+		ticket_notice_duration_printed_seconds: Number(document.getElementById("setting-ticket-notice-duration-printed").value),
+		ticket_notice_duration_unprinted_seconds: Number(document.getElementById("setting-ticket-notice-duration-unprinted").value),
+		ticket_notice_printed_text: document.getElementById("setting-ticket-notice-printed-text").value.trim(),
+		ticket_notice_unprinted_text: document.getElementById("setting-ticket-notice-unprinted-text").value.trim(),
+		default_operator_status: document.getElementById("setting-default-operator-status").value,
+		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
+		hide_services_without_online_operators: document.getElementById("setting-hide-services-without-online").checked,
+		queue_mode: document.getElementById("setting-queue-mode").value,
+
+		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
+		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim()
+	};
+
+    if (
+        !Number.isInteger(payload.ticket_notice_duration_printed_seconds) ||
+        !Number.isInteger(payload.ticket_notice_duration_unprinted_seconds) ||
+        payload.ticket_notice_duration_printed_seconds < 1 ||
+        payload.ticket_notice_duration_printed_seconds > 300 ||
+        payload.ticket_notice_duration_unprinted_seconds < 1 ||
+        payload.ticket_notice_duration_unprinted_seconds > 300
+    ) {
+        alert("Время показа номера должно быть целым числом от 1 до 300 секунд");
+        return;
+    }
+
+    if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
+        alert("Текст уведомления на терминале должен содержать <number>");
+        return;
+    }
+
+    if (!payload.call_message_template.includes("<number>") || !payload.call_message_template.includes("<window>")) {
+        alert("Шаблон озвучки должен содержать <number> и <window>");
+        return;
+    }
+
+    if (!payload.board_ticket_template.includes("<number>") || !payload.board_ticket_template.includes("<window>")) {
+        alert("Шаблон табло должен содержать <number> и <window>");
+        return;
+    }
+
+    const res = await fetchJSON(`${API}/admin/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    if (res) {
+        alert("Настройки сохранены");
+        loadExtraSettings();
+    }
+}
+
+export function loadStats() {
+    // Открываем Grafana в новой вкладке вместо embedded-режима.
+    window.open(GRAFANA, "_blank", "noopener,noreferrer");
+    setActiveTab('tab-stats');
+}
+
+//////// КАРТА
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
