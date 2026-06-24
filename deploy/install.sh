@@ -66,6 +66,15 @@ path.write_text("\n".join(result) + "\n", encoding="utf-8")
 PY
 }
 
+set_env_default() {
+    local env_file="$1"
+    local key="$2"
+    local value="$3"
+    if ! grep -q "^${key}=" "${env_file}"; then
+        printf '%s=%s\n' "${key}" "${value}" >> "${env_file}"
+    fi
+}
+
 if [[ ${EUID} -ne 0 ]]; then
     fail "запустите установщик командой: sudo bash deploy/install.sh"
 fi
@@ -97,7 +106,7 @@ rm -f /etc/apt/sources.list.d/grafana.list
 apt-get update
 apt-get install -y \
     python3 python3-venv python3-pip postgresql nginx rsync curl iproute2 \
-    mkcert libnss3-tools openssl acl
+    mkcert libnss3-tools openssl acl ffmpeg
 
 SERVER_IP="${QUEUE_SERVER_IP:-}"
 if [[ -z "${SERVER_IP}" ]]; then
@@ -192,6 +201,13 @@ TTS_LENGTH_SCALE=1.25
 TTS_NOISE_SCALE=0.65
 TTS_NOISE_W_SCALE=0.75
 TTS_OUTPUT_SAMPLE_RATE=48000
+MAX_FILE_SIZE_MB=300
+FFMPEG_PATH=/usr/bin/ffmpeg
+MEDIA_TRANSCODE_CRF=23
+MEDIA_TRANSCODE_PRESET=medium
+MEDIA_TRANSCODE_MAX_WIDTH=1920
+MEDIA_TRANSCODE_FPS=30
+MEDIA_TRANSCODE_KEEP_AUDIO=false
 EOF
     chmod 0600 "${APP_DIR}/main.env"
 
@@ -213,6 +229,13 @@ fi
 
 set_env_value "${APP_DIR}/main.env" "CORS_ORIGINS" \
     "http://${SERVER_IP},https://${SERVER_IP},http://localhost,http://127.0.0.1"
+set_env_default "${APP_DIR}/main.env" "MAX_FILE_SIZE_MB" "300"
+set_env_default "${APP_DIR}/main.env" "FFMPEG_PATH" "/usr/bin/ffmpeg"
+set_env_default "${APP_DIR}/main.env" "MEDIA_TRANSCODE_CRF" "23"
+set_env_default "${APP_DIR}/main.env" "MEDIA_TRANSCODE_PRESET" "medium"
+set_env_default "${APP_DIR}/main.env" "MEDIA_TRANSCODE_MAX_WIDTH" "1920"
+set_env_default "${APP_DIR}/main.env" "MEDIA_TRANSCODE_FPS" "30"
+set_env_default "${APP_DIR}/main.env" "MEDIA_TRANSCODE_KEEP_AUDIO" "false"
 
 GRAFANA_DB_PASSWORD="$(sed -n 's/^GRAFANA_DB_PASSWORD=//p' "${APP_DIR}/main.env")"
 if [[ -z "${GRAFANA_DB_PASSWORD}" ]]; then
@@ -512,7 +535,7 @@ server {
     ssl_certificate_key /etc/nginx/tls/queue-key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
-    client_max_body_size 55m;
+    client_max_body_size 305m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;

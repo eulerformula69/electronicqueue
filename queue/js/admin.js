@@ -2689,13 +2689,11 @@ async function loadMedia() {
     const sessionId = sessionStorage.getItem("session_id");
 
     try {
-        // 1. Get both the physical files AND the playlist status
         const response = await fetch(`${API}/admin/media/files`, {
             headers: { "session-id": sessionId }
         });
         const data = await response.json();    
-        // Ensure we are working with arrays
-        const files = data.files || [];
+        const items = data.items || (data.files || []).map(filename => ({ filename, status: "ready" }));
         const playlist = data.playlist || [];
 
         let html = `<tr>
@@ -2704,27 +2702,39 @@ async function loadMedia() {
             <th>Действия</th>
         </tr>`;
 
-        files.forEach(filename => {
+        items.forEach(item => {
+            const filename = item.filename;
             const webPath = `/queue/media/${filename}`;
             const isIncluded = playlist.includes(webPath);
+            const status = item.status || "ready";
+            const isReady = status === "ready";
+            const statusText = getMediaStatusText(status, isIncluded, item.error);
+            const statusColor = getMediaStatusColor(status, isIncluded);
+            const compressionLabel = item.compression_label ? ` · ${item.compression_label}` : "";
+            const safeFilename = escapeJsString(filename);
+            const safeJobId = escapeJsString(item.job_id || "");
             
             html += `<tr>
                 <td>${filename}</td>
-                <td><b style="color: ${isIncluded ? 'var(--success)' : 'var(--text-muted)'}">
-                    ${isIncluded ? 'В плейлисте' : 'Исключен'}
-                </b></td>
+                <td><b style="color: ${statusColor}">
+                    ${escapeHtml(statusText)}
+                </b>${escapeHtml(compressionLabel)}</td>
                 <td>
-                    <a href="${webPath}" target="_blank" style="text-decoration: none;">
+                    ${isReady ? `<a href="${webPath}" target="_blank" style="text-decoration: none;">
                         <button style="background: var(--accent); color: white;">Предпросмотр</button>
-                    </a>
-                    <button onclick="toggleMedia('${filename}', ${isIncluded})" 
+                    </a>` : ""}
+                    ${isReady ? `<button onclick="toggleMedia('${safeFilename}', ${isIncluded})"
                             style="background: ${isIncluded ? '#ffcc00' : 'var(--success)'}; color: white; margin-left: 5px;">
                         ${isIncluded ? 'Исключить' : 'Включить'}
-                    </button>
-                    <button onclick="deletePhysicalFile('${filename}')" 
+                    </button>` : ""}
+                    ${isReady ? `<button onclick="deletePhysicalFile('${safeFilename}')"
                             style="background: var(--danger); color: white; margin-left: 5px;">
                         Удалить
-                    </button>
+                    </button>` : ""}
+                    ${status === "error" && item.job_id ? `<button onclick="retryMediaJob('${safeJobId}')"
+                            style="background: var(--accent); color: white; margin-left: 5px;">
+                        Повторить
+                    </button>` : ""}
                 </td>
             </tr>`;
         });
@@ -2732,15 +2742,70 @@ async function loadMedia() {
         setTable(html);
         setForm(`
             <div class="form">
-                <h3>Загрузить видео (MP4, Max 50MB)</h3>
-                <input type="file" id="videoFileInput" accept="video/mp4">
+                <h3>Загрузить видео: MP4, WebM, MOV, MKV, AVI, M4V, WMV, MPG, MPEG, 3GP (до 300MB)</h3>
+                <input type="file" id="videoFileInput" accept=".mp4,.webm,.mov,.mkv,.avi,.m4v,.wmv,.mpg,.mpeg,.3gp,video/*">
+                <select id="compressionMode">
+                    <option value="normal" selected>Обычное качество</option>
+                    <option value="high">Высокое качество</option>
+                    <option value="compact">Максимальное сжатие</option>
+                </select>
                 <button onclick="uploadVideoFile()">Начать загрузку</button>
                 <div id="uploadStatus"></div>
             </div>
         `);
+        if (items.some(item => item.status === "pending" || item.status === "processing")) {
+            setTimeout(() => {
+                if (document.getElementById("tab-media")?.classList.contains("active")) {
+                    loadMedia();
+                }
+            }, 5000);
+        }
     } catch (e) {
         console.error("Ошибка загрузки медиа:", e);
         setTable("<tr><td>Ошибка связи с сервером</td></tr>");
+    }
+}
+
+function getMediaStatusText(status, isIncluded, error) {
+    if (status === "pending") return "Ожидает обработки";
+    if (status === "processing") return "Обработка";
+    if (status === "error") return `Ошибка обработки${error ? ": " + error : ""}`;
+    return isIncluded ? "В плейлисте" : "Исключен";
+}
+
+function getMediaStatusColor(status, isIncluded) {
+    if (status === "pending" || status === "processing") return "var(--accent)";
+    if (status === "error") return "var(--danger)";
+    return isIncluded ? "var(--success)" : "var(--text-muted)";
+}
+
+function escapeJsString(value) {
+    return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+async function retryMediaJob(jobId) {
+    const status = document.getElementById("uploadStatus");
+    if (status) status.textContent = "Повторная обработка...";
+
+    const response = await fetch(`${API}/admin/media/job/${jobId}/retry`, {
+        method: "POST",
+        headers: { "session-id": sessionStorage.getItem("session_id") }
+    });
+
+    if (response.ok) {
+        loadMedia();
+    } else {
+        const err = await readResponseData(response);
+        if (status) status.textContent = `Ошибка повтора (${response.status}): ${err.detail || "нет подробностей"}`;
     }
 }
 
@@ -2810,27 +2875,34 @@ async function uploadVideoFile() {
 
     if (!file) return;
 
-    if (file.size > 50 * 1024 * 1024) {
-        alert("Файл слишком большой (> 50MB)");
+    if (file.size > 300 * 1024 * 1024) {
+        alert("Файл слишком большой (> 300MB)");
         return;
     }
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("compression_mode", document.getElementById("compressionMode")?.value || "normal");
     status.textContent = "Загрузка...";
 
-    const response = await fetch(`${API}/admin/media/upload`, {
-        method: "POST",
-        headers: { "session-id": sessionStorage.getItem("session_id") },
-        body: formData
-    });
+    let response;
+    try {
+        response = await fetch(`${API}/admin/media/upload`, {
+            method: "POST",
+            headers: { "session-id": sessionStorage.getItem("session_id") },
+            body: formData
+        });
+    } catch (error) {
+        status.textContent = "Ошибка загрузки: сервер недоступен";
+        return;
+    }
 
     if (response.ok) {
-        status.textContent = "Загружено!";
+        status.textContent = "Загружено. Видео обрабатывается...";
         loadMedia();
     } else {
-        const err = await response.json();
-        status.textContent = "Ошибка: " + err.detail;
+        const err = await readResponseData(response);
+        status.textContent = `Ошибка загрузки (${response.status}): ${err.detail || "нет подробностей"}`;
     }
 }
 

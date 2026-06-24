@@ -18,10 +18,22 @@ CLOSE_DAY_WS_URL = os.getenv(
     "CLOSE_DAY_WS_URL", "ws://127.0.0.1:8000/ws/terminal"
 )
 
-MAX_FILE_SIZE = 50 * 1024 * 1024
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "300")) * 1024 * 1024
 DEFAULT_PAGE_LIMIT = 100
 MAX_PAGE_LIMIT = 500
-ALLOWED_MEDIA_EXTENSIONS = {".mp4", ".webm"}
+ALLOWED_MEDIA_EXTENSIONS = {
+    ".mp4", ".webm", ".mov", ".mkv", ".avi",
+    ".m4v", ".wmv", ".mpg", ".mpeg", ".3gp",
+}
+
+FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
+MEDIA_TRANSCODE_CRF = os.getenv("MEDIA_TRANSCODE_CRF", "23")
+MEDIA_TRANSCODE_PRESET = os.getenv("MEDIA_TRANSCODE_PRESET", "medium")
+MEDIA_TRANSCODE_MAX_WIDTH = int(os.getenv("MEDIA_TRANSCODE_MAX_WIDTH", "1920"))
+MEDIA_TRANSCODE_FPS = int(os.getenv("MEDIA_TRANSCODE_FPS", "30"))
+MEDIA_TRANSCODE_KEEP_AUDIO = os.getenv(
+    "MEDIA_TRANSCODE_KEEP_AUDIO", "false"
+).lower() in {"1", "true", "yes", "on"}
 
 PIPER_PATH = os.getenv("PIPER_PATH", "piper")
 PIPER_MODEL = Path(os.getenv(

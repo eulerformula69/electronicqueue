@@ -4,15 +4,13 @@ import json
 import os
 import re
 import secrets
-import shutil
-import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path as FilePath
 from typing import List
 
 import bcrypt
 from fastapi import (
-    APIRouter, Body, Depends, File, Header, HTTPException, Query, UploadFile,
+    APIRouter, Body, Depends, File, Form, Header, HTTPException, Query, UploadFile,
     WebSocket, WebSocketDisconnect, status,
 )
 from fastapi.params import Path
@@ -38,7 +36,11 @@ from app.schemas import (
     SystemSettingsUpdate,
 )
 from app.security import get_password_hash, verify_password
-from app.services.media import build_media_file_path, sanitize_media_filename
+from app.services.media import (
+    build_media_file_path, enqueue_media_processing, get_media_job_index,
+    list_media_jobs, retry_media_job, sanitize_media_filename,
+    save_upload_to_originals,
+)
 from app.services.operators import update_services_status_for_window
 from app.services.settings import (
     _bool_to_str, get_or_create_system_settings, get_system_settings_dict,
@@ -124,26 +126,31 @@ async def update_office_map(
 
 @router.post("/admin/media/upload", tags=["Admin"])
 async def upload_media(
-    file: UploadFile = File(...), 
+    file: UploadFile = File(...),
+    compression_mode: str = Form("normal"),
     admin: Admin = Depends(verify_admin_session)
     ):
     safe_filename = sanitize_media_filename(file.filename)
 
-    # 1. Size Limit Check
-    # Spool to check size without reading everything into memory at once
     file.file.seek(0, os.SEEK_END)
     file_size = file.file.tell()
     file.file.seek(0)
     
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Файл слишком большой. Максимум 50MB.")
+        max_mb = MAX_FILE_SIZE // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"Файл слишком большой. Максимум {max_mb}MB.",
+        )
 
-    file_path = build_media_file_path(safe_filename)
-    
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-            
-    return {"status": "success", "filename": safe_filename}
+    source_path = save_upload_to_originals(file.file, safe_filename)
+    job = await enqueue_media_processing(source_path, safe_filename, compression_mode)
+
+    return {
+        "status": "processing",
+        "filename": job["filename"],
+        "job_id": job["id"],
+    }
 
 
 @router.delete("/admin/media/file/{filename}", tags=["Admin"])
@@ -171,6 +178,19 @@ async def delete_media_file(filename: str, admin: Admin = Depends(verify_admin_s
     return {"status": "deleted"}
 
 
+@router.post("/admin/media/job/{job_id}/retry", tags=["Admin"])
+async def retry_media_processing_job(
+    job_id: str,
+    admin: Admin = Depends(verify_admin_session),
+):
+    job = await retry_media_job(job_id)
+    return {
+        "status": job["status"],
+        "filename": job["filename"],
+        "job_id": job["id"],
+    }
+
+
 @router.post("/admin/media/playlist", tags=["Admin"])
 async def update_playlist(data: PlaylistUpdate, admin: Admin = Depends(verify_admin_session)):
     playlist_path = os.path.abspath("queue/media/playlist.json")
@@ -190,7 +210,9 @@ async def update_playlist(data: PlaylistUpdate, admin: Admin = Depends(verify_ad
     if data.action == "add":
         if not data.path or not data.path.startswith("/queue/media/"):
             raise HTTPException(status_code=400, detail="Некорректный путь в плейлисте")
-        sanitize_media_filename(data.path.rsplit("/", 1)[-1])
+        playlist_filename = sanitize_media_filename(data.path.rsplit("/", 1)[-1])
+        if not os.path.exists(build_media_file_path(playlist_filename)):
+            raise HTTPException(status_code=400, detail="Файл еще не готов")
         if data.path not in playlist:
             playlist.append(data.path)
     elif data.action == "delete":
@@ -227,8 +249,47 @@ async def list_media_files(admin: Admin = Depends(verify_admin_session)):
         except:
             playlist = []
             
+    jobs_by_filename = await get_media_job_index()
+    items = []
+    for filename in physical_files:
+        job = jobs_by_filename.get(filename, {})
+        items.append({
+            "job_id": job.get("id"),
+            "filename": filename,
+            "status": job.get("status", "ready"),
+            "compression_mode": job.get("compression_mode"),
+            "compression_label": job.get("compression_label"),
+            "error": (
+                job.get("error")
+                or (
+                    "Подробность не сохранилась. Нажмите «Повторить», чтобы получить точную причину."
+                    if job.get("status") == "error" else ""
+                )
+            ),
+            "size_bytes": job.get("size_bytes"),
+        })
+
+    existing_names = set(physical_files)
+    for job in await list_media_jobs():
+        filename = job.get("filename")
+        if not filename or filename in existing_names:
+            continue
+        if job.get("status") not in {"pending", "processing", "error"}:
+            continue
+        items.append({
+            "job_id": job.get("id"),
+            "filename": filename,
+            "original_filename": job.get("original_filename"),
+            "status": job.get("status", "pending"),
+            "compression_mode": job.get("compression_mode"),
+            "compression_label": job.get("compression_label"),
+            "error": job.get("error") or "Подробность не сохранилась. Нажмите «Повторить», чтобы получить точную причину.",
+            "size_bytes": job.get("size_bytes"),
+        })
+
     return {
         "files": physical_files,
+        "items": items,
         "playlist": playlist
     }
 
