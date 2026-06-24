@@ -32,7 +32,7 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Operator, Service, Window, WindowService
+from app.models import Admin, Operator, Service, Ticket, Window, WindowService
 from app.schemas import (
     ServiceCreate, ServiceOperatorChoiceUpdate, ServiceOrderUpdate, ServiceRename,
     ServiceStatusUpdate,
@@ -80,6 +80,7 @@ def list_services(
     db = SessionLocal()
     services = (
         db.query(Service)
+        .filter(Service.is_archived == 0)
         .order_by(Service.display_order, Service.id)
         .offset(skip)
         .limit(limit)
@@ -96,7 +97,12 @@ async def update_services_order(
 ):
     db = SessionLocal()
     try:
-        services = db.query(Service).with_for_update().all()
+        services = (
+            db.query(Service)
+            .filter(Service.is_archived == 0)
+            .with_for_update()
+            .all()
+        )
         existing_ids = {service.id for service in services}
 
         if len(data.service_ids) != len(set(data.service_ids)):
@@ -127,7 +133,11 @@ async def update_services_order(
 @router.patch("/services/{service_id}", tags=["Services"])
 async def rename_service(service_id: int, data: ServiceRename, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
-    service = db.query(Service).filter(Service.id == service_id).first()
+    service = (
+        db.query(Service)
+        .filter(Service.id == service_id, Service.is_archived == 0)
+        .first()
+    )
 
     if not service:
         db.close()
@@ -154,7 +164,11 @@ async def update_service_status(
     ):
     db = SessionLocal()
     try:
-        service = db.query(Service).filter(Service.id == service_id).first()
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
         if not service:
             raise HTTPException(status_code=404, detail="Service not found")
 
@@ -179,7 +193,11 @@ async def update_service_operator_choice(
     ):
     db = SessionLocal()
     try:
-        service = db.query(Service).filter(Service.id == service_id).first()
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
         if not service:
             raise HTTPException(status_code=404, detail="Service not found")
 
@@ -203,7 +221,11 @@ def list_service_operators(
     ):
     db = SessionLocal()
     try:
-        service = db.query(Service).filter(Service.id == service_id).first()
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
         if not service:
             raise HTTPException(status_code=404, detail="Услуга не найдена")
 
@@ -233,20 +255,45 @@ def list_service_operators(
 
 
 @router.delete("/services/{service_id}", tags=["Services"])
-async def delete_service(service_id: int, admin: Admin = Depends(verify_admin_session)): # Добавили проверку
+async def delete_service(service_id: int, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
-    service = db.query(Service).filter(Service.id == service_id).first()
-    if not service:
+    try:
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
+        if not service:
+            raise HTTPException(status_code=404, detail="Услуга не найдена")
+
+        ticket_count = db.query(Ticket).filter(Ticket.service_id == service_id).count()
+        db.query(WindowService).filter(WindowService.service_id == service_id).delete(
+            synchronize_session=False
+        )
+
+        if ticket_count:
+            service.status = "inactive"
+            service.is_archived = 1
+            service.operator_choice_enabled = 0
+            message = "Услуга архивирована, потому что по ней уже есть билеты"
+            action = "archived"
+        else:
+            db.delete(service)
+            message = "Услуга удалена"
+            action = "deleted"
+
+        db.commit()
+        await manager.broadcast({"type": "services_updated"})
+        return {"message": message, "action": action}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        print(f"Failed to delete service {service_id}: {exc!r}")
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось удалить услугу из-за ошибки базы данных"
+        ) from exc
+    finally:
         db.close()
-        raise HTTPException(status_code=404, detail="Услуга не найдена")
-    
-    db.delete(service)
-
-    await manager.broadcast({
-        "type": "services_updated"
-    })
-
-    db.commit()
-    db.close()
-
-    return {"message": "Service deleted"}

@@ -369,7 +369,7 @@ async function saveService(id) {
 }
 
 async function deleteService(id) {
-    if (!confirm("Вы уверены, что хотите удалить эту услугу?")) return;
+    if (!confirm("Удалить услугу из работы? Если по ней уже есть билеты, она будет скрыта, но история сохранится.")) return;
 
     const sessionId = sessionStorage.getItem("session_id"); // Получаем сессию
 
@@ -381,9 +381,11 @@ async function deleteService(id) {
     });
 
     if (res.ok) {
+        const data = await readResponseData(res);
+        if (data.message) alert(data.message);
         loadServices(); // Обновляем список, если всё ок
     } else {
-        const err = await res.json();
+        const err = await readResponseData(res);
         alert("Ошибка: " + (err.detail || "Не удалось удалить услугу"));
     }
 }

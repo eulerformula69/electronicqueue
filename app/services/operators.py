@@ -30,7 +30,10 @@ def update_services_status_for_window(db: Session, window_id: int):
             .all()
         ]
         if service_ids:
-            db.query(Service).filter(Service.id.in_(service_ids)).update(
+            db.query(Service).filter(
+                Service.id.in_(service_ids),
+                Service.is_archived == 0,
+            ).update(
                 {Service.status: "active"},
                 synchronize_session=False
             )
@@ -61,7 +64,11 @@ def update_services_status_for_window(db: Session, window_id: int):
         .all()
     }
 
-    services = db.query(Service).filter(Service.id.in_(service_ids)).all()
+    services = (
+        db.query(Service)
+        .filter(Service.id.in_(service_ids), Service.is_archived == 0)
+        .all()
+    )
     for service in services:
         new_status = "active" if service.id in online_service_ids else "inactive"
         if service.status != new_status:

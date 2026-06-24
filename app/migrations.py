@@ -104,6 +104,28 @@ def migrate_service_order_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_service_archive_schema(engine):
+    """Add soft-delete support for services while keeping ticket history intact."""
+    ddl = """
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS is_archived integer NOT NULL DEFAULT 0;
+
+    UPDATE services
+    SET is_archived = 0
+    WHERE is_archived IS NULL;
+
+    ALTER TABLE services
+        ALTER COLUMN is_archived SET DEFAULT 0,
+        ALTER COLUMN is_archived SET NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS ix_services_is_archived_display_order
+        ON services (is_archived, display_order, id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_ticket_stages_schema(engine):
     """Add ticket-chain metadata and backfill tickets from older releases."""
     ddl = """

@@ -56,7 +56,11 @@ async def create_ticket(
         settings = get_system_settings_dict(db)
         
         # 1. Проверяем существование услуги
-        service = db.query(Service).filter(Service.id == ticket.service_id).first()
+        service = (
+            db.query(Service)
+            .filter(Service.id == ticket.service_id, Service.is_archived == 0)
+            .first()
+        )
         if not service:
             raise HTTPException(status_code=404, detail="Услуга не найдена")
 
@@ -586,7 +590,11 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
                 detail="Этот билет не является текущим билетом вашего рабочего места",
             )
 
-        service = db.query(Service).filter(Service.id == data.new_service_id).first()
+        service = (
+            db.query(Service)
+            .filter(Service.id == data.new_service_id, Service.is_archived == 0)
+            .first()
+        )
         if not service:
             return {"detail": "Новая услуга не найдена"}
 

@@ -15,6 +15,7 @@ class Service(Base):
     name = Column(String, nullable=False)
     display_order = Column(Integer, nullable=False, default=0, server_default=text("0"))
     status = Column(String, default="inactive")
+    is_archived = Column(Integer, nullable=False, default=0, server_default=text("0"))
     last_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
     operator_choice_enabled = Column(
         Integer, nullable=False, default=0, server_default=text("0")

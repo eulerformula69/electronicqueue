@@ -32,7 +32,7 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Operator, Window, WindowService, record_operator_status
+from app.models import Admin, Operator, Service, Window, WindowService, record_operator_status
 from app.schemas import (
     PriorityUpdate, WindowCreate, WindowServiceCreate, WindowServiceRead,
     WindowServicesUpdate, WindowStatusUpdate, WindowStatusUpdateOp,
@@ -115,6 +115,15 @@ async def update_window_status(
 async def create_window_service(data: WindowServiceCreate, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
 
+    service = (
+        db.query(Service)
+        .filter(Service.id == data.service_id, Service.is_archived == 0)
+        .first()
+    )
+    if not service:
+        db.close()
+        raise HTTPException(status_code=404, detail="Услуга не найдена")
+
     existing = db.query(WindowService).filter_by(
         window_id=data.window_id,
         service_id=data.service_id
@@ -145,7 +154,15 @@ def list_window_services(
     admin: Admin = Depends(verify_admin_session)
     ):
     db = SessionLocal()
-    result = db.query(WindowService).order_by(WindowService.window_id, WindowService.service_id).offset(skip).limit(limit).all()
+    result = (
+        db.query(WindowService)
+        .join(Service, Service.id == WindowService.service_id)
+        .filter(Service.is_archived == 0)
+        .order_by(WindowService.window_id, WindowService.service_id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     db.close()
     return result
 
@@ -156,7 +173,9 @@ def get_window_services(window_id: int, admin: Admin = Depends(verify_admin_sess
 
     services = (
         db.query(WindowService)
+        .join(Service, Service.id == WindowService.service_id)
         .filter(WindowService.window_id == window_id)
+        .filter(Service.is_archived == 0)
         .all()
     )
 
@@ -172,6 +191,16 @@ async def update_window_services(
     ):
     db = SessionLocal()
     try:
+        service_ids = [item.service_id for item in data.services]
+        if service_ids:
+            active_service_count = (
+                db.query(Service)
+                .filter(Service.id.in_(service_ids), Service.is_archived == 0)
+                .count()
+            )
+            if active_service_count != len(set(service_ids)):
+                raise HTTPException(status_code=404, detail="Одна или несколько услуг не найдены")
+
         # Удаляем старое
         db.query(WindowService).filter(WindowService.window_id == window_id).delete()
         
@@ -187,6 +216,9 @@ async def update_window_services(
         db.commit()
         await manager.broadcast({"type": "services_updated"})
         return {"status": "ok"}
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

@@ -59,7 +59,7 @@ def get_operator_windows(operator: Operator = Depends(verify_session)):
             services = (
                 db.query(Service)
                 .join(WindowService, WindowService.service_id == Service.id)
-                .filter(WindowService.window_id == w.id)
+                .filter(WindowService.window_id == w.id, Service.is_archived == 0)
                 .order_by(WindowService.priority.asc(), Service.name.asc())
                 .all()
             )
@@ -332,7 +332,10 @@ async def get_my_details(operator: Operator = Depends(verify_session)):
             results = (
                 db.query(Service.name, WindowService.priority)
                 .join(WindowService, Service.id == WindowService.service_id)
-                .filter(WindowService.window_id == operator.window_id)
+                .filter(
+                    WindowService.window_id == operator.window_id,
+                    Service.is_archived == 0,
+                )
                 .order_by(WindowService.priority.desc()) # Сортируем по важности
                 .all()
             )

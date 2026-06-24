@@ -302,7 +302,7 @@ async def update_admin_settings(
             for window_id in all_window_ids:
                 update_services_status_for_window(db, window_id)
         else:
-            db.query(Service).update({Service.status: "active"})
+            db.query(Service).filter(Service.is_archived == 0).update({Service.status: "active"})
             db.commit()
 
         await manager.broadcast({"type": "services_updated"})
