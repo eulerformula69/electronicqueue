@@ -44,10 +44,27 @@ class ServiceCreate(BaseModel):
     name: str
     operator_choice_enabled: bool = False
     visible_on_terminal: bool = True
+    service_group_id: int | None = None
 
 
 class ServiceOperatorChoiceUpdate(BaseModel):
     operator_choice_enabled: bool
+
+
+class ServiceGroupCreate(BaseModel):
+    name: str
+
+
+class ServiceGroupUpdate(BaseModel):
+    name: str
+
+
+class ServiceGroupOrderUpdate(BaseModel):
+    group_ids: List[int]
+
+
+class ServiceGroupAssignUpdate(BaseModel):
+    service_group_id: int | None = None
 
 
 class ServiceOrderUpdate(BaseModel):

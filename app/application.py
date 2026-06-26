@@ -13,6 +13,7 @@ from app.migrations import (
     migrate_service_archive_schema, migrate_service_order_schema,
     migrate_ticket_notice_settings_schema,
     migrate_ticket_operator_schema, migrate_ticket_stages_schema,
+    migrate_service_groups_schema,
     migrate_service_terminal_visibility_schema,
 )
 from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
@@ -51,6 +52,7 @@ async def startup():
     migrate_ticket_notice_settings_schema(engine)
     init_ticket_numbering(engine)
     migrate_service_terminal_visibility_schema(engine)
+    migrate_service_groups_schema(engine)
     if not TESTING:
         await start_media_processor()
         asyncio.create_task(cleanup_sessions())

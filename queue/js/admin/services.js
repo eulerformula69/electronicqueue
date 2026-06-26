@@ -3,11 +3,28 @@ import { setActiveTab, setForm, setTable } from "./dom.js";
 
 const API = CONFIG.API_URL;
 let services = [];
+let serviceGroups = [];
 let openedServices = null;
 
 function resetOpened() {
     openedServices?.remove();
     openedServices = null;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function renderServiceGroupOptions(selectedId) {
+  return `<option value="">Без группы</option>` + serviceGroups.map(group => `
+    <option value="${group.id}" ${group.id === selectedId ? "selected" : ""}>${escapeHtml(group.name)}</option>
+  `).join("");
 }
 
 //////// УСЛУГИ
@@ -35,9 +52,31 @@ export async function loadServices() {
         return;
     }
     services = await res.json();
+    serviceGroups = await fetchJSON(`${API}/service-groups/`);
+    if (!Array.isArray(serviceGroups)) serviceGroups = [];
+
+  let groupsHtml = `
+    <div class="servicesBox" style="max-width:900px; box-sizing:border-box; margin:0 auto 15px;">
+      <h3 style="margin:0 0 10px;">Группы услуг</h3>
+      ${serviceGroups.length ? serviceGroups.map((group, index) => `
+        <div style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+          <span style="flex:1;">${escapeHtml(group.name)}</span>
+          <button onclick="moveServiceGroup(${group.id}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button onclick="moveServiceGroup(${group.id}, 1)" ${index === serviceGroups.length - 1 ? "disabled" : ""}>↓</button>
+          <button onclick="editServiceGroup(${group.id})">Название</button>
+          <button style="background:#ffcccc;" onclick="deleteServiceGroup(${group.id})">Удалить</button>
+        </div>
+      `).join("") : `<div>Группы не созданы</div>`}
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <input id="newServiceGroupName" placeholder="Название группы" style="flex:1;">
+        <button onclick="addServiceGroup()">Добавить группу</button>
+      </div>
+    </div>
+  `;
 
   let html = `<tr>
 	<th>ID</th>
+	<th>Группа</th>
 	<th>Название</th>
 	<th>Статус</th>
 	<th>Выбор оператора</th>
@@ -51,7 +90,12 @@ export async function loadServices() {
     html += `
     <tr id="service-${s.id}">
       <td>${s.id}</td>
-      <td>${s.name}</td>
+      <td>
+        <select onchange="saveServiceGroupAssignment(${s.id}, this.value)">
+          ${renderServiceGroupOptions(s.service_group_id)}
+        </select>
+      </td>
+      <td>${escapeHtml(s.name)}</td>
       <td>${s.status}</td>
       <td>${s.operator_choice_enabled ? "Да" : "Нет"}</td>
 	  <td>${s.visible_on_terminal ? "Показана" : "Скрыта"}</td>
@@ -62,7 +106,7 @@ export async function loadServices() {
           onclick="moveService(${s.id}, 1)" ${index === services.length - 1 ? "disabled" : ""}>↓</button>
       </td>
       <td>
-        <button onclick="editService(${s.id},'${s.name}')">Название</button>
+        <button onclick="editService(${s.id})">Название</button>
         <button onclick="editServiceStatus(${s.id}, '${s.status}')">Статус</button>
         <button onclick="toggleOperatorChoice(${s.id}, ${s.operator_choice_enabled ? 0 : 1})">
           ${s.operator_choice_enabled ? "Отключить выбор" : "Включить выбор"}
@@ -79,7 +123,9 @@ export async function loadServices() {
 
   setForm(`
     <div class="form">
+      ${groupsHtml}
       <input id="newServiceName" placeholder="Название услуги">
+      <select id="newServiceGroupId">${renderServiceGroupOptions(null)}</select>
       <button onclick="addService()">Добавить услугу</button>
     </div>
   `);
@@ -104,6 +150,74 @@ export async function moveService(serviceId, direction) {
   if (result) loadServices();
 }
 
+export async function addServiceGroup() {
+  const input = document.getElementById("newServiceGroupName");
+  const name = input.value.trim();
+  if (!name) return;
+
+  const result = await fetchJSON(`${API}/service-groups`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({name})
+  });
+  if (result) loadServices();
+}
+
+export async function moveServiceGroup(groupId, direction) {
+  const currentIndex = serviceGroups.findIndex(group => group.id === groupId);
+  const targetIndex = currentIndex + direction;
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= serviceGroups.length) return;
+
+  const reordered = [...serviceGroups];
+  [reordered[currentIndex], reordered[targetIndex]] = [
+    reordered[targetIndex], reordered[currentIndex]
+  ];
+
+  const result = await fetchJSON(`${API}/service-groups/order`, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({group_ids: reordered.map(group => group.id)})
+  });
+  if (result) loadServices();
+}
+
+export async function editServiceGroup(groupId) {
+  const group = serviceGroups.find(item => item.id === groupId);
+  if (!group) return;
+
+  const name = prompt("Название группы", group.name);
+  if (name === null || !name.trim()) return;
+
+  const result = await fetchJSON(`${API}/service-groups/${groupId}`, {
+    method: "PATCH",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({name: name.trim()})
+  });
+  if (result) loadServices();
+}
+
+export async function deleteServiceGroup(groupId) {
+  if (!confirm("Удалить группу? Услуги останутся без группы.")) return;
+
+  const result = await fetchJSON(`${API}/service-groups/${groupId}`, {
+    method: "DELETE"
+  });
+  if (result) loadServices();
+}
+
+export async function saveServiceGroupAssignment(serviceId, value) {
+  const groupId = value ? Number(value) : null;
+  const result = await fetchJSON(`${API}/services/${serviceId}/group`, {
+    method: "PATCH",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({service_group_id: groupId})
+  });
+  if (result) {
+    const service = services.find(item => item.id === serviceId);
+    if (service) service.service_group_id = groupId;
+  }
+}
+
 export function editServiceStatus(id, currentStatus) {
   // если уже открыто для этой услуги — закрываем
   if(openedServices && openedServices.dataset.type === "serviceStatus" && openedServices.dataset.serviceId == id){
@@ -118,6 +232,7 @@ export function editServiceStatus(id, currentStatus) {
   let row = document.getElementById(`service-${id}`);
 
   let html = `<tr class="serviceRow" data-service-id="${id}" data-type="serviceStatus">
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -231,7 +346,9 @@ export async function saveServiceStatus(id) {
   }
 }
 
-export function editService(id, name) {
+export function editService(id) {
+  const service = services.find(item => item.id === id);
+  if (!service) return;
   // если уже открыто для этой услуги — закрываем
   if(openedServices && openedServices.dataset.type === "service" && openedServices.dataset.serviceId == id){
     openedServices.remove();
@@ -249,9 +366,10 @@ export function editService(id, name) {
     <td></td>
     <td></td>
     <td></td>
+    <td></td>
     <td>
       <div class="servicesBox" style="max-width:500px; box-sizing:border-box;">
-        <input id="serviceInput-${id}" value="${name}" style="width:100%; box-sizing:border-box;">
+        <input id="serviceInput-${id}" value="${escapeHtml(service.name)}" style="width:100%; box-sizing:border-box;">
         <button onclick="saveService(${id})">Сохранить</button>
       </div>
     </td>
@@ -312,6 +430,8 @@ export async function addService() {
     const nameInput = document.getElementById("newServiceName");
     const name = nameInput.value;
     if (!name) return;
+    const groupValue = document.getElementById("newServiceGroupId")?.value;
+    const service_group_id = groupValue ? Number(groupValue) : null;
 
     const sessionId = sessionStorage.getItem("session_id"); // Достаем сессию
 
@@ -321,7 +441,7 @@ export async function addService() {
             "Content-Type": "application/json",
             "session-id": sessionId // Передаем заголовок
         },
-        body: JSON.stringify({ name, operator_choice_enabled: false })
+        body: JSON.stringify({ name, operator_choice_enabled: false, service_group_id })
     });
 
     if (res.ok) {

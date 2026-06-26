@@ -374,3 +374,40 @@ def migrate_service_terminal_visibility_schema(engine):
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_service_groups_schema(engine):
+    """Add service groups used for display only."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS service_groups (
+        id serial PRIMARY KEY,
+        name varchar NOT NULL,
+        display_order integer NOT NULL DEFAULT 0
+    );
+
+    ALTER TABLE services
+        ADD COLUMN IF NOT EXISTS service_group_id integer;
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'fk_services_service_group_id'
+              AND conrelid = 'services'::regclass
+        ) THEN
+            ALTER TABLE services
+                ADD CONSTRAINT fk_services_service_group_id
+                FOREIGN KEY (service_group_id) REFERENCES service_groups(id)
+                ON DELETE SET NULL;
+        END IF;
+    END
+    $$;
+
+    CREATE INDEX IF NOT EXISTS ix_service_groups_display_order
+        ON service_groups (display_order, id);
+    CREATE INDEX IF NOT EXISTS ix_services_service_group_id
+        ON services (service_group_id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

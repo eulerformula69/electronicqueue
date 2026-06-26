@@ -14,6 +14,7 @@ class Service(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     display_order = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    service_group_id = Column(Integer, ForeignKey("service_groups.id", ondelete="SET NULL"), nullable=True)
     status = Column(String, default="inactive")
     is_archived = Column(Integer, nullable=False, default=0, server_default=text("0"))
     last_window_id = Column(Integer, ForeignKey("windows.id"), nullable=True)
@@ -23,6 +24,13 @@ class Service(Base):
     visible_on_terminal = Column(
     Integer, nullable=False, default=1, server_default=text("1")
     )
+
+
+class ServiceGroup(Base):
+    __tablename__ = "service_groups"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    display_order = Column(Integer, nullable=False, default=0, server_default=text("0"))
 
 
 class Ticket(Base):

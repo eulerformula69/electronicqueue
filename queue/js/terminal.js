@@ -97,6 +97,9 @@ let terminalSettings = {
     ticket_notice_unprinted_text: "Пожалуйста, запомните свой номер:\n<number>"
 };
 
+let terminalServiceGroups = [];
+let terminalUngroupedServices = [];
+
 const TERMINAL_SERVICE_GESTURE = {
     corners: ["top-left", "top-right", "bottom-right", "bottom-left"],
     hitSize: 120,
@@ -254,47 +257,84 @@ async function loadTerminalSettings() {
 // --- Загрузка услуг ---
 async function loadServices() {
     try {
-        console.log("Loading services from:", `${CONFIG.API_URL}/services/`);
-        const res = await fetch(`${CONFIG.API_URL}/services/`);
+        console.log("Loading grouped services from:", `${CONFIG.API_URL}/services/terminal-groups`);
+        const res = await fetch(`${CONFIG.API_URL}/services/terminal-groups`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        
-        const services = await res.json();
-        const container = document.getElementById("services");
-        container.innerHTML = "";
-
-        if (services.length === 0) {
-            container.innerHTML = "<p>Нет доступных услуг</p>";
-            return;
-        }
-
-        services.forEach(service => {
-            const btn = document.createElement("button");
-            btn.classList.add("service-btn");
-
-            if (service.status === "inactive") {
-                btn.textContent = `${service.name} (сейчас не активна)`;
-                btn.classList.add("unavailable");
-                btn.onclick = () => {
-                    showNotice("В данный момент нет доступных специалистов. Услуга недоступна", CONFIG.NOTICE_DURATION);
-                };
-            } else {
-                btn.textContent = service.name;
-                btn.onclick = () => {
-                    if (service.operator_choice_enabled) {
-                        chooseOperator(service.id, service.name);
-                    } else {
-                        createTicket(service.id, service.name);
-                    }
-                };
-            }
-            container.appendChild(btn);
-        });
+        const data = await res.json();
+        terminalServiceGroups = Array.isArray(data.groups) ? data.groups : [];
+        terminalUngroupedServices = Array.isArray(data.ungrouped_services)
+            ? data.ungrouped_services
+            : [];
+        renderServiceGroups();
+        return;
 
     } catch (error) {
         console.error("Ошибка загрузки услуг:", error);
         const container = document.getElementById("services");
         container.innerHTML = `<p style="color: red;">Ошибка загрузки услуг (ОШИБКА: ${error.message})</p>`;
     }
+}
+
+function renderServiceGroups() {
+    const container = document.getElementById("services");
+    container.innerHTML = "";
+
+    if (terminalServiceGroups.length === 0 && terminalUngroupedServices.length === 0) {
+        container.innerHTML = "<p>Нет доступных услуг</p>";
+        return;
+    }
+
+    terminalServiceGroups.forEach(group => {
+        const btn = document.createElement("button");
+        btn.classList.add("service-btn");
+        btn.textContent = group.name;
+        btn.onclick = () => renderServiceList(group.services || [], group.name, true);
+        container.appendChild(btn);
+    });
+
+    if (terminalUngroupedServices.length > 0) {
+        const btn = document.createElement("button");
+        btn.classList.add("service-btn");
+        btn.textContent = "Без группы";
+        btn.onclick = () => renderServiceList(terminalUngroupedServices, "Без группы", true);
+        container.appendChild(btn);
+    }
+}
+
+function renderServiceList(services, title, showBackButton = false) {
+    const container = document.getElementById("services");
+    container.innerHTML = "";
+
+    if (showBackButton) {
+        const backBtn = document.createElement("button");
+        backBtn.classList.add("service-btn");
+        backBtn.textContent = "Назад";
+        backBtn.onclick = renderServiceGroups;
+        container.appendChild(backBtn);
+    }
+
+    services.forEach(service => {
+        const btn = document.createElement("button");
+        btn.classList.add("service-btn");
+
+        if (service.status === "inactive") {
+            btn.textContent = `${service.name} (сейчас не активна)`;
+            btn.classList.add("unavailable");
+            btn.onclick = () => {
+                showNotice("В данный момент нет доступных специалистов. Услуга недоступна", CONFIG.NOTICE_DURATION);
+            };
+        } else {
+            btn.textContent = service.name;
+            btn.onclick = () => {
+                if (service.operator_choice_enabled) {
+                    chooseOperator(service.id, service.name);
+                } else {
+                    createTicket(service.id, service.name);
+                }
+            };
+        }
+        container.appendChild(btn);
+    });
 }
 
 function ensureOperatorChoiceModal() {

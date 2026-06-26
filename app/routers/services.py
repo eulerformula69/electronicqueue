@@ -32,9 +32,13 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Operator, Service, Ticket, Window, WindowService
+from app.models import Admin, Operator, Service, ServiceGroup, Ticket, Window, WindowService
 from app.schemas import (
     ServiceCreate,
+    ServiceGroupAssignUpdate,
+    ServiceGroupCreate,
+    ServiceGroupOrderUpdate,
+    ServiceGroupUpdate,
     ServiceOperatorChoiceUpdate,
     ServiceOrderUpdate,
     ServiceRename,
@@ -47,14 +51,80 @@ from app.services.settings import get_system_settings_dict
 router = APIRouter()
 
 
+def _visible_services_query(db: Session, include_hidden: bool):
+    query = db.query(Service).filter(Service.is_archived == 0)
+
+    if not include_hidden:
+        settings = get_system_settings_dict(db)
+        query = query.filter(Service.visible_on_terminal == 1)
+        if settings["hide_services_without_online_operators"]:
+            query = query.filter(
+                Service.status == "active",
+                db.query(WindowService.service_id)
+                .join(Window, WindowService.window_id == Window.id)
+                .filter(
+                    WindowService.service_id == Service.id,
+                    Window.status == "online",
+                )
+                .exists()
+            )
+
+    return query
+
+
+def _service_payload(service: Service):
+    return {
+        "id": service.id,
+        "name": service.name,
+        "display_order": service.display_order,
+        "service_group_id": service.service_group_id,
+        "status": service.status,
+        "is_archived": service.is_archived,
+        "last_window_id": service.last_window_id,
+        "operator_choice_enabled": service.operator_choice_enabled,
+        "visible_on_terminal": service.visible_on_terminal,
+    }
+
+
+def build_terminal_service_groups(groups, services):
+    grouped_services = {group.id: [] for group in groups}
+    ungrouped_services = []
+
+    for service in services:
+        if service.service_group_id in grouped_services:
+            grouped_services[service.service_group_id].append(_service_payload(service))
+        else:
+            ungrouped_services.append(_service_payload(service))
+
+    return {
+        "groups": [
+            {
+                "id": group.id,
+                "name": group.name,
+                "display_order": group.display_order,
+                "services": grouped_services[group.id],
+            }
+            for group in groups
+            if grouped_services[group.id]
+        ],
+        "ungrouped_services": ungrouped_services,
+    }
+
+
 @router.post("/services/", tags=["Services"])
 async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
     try:
+        if service.service_group_id is not None:
+            group_exists = db.query(ServiceGroup.id).filter(ServiceGroup.id == service.service_group_id).first()
+            if not group_exists:
+                raise HTTPException(status_code=400, detail="Service group not found")
+
         next_order = db.query(func.coalesce(func.max(Service.display_order), -1)).scalar() + 1
         db_service = Service(
             name=service.name.strip(),
             display_order=next_order,
+            service_group_id=service.service_group_id,
             operator_choice_enabled=1 if service.operator_choice_enabled else 0,
             visible_on_terminal=1 if service.visible_on_terminal else 0
 
@@ -87,25 +157,8 @@ def list_services(
 ):
     db = SessionLocal()
     try:
-        query = db.query(Service).filter(Service.is_archived == 0)
-
-        if not include_hidden:
-            settings = get_system_settings_dict(db)
-            query = query.filter(Service.visible_on_terminal == 1)
-            if settings["hide_services_without_online_operators"]:
-                query = query.filter(
-                    Service.status == "active",
-                    db.query(WindowService.service_id)
-                    .join(Window, WindowService.window_id == Window.id)
-                    .filter(
-                        WindowService.service_id == Service.id,
-                        Window.status == "online",
-                    )
-                    .exists()
-                )
-
         return (
-            query
+            _visible_services_query(db, include_hidden)
             .order_by(Service.display_order, Service.id)
             .offset(skip)
             .limit(limit)
@@ -113,6 +166,156 @@ def list_services(
         )
     finally:
         db.close()
+
+
+@router.get("/services/terminal-groups", tags=["Services"])
+def list_terminal_service_groups():
+    db = SessionLocal()
+    try:
+        groups = (
+            db.query(ServiceGroup)
+            .order_by(ServiceGroup.display_order, ServiceGroup.id)
+            .all()
+        )
+        services = (
+            _visible_services_query(db, include_hidden=False)
+            .order_by(Service.display_order, Service.id)
+            .all()
+        )
+        return build_terminal_service_groups(groups, services)
+    finally:
+        db.close()
+
+
+@router.get("/service-groups/", tags=["Services"])
+def list_service_groups(admin: Admin = Depends(verify_admin_session)):
+    db = SessionLocal()
+    try:
+        return (
+            db.query(ServiceGroup)
+            .order_by(ServiceGroup.display_order, ServiceGroup.id)
+            .all()
+        )
+    finally:
+        db.close()
+
+
+@router.post("/service-groups/", tags=["Services"])
+async def create_service_group(
+    data: ServiceGroupCreate,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        name = data.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Service group name is required")
+
+        next_order = db.query(func.coalesce(func.max(ServiceGroup.display_order), -1)).scalar() + 1
+        group = ServiceGroup(name=name, display_order=next_order)
+        db.add(group)
+        db.commit()
+        db.refresh(group)
+        await manager.broadcast({"type": "services_updated"})
+        return group
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+@router.put("/service-groups/order", tags=["Services"])
+async def update_service_groups_order(
+    data: ServiceGroupOrderUpdate,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        groups = db.query(ServiceGroup).with_for_update().all()
+        existing_ids = {group.id for group in groups}
+
+        if len(data.group_ids) != len(set(data.group_ids)):
+            raise HTTPException(status_code=400, detail="Service group IDs must be unique")
+        if set(data.group_ids) != existing_ids:
+            raise HTTPException(status_code=400, detail="The order must include all service groups")
+
+        order_by_id = {
+            group_id: position
+            for position, group_id in enumerate(data.group_ids)
+        }
+        for group in groups:
+            group.display_order = order_by_id[group.id]
+
+        db.commit()
+        await manager.broadcast({"type": "services_updated"})
+        return {"group_ids": data.group_ids}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+@router.patch("/service-groups/{group_id}", tags=["Services"])
+async def update_service_group(
+    group_id: int = Path(..., gt=0),
+    data: ServiceGroupUpdate = ...,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        group = db.query(ServiceGroup).filter(ServiceGroup.id == group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Service group not found")
+
+        name = data.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Service group name is required")
+
+        group.name = name
+        db.commit()
+        db.refresh(group)
+        await manager.broadcast({"type": "services_updated"})
+        return group
+    finally:
+        db.close()
+
+
+@router.delete("/service-groups/{group_id}", tags=["Services"])
+async def delete_service_group(
+    group_id: int = Path(..., gt=0),
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        group = db.query(ServiceGroup).filter(ServiceGroup.id == group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Service group not found")
+
+        db.query(Service).filter(Service.service_group_id == group_id).update(
+            {Service.service_group_id: None},
+            synchronize_session=False,
+        )
+        db.delete(group)
+        db.commit()
+        await manager.broadcast({"type": "services_updated"})
+        return {"message": "Service group deleted"}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
 
 @router.patch("/services/{service_id}/terminal-visibility", tags=["Services"])
 async def update_service_terminal_visibility(
@@ -142,6 +345,37 @@ async def update_service_terminal_visibility(
         }
     finally:
         db.close()
+
+
+@router.patch("/services/{service_id}/group", tags=["Services"])
+async def update_service_group_assignment(
+    service_id: int = Path(..., gt=0),
+    data: ServiceGroupAssignUpdate = ...,
+    admin: Admin = Depends(verify_admin_session),
+):
+    db = SessionLocal()
+    try:
+        service = (
+            db.query(Service)
+            .filter(Service.id == service_id, Service.is_archived == 0)
+            .first()
+        )
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        if data.service_group_id is not None:
+            group_exists = db.query(ServiceGroup.id).filter(ServiceGroup.id == data.service_group_id).first()
+            if not group_exists:
+                raise HTTPException(status_code=400, detail="Service group not found")
+
+        service.service_group_id = data.service_group_id
+        db.commit()
+        db.refresh(service)
+        await manager.broadcast({"type": "services_updated"})
+        return _service_payload(service)
+    finally:
+        db.close()
+
 
 @router.put("/services/order", tags=["Services"])
 async def update_services_order(
