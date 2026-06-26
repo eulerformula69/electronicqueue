@@ -712,6 +712,36 @@ body.terminal-page #services{
     margin: 0 auto 40px auto;
 }
 
+body.terminal-page .terminal-service-section{
+    width: 100%;
+}
+
+body.terminal-page .terminal-service-section-title{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 8px 0 22px;
+    color: var(--primary);
+    font-size: 24px;
+    font-weight: 800;
+    text-align: left;
+}
+
+body.terminal-page .terminal-service-section-title::after{
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: rgba(0, 51, 102, 0.18);
+}
+
+body.terminal-page .terminal-service-section-list{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--button-gap);
+    margin-bottom: 34px;
+}
+
 
 /* --- Кнопки (в стиле Glass Card) --- */
 body.terminal-page button.service-btn{

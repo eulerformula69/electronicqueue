@@ -84,6 +84,8 @@ main.env.example    пример локальной конфигурации
 requirements.txt    зависимости Python
 data/statistics.json дашборд Grafana
 deploy/update_from_git.py обновление существующей установки из Git
+deploy/backup_db.sh      резервное копирование PostgreSQL
+deploy/restore_db.sh     восстановление PostgreSQL из дампа
 deploy/exclude_from_update.txt локальные исключения для обновления
 ```
 
@@ -95,7 +97,138 @@ cd /home/queue/queue_project
 ./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
 ```
 
-Первая команда только показывает будущие изменения, вторая применяет их с резервной копией.
+Первая команда только показывает будущие изменения, вторая применяет их с резервной копией файлов проекта.
+
+## Резервное копирование базы данных
+
+Дампы сохраняются в `/var/backups/queue/db/` в формате PostgreSQL custom (`queue_YYYYMMDD_HHMMSS.dump`).
+
+### Можно ли сразу запустить `sudo queue-backup`?
+
+**Нет, не с этого компьютера (Windows).** Команды выполняются **на сервере Ubuntu**, где уже стоит очередь — по SSH.
+
+**На сервере тоже не сразу**, пока туда не попадут новые скрипты из этого репозитория. Порядок такой:
+
+1. Здесь (на ПК с кодом): закоммитить и отправить изменения в Git.
+2. Зайти на сервер по SSH под пользователем, у которого есть доступ к проекту.
+3. Обновить файлы на сервере через `update_from_git.py --apply`.
+4. После этого запускать бэкап.
+
+Все команды ниже — **на сервере**, из каталога проекта:
+
+```bash
+cd /home/queue/queue_project
+```
+
+### Первый раз: подготовка на сервере
+
+```bash
+# 1. Посмотреть, что изменится (без применения)
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git
+
+# 2. Применить обновление (скачает deploy/backup_db.sh и deploy/restore_db.sh)
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
+
+# 3. Создать каталог для дампов (если install.sh после этого не запускали)
+sudo install -d -m 0750 -o root -g queue /var/backups/queue/db
+
+# 4. Проверочный бэкап — работает сразу, без queue-backup
+sudo bash /home/queue/queue_project/deploy/backup_db.sh
+```
+
+Чтобы появились короткие команды `queue-backup` и `queue-restore`, один раз перезапустите установщик (данные и `main.env` сохранятся):
+
+```bash
+cd /home/queue/queue_project
+sudo bash deploy/install.sh
+```
+
+После `install.sh` можно использовать `sudo queue-backup` вместо полного пути к скрипту.
+
+### Обычные команды (sudo, на сервере)
+
+Ручной бэкап:
+
+```bash
+sudo queue-backup
+```
+
+Или без обёртки (если `queue-backup` ещё не установлен):
+
+```bash
+sudo bash /home/queue/queue_project/deploy/backup_db.sh
+```
+
+Дополнительные варианты:
+
+```bash
+sudo queue-backup --keep-days 30
+sudo queue-backup --label before_update
+```
+
+Ежедневный автоматический бэкап в 03:15:
+
+```bash
+sudo queue-backup --install-cron
+```
+
+Журнал cron: `/var/log/queue-db-backup.log`.
+
+Список дампов:
+
+```bash
+ls -lh /var/backups/queue/db/
+```
+
+### Перед обновлением проекта из Git
+
+```bash
+cd /home/queue/queue_project
+
+sudo queue-backup --label before_update
+
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git
+./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
+```
+
+Если `queue-backup` ещё нет:
+
+```bash
+sudo bash /home/queue/queue_project/deploy/backup_db.sh --label before_update
+```
+
+### Восстановление из дампа
+
+Служба `queue` будет остановлена и запущена снова. Перед восстановлением автоматически создаётся страховочный дамп с меткой `before_restore`.
+
+```bash
+sudo queue-restore /var/backups/queue/db/queue_20250624_031500.dump
+```
+
+Последний дамп в каталоге:
+
+```bash
+sudo queue-restore latest
+```
+
+Без вопроса «Продолжить?» (осторожно):
+
+```bash
+sudo queue-restore /var/backups/queue/db/queue_20250624_031500.dump -y
+```
+
+Через полный путь к скрипту:
+
+```bash
+sudo bash /home/queue/queue_project/deploy/restore_db.sh /var/backups/queue/db/queue_20250624_031500.dump
+```
+
+Проверка, что восстановление вообще работает (на уже сделанном тестовом дампе):
+
+```bash
+sudo queue-backup --label test_copy
+sudo queue-restore /var/backups/queue/db/queue_YYYYMMDD_HHMMSS_test_copy.dump -y
+```
 
 ## Учётные записи
 

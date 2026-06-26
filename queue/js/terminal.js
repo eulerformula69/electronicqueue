@@ -285,33 +285,26 @@ function renderServiceGroups() {
     }
 
     terminalServiceGroups.forEach(group => {
-        const btn = document.createElement("button");
-        btn.classList.add("service-btn");
-        btn.textContent = group.name;
-        btn.onclick = () => renderServiceList(group.services || [], group.name, true);
-        container.appendChild(btn);
+        renderServiceSection(container, group.name, group.services || []);
     });
 
     if (terminalUngroupedServices.length > 0) {
-        const btn = document.createElement("button");
-        btn.classList.add("service-btn");
-        btn.textContent = "Без группы";
-        btn.onclick = () => renderServiceList(terminalUngroupedServices, "Без группы", true);
-        container.appendChild(btn);
+        renderServiceSection(container, "Без группы", terminalUngroupedServices);
     }
 }
 
-function renderServiceList(services, title, showBackButton = false) {
-    const container = document.getElementById("services");
-    container.innerHTML = "";
+function renderServiceSection(container, title, services) {
+    if (!services.length) return;
 
-    if (showBackButton) {
-        const backBtn = document.createElement("button");
-        backBtn.classList.add("service-btn");
-        backBtn.textContent = "Назад";
-        backBtn.onclick = renderServiceGroups;
-        container.appendChild(backBtn);
-    }
+    const section = document.createElement("section");
+    section.className = "terminal-service-section";
+
+    const heading = document.createElement("h2");
+    heading.className = "terminal-service-section-title";
+    heading.textContent = title;
+
+    const list = document.createElement("div");
+    list.className = "terminal-service-section-list";
 
     services.forEach(service => {
         const btn = document.createElement("button");
@@ -333,8 +326,11 @@ function renderServiceList(services, title, showBackButton = false) {
                 }
             };
         }
-        container.appendChild(btn);
+        list.appendChild(btn);
     });
+
+    section.append(heading, list);
+    container.appendChild(section);
 }
 
 function ensureOperatorChoiceModal() {

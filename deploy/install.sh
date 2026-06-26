@@ -158,6 +158,10 @@ install -m 0750 "${SOURCE_DIR}/scripts/closeDay.py" "${APP_DIR}/scripts/closeDay
 install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"
 install -m 0640 "${SOURCE_DIR}/deploy/exclude_from_update.txt" "${APP_DIR}/deploy/exclude_from_update.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
+install -m 0750 "${SOURCE_DIR}/deploy/db_common.sh" "${APP_DIR}/deploy/db_common.sh"
+install -m 0750 "${SOURCE_DIR}/deploy/backup_db.sh" "${APP_DIR}/deploy/backup_db.sh"
+install -m 0750 "${SOURCE_DIR}/deploy/restore_db.sh" "${APP_DIR}/deploy/restore_db.sh"
+install -d -m 0750 -o root -g "${APP_USER}" /var/backups/queue/db
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/queue"
 rsync -a --delete \
     --exclude 'media/' \
@@ -271,6 +275,18 @@ cat > /usr/local/bin/queue-close-day <<EOF
 exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/closeDay.py "\$@"
 EOF
 chmod 0755 /usr/local/bin/queue-close-day
+
+cat > /usr/local/bin/queue-backup <<EOF
+#!/bin/sh
+exec bash ${APP_DIR}/deploy/backup_db.sh "\$@"
+EOF
+chmod 0755 /usr/local/bin/queue-backup
+
+cat > /usr/local/bin/queue-restore <<EOF
+#!/bin/sh
+exec bash ${APP_DIR}/deploy/restore_db.sh "\$@"
+EOF
+chmod 0755 /usr/local/bin/queue-restore
 
 log "Проверяю подключение к базе данных"
 runuser -u "${APP_USER}" -- "${APP_DIR}/venv/bin/python" - "${APP_DIR}/main.env" <<'PY'
