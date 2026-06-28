@@ -579,6 +579,47 @@ body.admin-page .admin-upload-form .admin-input {
     width: auto;
 }
 
+body.admin-page .admin-file-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: min(340px, 100%);
+    max-width: 100%;
+    min-height: 42px;
+    padding: 0 12px 0 0;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+body.admin-page .admin-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.admin-page .admin-file-picker .admin-btn {
+    min-height: 40px;
+    border-radius: 6px 0 0 6px;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+}
+
+body.admin-page .admin-file-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 body.admin-page .admin-upload-status {
     width: 100%;
     color: var(--text-muted);

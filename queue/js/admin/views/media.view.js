@@ -39,7 +39,11 @@ async function render() {
     ctx.view.innerHTML = `
         <div class="admin-toolbar">
             <form id="media-upload-form" class="admin-upload-form">
-                <input class="admin-input" type="file" name="file" accept=".mp4,.webm,.mov,.mkv,.avi,.m4v,.wmv,.mpg,.mpeg,.3gp,video/*">
+                <label class="admin-file-picker">
+                    <input class="admin-file-input" type="file" name="file" accept=".mp4,.webm,.mov,.mkv,.avi,.m4v,.wmv,.mpg,.mpeg,.3gp,video/*">
+                    <span class="admin-btn admin-btn-secondary">Выбрать файл</span>
+                    <span class="admin-file-name" data-file-name>Файл не выбран</span>
+                </label>
                 <label class="admin-checkbox"><input type="checkbox" name="process_video" checked> Обрабатывать видео</label>
                 <select class="admin-input" name="compression_mode">
                     <option value="normal" selected>Обычное качество</option>
@@ -55,6 +59,9 @@ async function render() {
 
     ctx.view.onclick = handleClick;
     ctx.view.onchange = event => {
+        if (event.target.name === "file") {
+            updateSelectedFileName(event.target);
+        }
         if (event.target.name === "process_video") {
             document.querySelector('[name="compression_mode"]').disabled = !event.target.checked;
         }
@@ -65,6 +72,13 @@ async function render() {
             if (location.hash === "#media") render();
         }, 5000);
     }
+}
+
+function updateSelectedFileName(input) {
+    const label = input.closest(".admin-file-picker");
+    const fileName = label?.querySelector("[data-file-name]");
+    if (!fileName) return;
+    fileName.textContent = input.files[0]?.name || "Файл не выбран";
 }
 
 function statusText(item, included) {
