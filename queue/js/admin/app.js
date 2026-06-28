@@ -65,10 +65,6 @@ function renderShell() {
     root.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
-                <div class="admin-brand">
-                    <span class="admin-brand-mark">EQ</span>
-                    <span>Электронная очередь</span>
-                </div>
                 <nav class="admin-nav">
                     ${Object.entries(routes).map(([key, route]) => `
                         <a href="#${key}" class="admin-nav-link" data-route="${key}">
@@ -77,10 +73,6 @@ function renderShell() {
                         </a>
                     `).join("")}
                 </nav>
-                <div class="admin-sidebar-user">
-                    <span class="admin-avatar">A</span>
-                    <span><strong>Администратор</strong><small>admin</small></span>
-                </div>
             </aside>
             <main class="admin-main">
                 <header class="admin-header">
@@ -90,8 +82,6 @@ function renderShell() {
                         <p id="admin-description"></p>
                     </div>
                     <div class="admin-header-spacer"></div>
-                    <span class="admin-online"><i></i> Онлайн</span>
-                    <div class="admin-user-chip"><span class="admin-avatar">A</span><span>Администратор<small>admin</small></span></div>
                     ${ui.button("Выйти", {variant: "ghost", action: "logout"})}
                 </header>
                 <section id="admin-view" class="admin-view"></section>
