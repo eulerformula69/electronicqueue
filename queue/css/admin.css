@@ -11,9 +11,11 @@ body.admin-page {
     --admin-sidebar-muted: color-mix(in srgb, var(--card-bg) 82%, transparent);
 
     margin: 0;
+    height: 100vh;
     min-height: 100vh;
+    max-height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
     background: var(--bg);
     color: var(--text-main);
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -32,7 +34,9 @@ body.admin-page * {
 body.admin-page .admin-shell {
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
 }
 
 body.admin-page .admin-sidebar {
@@ -133,7 +137,9 @@ body.admin-page .admin-main {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
 }
 
 body.admin-page .admin-header {
@@ -141,6 +147,7 @@ body.admin-page .admin-header {
     align-items: center;
     gap: 18px;
     min-height: 84px;
+    flex: 0 0 84px;
     padding: 0 28px;
     background: var(--card-bg);
     border-bottom: 1px solid var(--admin-border);
@@ -209,8 +216,9 @@ body.admin-page .admin-user-chip small {
 
 body.admin-page .admin-view {
     flex: 1 1 auto;
-    min-height: calc(100vh - 84px);
-    overflow: visible;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
     padding: 28px;
 }
 
@@ -695,16 +703,25 @@ body.admin-page .admin-map-host .map-editor {
     body.admin-page {
         overflow-x: hidden;
         overflow-y: auto;
+        height: auto;
+        max-height: none;
     }
 
     body.admin-page .admin-shell {
         grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
     }
 
     body.admin-page .admin-sidebar {
         position: static;
         height: auto;
         min-height: auto;
+    }
+
+    body.admin-page .admin-main {
+        height: auto;
+        overflow: visible;
     }
 
     body.admin-page .admin-nav {
@@ -720,10 +737,13 @@ body.admin-page .admin-map-host .map-editor {
     body.admin-page .admin-header {
         flex-wrap: wrap;
         height: auto;
+        flex-basis: auto;
         padding: 16px;
     }
 
     body.admin-page .admin-view {
+        min-height: auto;
+        overflow: visible;
         padding: 16px;
     }
 
