@@ -41,7 +41,7 @@ async function render() {
             <form id="media-upload-form" class="admin-upload-form">
                 <label class="admin-file-picker">
                     <input class="admin-file-input" type="file" name="file" accept=".mp4,.webm,.mov,.mkv,.avi,.m4v,.wmv,.mpg,.mpeg,.3gp,video/*">
-                    <span class="admin-btn admin-btn-secondary">Выбрать файл</span>
+                    <span class="admin-file-action">Выбрать файл</span>
                     <span class="admin-file-name" data-file-name>Файл не выбран</span>
                 </label>
                 <label class="admin-checkbox"><input type="checkbox" name="process_video" checked> Обрабатывать видео</label>
