@@ -1,21 +1,19 @@
 export function resetOpened() {
-    if (typeof window.resetOpened === "function") {
-        window.resetOpened();
-    }
+    document.querySelectorAll(".admin-drawer.open").forEach(drawer => drawer.classList.remove("open"));
 }
 
 export function setTable(html) {
-    document.getElementById("table").innerHTML = html;
+    const table = document.getElementById("table");
+    if (table) table.innerHTML = html;
 }
 
 export function setForm(html) {
-    document.getElementById("form").innerHTML = html;
+    const form = document.getElementById("form");
+    if (form) form.innerHTML = html;
 }
 
 export function setActiveTab(tabId) {
-    document.querySelectorAll(".tabs button").forEach(btn => {
-        btn.classList.remove("active");
+    document.querySelectorAll(".admin-nav-link").forEach(link => {
+        link.classList.toggle("active", link.getAttribute("href") === `#${tabId.replace("tab-", "")}`);
     });
-
-    document.getElementById(tabId)?.classList.add("active");
 }

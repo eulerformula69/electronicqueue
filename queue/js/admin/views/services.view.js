@@ -1,0 +1,232 @@
+let ctx;
+let services = [];
+let groups = [];
+
+const statusOptions = [
+    {value: "active", label: "active"},
+    {value: "inactive", label: "inactive"}
+];
+
+export async function mount(context) {
+    ctx = context;
+    await load();
+    render();
+}
+
+async function load() {
+    const [serviceData, groupData] = await Promise.all([
+        ctx.api.request("/services?limit=500&include_hidden=true"),
+        ctx.api.request("/service-groups/")
+    ]);
+    services = Array.isArray(serviceData) ? serviceData : [];
+    groups = Array.isArray(groupData) ? groupData : [];
+}
+
+function render() {
+    const activeCount = services.filter(item => item.status === "active").length;
+    const inactiveCount = services.filter(item => item.status !== "active").length;
+    const hiddenCount = services.filter(item => !item.visible_on_terminal).length;
+
+    const rows = services.map((service, index) => `
+        <tr>
+            <td>${service.id}</td>
+            <td>${ctx.ui.escapeHtml(groupName(service.service_group_id))}</td>
+            <td><strong>${ctx.ui.escapeHtml(service.name)}</strong></td>
+            <td>${ctx.ui.badge(service.status, service.status === "active" ? "success" : "neutral")}</td>
+            <td>${service.visible_on_terminal ? ctx.ui.badge("Показывается", "success") : ctx.ui.badge("Скрыта", "warning")}</td>
+            <td>${service.operator_choice_enabled ? "Да" : "Нет"}</td>
+            <td>
+                ${ctx.ui.button("↑", {variant: "icon", action: "move", id: service.id, disabled: index === 0, title: "Выше"})}
+                ${ctx.ui.button("↓", {variant: "icon", action: "move-down", id: service.id, disabled: index === services.length - 1, title: "Ниже"})}
+            </td>
+            <td>${ctx.ui.button("Редактировать", {variant: "link", action: "edit", id: service.id})}</td>
+        </tr>
+    `);
+
+    ctx.view.innerHTML = `
+        <div class="admin-toolbar">
+            ${ctx.ui.button("Добавить услугу", {variant: "primary", action: "create-service"})}
+            ${ctx.ui.button("Группы услуг", {variant: "secondary", action: "groups"})}
+        </div>
+        <div class="admin-stats-grid">
+            ${ctx.ui.statCard("Всего услуг", services.length, "blue")}
+            ${ctx.ui.statCard("Активных", activeCount, "green")}
+            ${ctx.ui.statCard("Отключенных", inactiveCount, "red")}
+            ${ctx.ui.statCard("Скрытых", hiddenCount, "orange")}
+        </div>
+        ${ctx.ui.table(["ID", "Группа", "Название", "Статус", "Терминал", "Выбор оператора", "Порядок", "Действия"], rows)}
+    `;
+
+    ctx.view.onclick = handleClick;
+}
+
+async function handleClick(event) {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const id = Number(button.dataset.id);
+
+    if (button.dataset.action === "create-service") openServiceDrawer();
+    if (button.dataset.action === "groups") openGroupsDrawer();
+    if (button.dataset.action === "edit") openServiceDrawer(services.find(item => item.id === id));
+    if (button.dataset.action === "move") await moveService(id, -1);
+    if (button.dataset.action === "move-down") await moveService(id, 1);
+}
+
+function groupName(id) {
+    return groups.find(group => group.id === id)?.name || "Без группы";
+}
+
+function groupOptions(selectedId) {
+    return [
+        {value: "", label: "Без группы"},
+        ...groups.map(group => ({value: group.id, label: group.name}))
+    ];
+}
+
+function openServiceDrawer(service = null) {
+    const isEdit = Boolean(service);
+    ctx.openDrawer(isEdit ? "Редактирование услуги" : "Новая услуга", `
+        <form id="service-form" class="admin-form">
+            ${ctx.ui.field("Название", ctx.ui.input("name", service?.name || "", "required"))}
+            ${ctx.ui.field("Группа", ctx.ui.select("service_group_id", groupOptions(service?.service_group_id), service?.service_group_id ?? ""))}
+            ${isEdit ? ctx.ui.field("Статус", ctx.ui.select("status", statusOptions, service.status)) : ""}
+            ${ctx.ui.field("Показывать на терминале", ctx.ui.switchField("visible_on_terminal", service?.visible_on_terminal ?? true))}
+            ${ctx.ui.field("Выбор оператора", ctx.ui.switchField("operator_choice_enabled", service?.operator_choice_enabled ?? false))}
+        </form>
+    `, {
+        footer: `
+            ${ctx.ui.button("Отмена", {variant: "secondary", action: "close-service"})}
+            ${isEdit ? ctx.ui.button("Удалить", {variant: "danger", action: "delete-service", id: service.id}) : ""}
+            ${ctx.ui.button("Сохранить", {variant: "primary", action: "save-service", id: service?.id ?? ""})}
+        `
+    });
+
+    document.getElementById("admin-drawer").onclick = handleDrawerClick;
+}
+
+async function handleDrawerClick(event) {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const action = button.dataset.action;
+    const id = Number(button.dataset.id);
+
+    if (action === "close-service" || action === "close-groups") ctx.closeDrawer();
+    if (action === "save-service") await saveService(id || null);
+    if (action === "delete-service") await deleteService(id);
+    if (action === "add-group") await addGroup();
+    if (action === "rename-group") await renameGroup(id);
+    if (action === "delete-group") await deleteGroup(id);
+    if (action === "group-up") await moveGroup(id, -1);
+    if (action === "group-down") await moveGroup(id, 1);
+}
+
+async function saveService(id) {
+    const form = document.getElementById("service-form");
+    const data = Object.fromEntries(new FormData(form).entries());
+    const name = data.name?.trim();
+    if (!name) return ctx.toast("Введите название услуги", "error");
+    const service_group_id = data.service_group_id ? Number(data.service_group_id) : null;
+
+    if (!id) {
+        await ctx.api.json("/services", {
+            method: "POST",
+            body: {name, operator_choice_enabled: Boolean(data.operator_choice_enabled), service_group_id}
+        });
+    } else {
+        await ctx.api.json(`/services/${id}`, {method: "PATCH", body: {name}});
+        await ctx.api.json(`/services/${id}/group`, {method: "PATCH", body: {service_group_id}});
+        await ctx.api.json(`/services/${id}/status`, {method: "PATCH", body: {status: data.status}});
+        await ctx.api.json(`/services/${id}/terminal-visibility`, {method: "PATCH", body: {visible_on_terminal: Boolean(data.visible_on_terminal)}});
+        await ctx.api.json(`/services/${id}/operator-choice`, {method: "PATCH", body: {operator_choice_enabled: Boolean(data.operator_choice_enabled)}});
+    }
+
+    ctx.closeDrawer();
+    await load();
+    render();
+    ctx.toast("Услуга сохранена", "success");
+}
+
+async function deleteService(id) {
+    if (!ctx.ui.confirmAction("Удалить услугу? Если по ней уже есть билеты, она будет скрыта, история сохранится.")) return;
+    const data = await ctx.api.request(`/services/${id}`, {method: "DELETE"});
+    if (data.message) ctx.toast(data.message, "info");
+    ctx.closeDrawer();
+    await load();
+    render();
+}
+
+async function moveService(id, direction) {
+    const index = services.findIndex(item => item.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= services.length) return;
+    const reordered = [...services];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    await ctx.api.json("/services/order", {method: "PUT", body: {service_ids: reordered.map(item => item.id)}});
+    await load();
+    render();
+}
+
+function openGroupsDrawer() {
+    ctx.openDrawer("Группы услуг", `
+        <div class="admin-form">
+            <div class="admin-inline-form">
+                ${ctx.ui.input("new_group_name", "", "placeholder=\"Название группы\"")}
+                ${ctx.ui.button("Добавить", {variant: "primary", action: "add-group"})}
+            </div>
+            <div class="admin-list">
+                ${groups.length ? groups.map((group, index) => `
+                    <div class="admin-list-row">
+                        <strong>${ctx.ui.escapeHtml(group.name)}</strong>
+                        <span>
+                            ${ctx.ui.button("↑", {variant: "icon", action: "group-up", id: group.id, disabled: index === 0})}
+                            ${ctx.ui.button("↓", {variant: "icon", action: "group-down", id: group.id, disabled: index === groups.length - 1})}
+                            ${ctx.ui.button("Имя", {variant: "secondary", action: "rename-group", id: group.id})}
+                            ${ctx.ui.button("Удалить", {variant: "danger", action: "delete-group", id: group.id})}
+                        </span>
+                    </div>
+                `).join("") : `<p class="admin-muted">Группы не созданы</p>`}
+            </div>
+        </div>
+    `);
+    document.getElementById("admin-drawer").onclick = handleDrawerClick;
+}
+
+async function addGroup() {
+    const input = document.querySelector('[name="new_group_name"]');
+    const name = input.value.trim();
+    if (!name) return;
+    await ctx.api.json("/service-groups", {method: "POST", body: {name}});
+    await load();
+    openGroupsDrawer();
+    render();
+}
+
+async function renameGroup(id) {
+    const group = groups.find(item => item.id === id);
+    const name = prompt("Название группы", group?.name || "")?.trim();
+    if (!name) return;
+    await ctx.api.json(`/service-groups/${id}`, {method: "PATCH", body: {name}});
+    await load();
+    openGroupsDrawer();
+    render();
+}
+
+async function deleteGroup(id) {
+    if (!ctx.ui.confirmAction("Удалить группу? Услуги останутся без группы.")) return;
+    await ctx.api.request(`/service-groups/${id}`, {method: "DELETE"});
+    await load();
+    openGroupsDrawer();
+    render();
+}
+
+async function moveGroup(id, direction) {
+    const index = groups.findIndex(item => item.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= groups.length) return;
+    const reordered = [...groups];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    await ctx.api.json("/service-groups/order", {method: "PUT", body: {group_ids: reordered.map(item => item.id)}});
+    await load();
+    openGroupsDrawer();
+    render();
+}

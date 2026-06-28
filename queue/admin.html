@@ -1,38 +1,17 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2328a745'/%3E%3Ccircle cx='5' cy='8' r='2' fill='white'/%3E%3Cpath d='M10,4 C12,6 12,10 10,12' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
     <meta charset="UTF-8">
-    <title>Настройки Очереди</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Администрирование очереди</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2328a745'/%3E%3Ccircle cx='5' cy='8' r='2' fill='white'/%3E%3Cpath d='M10,4 C12,6 12,10 10,12' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/queue/css/style.css">
+    <link rel="stylesheet" href="/queue/css/admin.css">
 </head>
 <body class="admin-page">
+    <div id="admin-root"></div>
 
-<div class="sticky-header">
-    <header>Настройки Очереди</header>
-    <div class="tabs">
-        <button id="tab-services" onclick="loadServices()">Услуги</button>
-        <button id="tab-windows" onclick="loadWindows()">Рабочие места</button>
-        <button id="tab-map" onclick="loadMapEditor()">Карта</button>
-        <button id="tab-operators" onclick="loadOperators()">Операторы</button>
-        <button id="tab-media" onclick="loadMedia()">Медиафайлы</button>
-        <button id="tab-settings" onclick="loadExtraSettings()">Дополнительно</button>
-        <button id="tab-stats" onclick="loadStats()">Статистика</button>
-		<button id="tab-exit" onclick="ExitPage()">Выйти</button>
-    </div>
-</div>
-
-<div class="content">
-<div id="form"></div>
-
-<div class="table-scroll">
-    <table id="table"></table>
-</div>
-</div>
-
-<script src="/queue/js/config.js"></script>
-<script src="/queue/js/admin.js?v=1.2"></script>
-<script type="module" src="/queue/js/admin/main.js?v=1.3"></script>
-
+    <script src="/queue/js/config.js"></script>
+    <script type="module" src="/queue/js/admin/app.js"></script>
 </body>
 </html>

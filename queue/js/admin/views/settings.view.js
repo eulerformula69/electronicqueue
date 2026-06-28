@@ -1,0 +1,98 @@
+let ctx;
+let settings;
+
+export async function mount(context) {
+    ctx = context;
+    settings = await ctx.api.request("/admin/settings");
+    render();
+}
+
+function render() {
+    ctx.view.innerHTML = `
+        <form id="settings-form" class="admin-settings-layout">
+            <section class="admin-card admin-form">
+                <h2>Терминал</h2>
+                ${ctx.ui.field("Печатать талон", ctx.ui.switchField("print_ticket", settings.print_ticket))}
+                ${ctx.ui.field("Показывать режим печати", ctx.ui.switchField("show_print_badge", settings.show_print_badge))}
+                ${ctx.ui.field("Услуги без активных операторов", ctx.ui.select("unavailable_services_mode", [
+                    {value: "hide", label: "Скрывать услуги"},
+                    {value: "show_inactive", label: "Показывать как неактивные"}
+                ], settings.hide_services_without_online_operators ? "hide" : "show_inactive"))}
+                ${ctx.ui.field("Показ номера с печатью, секунд", ctx.ui.input("ticket_notice_duration_printed_seconds", settings.ticket_notice_duration_printed_seconds || 7, "type=\"number\" min=\"1\" max=\"300\""))}
+                ${ctx.ui.field("Текст при печати талона", ctx.ui.textarea("ticket_notice_printed_text", settings.ticket_notice_printed_text || "Ваш номер: <number>", "maxlength=\"500\""))}
+                ${ctx.ui.field("Показ номера без печати, секунд", ctx.ui.input("ticket_notice_duration_unprinted_seconds", settings.ticket_notice_duration_unprinted_seconds || 45, "type=\"number\" min=\"1\" max=\"300\""))}
+                ${ctx.ui.field("Текст без печати талона", ctx.ui.textarea("ticket_notice_unprinted_text", settings.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>", "maxlength=\"500\""))}
+            </section>
+            <section class="admin-card admin-form">
+                <h2>Оператор и очередь</h2>
+                ${ctx.ui.field("Статус окна при входе оператора", ctx.ui.select("default_operator_status", [
+                    {value: "online", label: "online"},
+                    {value: "break", label: "break"},
+                    {value: "offline", label: "offline"}
+                ], settings.default_operator_status))}
+                ${ctx.ui.field("Если оператор вышел с активным тикетом", ctx.ui.select("active_ticket_on_operator_logout", [
+                    {value: "return_to_queue", label: "Вернуть обратно в очередь"},
+                    {value: "keep_with_operator", label: "Оставить за оператором"}
+                ], settings.active_ticket_on_operator_logout))}
+                ${ctx.ui.field("Режим очереди", ctx.ui.select("queue_mode", [
+                    {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
+                    {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
+                ], settings.queue_mode))}
+            </section>
+            <section class="admin-card admin-form admin-settings-wide">
+                <h2>Табло и озвучка</h2>
+                ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
+                ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
+                <p class="admin-muted">В шаблонах должны остаться параметры &lt;number&gt; и &lt;window&gt;.</p>
+                ${ctx.ui.button("Сохранить изменения", {variant: "primary", action: "save-settings"})}
+            </section>
+        </form>
+    `;
+    ctx.view.onclick = handleClick;
+}
+
+async function handleClick(event) {
+    const button = event.target.closest("[data-action='save-settings']");
+    if (!button) return;
+    await save();
+}
+
+async function save() {
+    const form = document.getElementById("settings-form");
+    const data = Object.fromEntries(new FormData(form).entries());
+    const payload = {
+        print_ticket: Boolean(data.print_ticket),
+        show_print_badge: Boolean(data.show_print_badge),
+        ticket_notice_duration_printed_seconds: Number(data.ticket_notice_duration_printed_seconds),
+        ticket_notice_duration_unprinted_seconds: Number(data.ticket_notice_duration_unprinted_seconds),
+        ticket_notice_printed_text: data.ticket_notice_printed_text.trim(),
+        ticket_notice_unprinted_text: data.ticket_notice_unprinted_text.trim(),
+        default_operator_status: data.default_operator_status,
+        active_ticket_on_operator_logout: data.active_ticket_on_operator_logout,
+        hide_services_without_online_operators: data.unavailable_services_mode === "hide",
+        queue_mode: data.queue_mode,
+        call_message_template: data.call_message_template.trim(),
+        board_ticket_template: data.board_ticket_template.trim()
+    };
+
+    if (!validDuration(payload.ticket_notice_duration_printed_seconds) || !validDuration(payload.ticket_notice_duration_unprinted_seconds)) {
+        return ctx.toast("Время показа должно быть целым числом от 1 до 300 секунд", "error");
+    }
+    if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
+        return ctx.toast("Тексты терминала должны содержать <number>", "error");
+    }
+    if (!payload.call_message_template.includes("<number>") || !payload.call_message_template.includes("<window>")) {
+        return ctx.toast("Шаблон озвучки должен содержать <number> и <window>", "error");
+    }
+    if (!payload.board_ticket_template.includes("<number>") || !payload.board_ticket_template.includes("<window>")) {
+        return ctx.toast("Шаблон табло должен содержать <number> и <window>", "error");
+    }
+
+    settings = await ctx.api.json("/admin/settings", {method: "PUT", body: payload});
+    ctx.toast("Настройки сохранены", "success");
+    render();
+}
+
+function validDuration(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 300;
+}
