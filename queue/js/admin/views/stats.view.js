@@ -1,5 +1,5 @@
 export async function mount(ctx) {
-    window.location.href = CONFIG.GRAFANA_URL;
+    window.open(CONFIG.GRAFANA_URL, "_blank", "noopener,noreferrer");
     ctx.view.innerHTML = `
         <div class="admin-loading">Переход в Grafana...</div>
     `;

@@ -50,6 +50,7 @@ const routes = {
         label: "Статистика",
         description: "Переход к текущей статистике Grafana",
         icon: "↗",
+        externalUrl: CONFIG.GRAFANA_URL,
         mount: mountStats
     }
 };
@@ -67,7 +68,12 @@ function renderShell() {
             <aside class="admin-sidebar">
                 <nav class="admin-nav">
                     ${Object.entries(routes).map(([key, route]) => `
-                        <a href="#${key}" class="admin-nav-link" data-route="${key}">
+                        <a
+                            href="${route.externalUrl || `#${key}`}"
+                            class="admin-nav-link"
+                            data-route="${key}"
+                            ${route.externalUrl ? 'target="_blank" rel="noopener noreferrer"' : ""}
+                        >
                             <span>${route.icon}</span>
                             ${route.label}
                         </a>
