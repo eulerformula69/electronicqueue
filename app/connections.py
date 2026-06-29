@@ -6,9 +6,7 @@ from fastapi import WebSocket
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
-        # session_id -> websocket (для heartbeat/idle ливнеса)
         self.session_id_to_ws: dict[str, WebSocket] = {}
-        # websocket object id -> session_id
         self.ws_id_to_session_id: dict[int, str] = {}
 
     async def connect(self, websocket: WebSocket):
@@ -20,7 +18,6 @@ class ConnectionManager:
         ws_id = id(websocket)
         session_id = self.ws_id_to_session_id.pop(ws_id, None)
         if session_id:
-            # Убираем ливнес-маппинг при отключении сокета
             self.session_id_to_ws.pop(session_id, None)
 
     async def broadcast(self, message: dict):
@@ -29,25 +26,29 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
+            except Exception:
                 dead.append(connection)
 
-        for conn in dead:
-            self.disconnect(conn)
-    
+        for connection in dead:
+            self.disconnect(connection)
+
     async def send_personal_message(self, message: dict, session_id: str):
-        if session_id in self.active_connections:
-            websocket = self.active_connections[session_id]
-            try:
-                await websocket.send_json(message)
-            except Exception:
-                # Если соединение мертво, просто игнорируем
-                pass
+        websocket = self.session_id_to_ws.get(session_id)
+        if not websocket:
+            return
+
+        try:
+            await websocket.send_json(message)
+        except Exception:
+            self.disconnect(websocket)
+
+    async def send_to_sessions(self, session_ids: list[str], message: dict):
+        for session_id in session_ids:
+            await self.send_personal_message(message, session_id)
 
 
 class OperatorConnectionManager:
     def __init__(self):
-        # ключ = operator_id, значение = WebSocket
         self.connections: dict[int, WebSocket] = {}
 
     async def connect(self, operator_id: int, websocket: WebSocket):
@@ -59,22 +60,25 @@ class OperatorConnectionManager:
             del self.connections[operator_id]
 
     async def send_to_operator(self, operator_id: int, message: dict):
-        ws = self.connections.get(operator_id)
-        if ws:
-            try:
-                await ws.send_json(message)
-            except:
-                self.disconnect(operator_id)
+        websocket = self.connections.get(operator_id)
+        if not websocket:
+            return
+
+        try:
+            await websocket.send_json(message)
+        except Exception:
+            self.disconnect(operator_id)
 
     async def broadcast(self, message: dict):
         dead = []
         for operator_id, connection in self.connections.items():
             try:
                 await connection.send_json(message)
-            except:
+            except Exception:
                 dead.append(operator_id)
-        for oid in dead:
-            self.disconnect(oid)
+        for operator_id in dead:
+            self.disconnect(operator_id)
+
 
 manager = ConnectionManager()
 operatorManager = OperatorConnectionManager()

@@ -35,6 +35,7 @@ class CloseDayResult:
     tickets_finished: int
     tickets_cancelled: int
     sessions_deleted: int
+    deleted_session_ids: tuple[str, ...]
 
 
 def close_day(db) -> CloseDayResult:
@@ -97,6 +98,12 @@ def close_day(db) -> CloseDayResult:
         .filter(or_(Window.status != "offline", Window.status.is_(None)))
         .update({Window.status: "offline"}, synchronize_session=False)
     )
+    deleted_session_ids = tuple(
+        session_id
+        for (session_id,) in db.query(UserSession.session_id)
+        .order_by(UserSession.session_id)
+        .all()
+    )
     sessions_deleted = db.query(UserSession).delete(synchronize_session=False)
 
     if settings["hide_services_without_online_operators"]:
@@ -110,15 +117,23 @@ def close_day(db) -> CloseDayResult:
         tickets_finished=tickets_finished,
         tickets_cancelled=tickets_cancelled,
         sessions_deleted=sessions_deleted,
+        deleted_session_ids=deleted_session_ids,
     )
 
 
-async def notify_clients() -> None:
+async def notify_clients(deleted_session_ids: tuple[str, ...]) -> None:
     """Ask the running application to refresh all connected clients."""
     async with websockets.connect(
         CLOSE_DAY_WS_URL, open_timeout=5, close_timeout=2
     ) as websocket:
-        await websocket.send(json.dumps({"type": "close_day_updated"}))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "close_day_updated",
+                    "deleted_session_ids": list(deleted_session_ids),
+                }
+            )
+        )
 
 
 def main() -> int:
@@ -139,7 +154,7 @@ def main() -> int:
     print(f"Сессий операторов закрыто: {result.sessions_deleted}")
 
     try:
-        asyncio.run(notify_clients())
+        asyncio.run(notify_clients(result.deleted_session_ids))
     except Exception as error:
         print(
             "База обновлена, но WebSocket-уведомление не отправлено: "

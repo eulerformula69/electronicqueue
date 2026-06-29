@@ -109,6 +109,19 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "close_day_updated":
                 await manager.broadcast({"type": "services_updated"})
                 await manager.broadcast({"type": "queue_updated"})
+                deleted_session_ids = message.get("deleted_session_ids")
+                if isinstance(deleted_session_ids, list):
+                    await manager.send_to_sessions(
+                        [
+                            session_id
+                            for session_id in deleted_session_ids
+                            if isinstance(session_id, str)
+                        ],
+                        {
+                            "type": "session_expired",
+                            "message": "\u0420\u0430\u0431\u043e\u0447\u0438\u0439 \u0434\u0435\u043d\u044c \u0437\u0430\u043a\u0440\u044b\u0442. \u0412\u043e\u0439\u0434\u0438\u0442\u0435 \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0443 \u0441\u043d\u043e\u0432\u0430.",
+                        },
+                    )
                 await broadcast_board()
 
     except WebSocketDisconnect:
