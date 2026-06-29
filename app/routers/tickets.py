@@ -46,6 +46,10 @@ from app.services.tickets import (
 
 router = APIRouter()
 
+COMPLETED_TODAY_TICKET_DETAIL = (
+    "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
+)
+
 
 def is_ticket_redirected_to_operator_window(ticket, operator_window_id: int | None) -> bool:
     return (
@@ -114,6 +118,27 @@ def build_reprint_ticket_payload(
         "waiting_before": waiting_before,
         "date": ticket.created_at.strftime("%d.%m.%Y %H:%M") if ticket.created_at else "",
     }
+
+
+def find_completed_today_ticket_by_number(
+    db: Session,
+    number: int,
+    now: datetime | None = None,
+):
+    today_start, tomorrow_start = _today_bounds(now)
+
+    return (
+        db.query(Ticket)
+        .filter(
+            Ticket.number == number,
+            Ticket.status == "finished",
+            Ticket.completion_reason == "completed",
+            Ticket.finished_at >= today_start,
+            Ticket.finished_at < tomorrow_start,
+        )
+        .order_by(Ticket.finished_at.desc())
+        .first()
+    )
 
 
 @router.post("/tickets/", tags=["Tickets"])
@@ -388,6 +413,14 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         ).order_by(Ticket.created_at.desc()).first()
 
         if not ticket:
+            completed_ticket = find_completed_today_ticket_by_number(
+                db,
+                data.number,
+                now=today_start,
+            )
+            if completed_ticket:
+                return {"detail": COMPLETED_TODAY_TICKET_DETAIL}
+
             return {"detail": "Билет с таким номером за сегодня не найден или недоступен для вызова"}
 
         # Если билет был перенаправлен на конкретное окно, вызвать его может только это окно.
