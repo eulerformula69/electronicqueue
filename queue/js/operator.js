@@ -12,12 +12,14 @@ let operatorPollingTimer = null;
 let operatorPollingInProgress = false;
 const SESSION_EXPIRED_MESSAGE = "Ваша сессия истекла. Войдите в систему снова.";
 
-function handleExpiredSession(message) {
+function handleExpiredSession(message, options = {}) {
     const alertMessage = typeof message === "string" && message.trim()
         ? message
         : SESSION_EXPIRED_MESSAGE;
 
-    alert(alertMessage);
+    if (!options.silent) {
+        alert(alertMessage);
+    }
     sessionStorage.clear();
     window.location.href = "/queue/login.html";
 }
@@ -105,7 +107,7 @@ function initWebSocket() {
     operatorSocket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         if (data.type === "session_expired") {
-            handleExpiredSession(data.message);
+            handleExpiredSession(data.message, { silent: data.silent === true });
             return;
         }
 

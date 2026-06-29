@@ -1,9 +1,13 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from app.connections import ConnectionManager
 from scripts.closeDay import notify_clients
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeWebSocket:
@@ -60,3 +64,16 @@ async def test_close_day_notification_includes_deleted_operator_sessions(monkeyp
         "type": "close_day_updated",
         "deleted_session_ids": ["session-a", "session-b"],
     }
+
+
+def test_close_day_session_expiration_redirects_operator_without_alert():
+    websocket_source = (PROJECT_ROOT / "app/routers/websocket.py").read_text(
+        encoding="utf-8"
+    )
+    operator_source = (PROJECT_ROOT / "queue/js/operator.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"silent": True' in websocket_source
+    assert "if (!options.silent)" in operator_source
+    assert "handleExpiredSession(data.message, { silent: data.silent === true })" in operator_source
