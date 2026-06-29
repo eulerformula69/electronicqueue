@@ -1466,6 +1466,87 @@
       ],
       "title": "р90 общее время  (мин)",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 27,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "suspicious_count"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    t.operator_id AS operator_id,\r\n    COALESCE(o.name, 'Неизвестно') AS operator_name,\r\n    t.window_id AS window_id,\r\n    COALESCE(w.name, 'Неизвестно') AS window_name,\r\n    COUNT(*) AS suspicious_count,\r\n    ROUND(AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)))::numeric, 1) AS avg_duration_seconds,\r\n    MIN(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS min_duration_seconds,\r\n    MAX(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS max_duration_seconds\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nLEFT JOIN windows w ON w.id = t.window_id\r\nWHERE t.status = 'finished'\r\n  AND t.completion_reason = 'completed'\r\n  AND t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (t.finished_at - t.called_at) < INTERVAL '5 minutes'\r\nGROUP BY t.operator_id, o.name, t.window_id, w.name\r\nORDER BY suspicious_count DESC, avg_duration_seconds ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Подозрительные завершения операторов",
+      "type": "table"
     }
   ],
   "preload": false,
