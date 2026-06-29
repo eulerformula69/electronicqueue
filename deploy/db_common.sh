@@ -51,14 +51,27 @@ load_database_url() {
 import sys
 from pathlib import Path
 
-from dotenv import dotenv_values
-
 path = Path(sys.argv[1])
-values = dotenv_values(path)
-url = values.get("DATABASE_URL")
-if not url:
+database_url = ""
+
+for raw_line in path.read_text(encoding="utf-8").splitlines():
+    line = raw_line.strip()
+    if not line or line.startswith("#"):
+        continue
+    if line.startswith("export "):
+        line = line[7:].lstrip()
+
+    key, separator, value = line.partition("=")
+    if separator and key.strip() == "DATABASE_URL":
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        database_url = value
+        break
+
+if not database_url:
     raise SystemExit("DATABASE_URL не задан в main.env")
-print(url)
+print(database_url)
 PY
     )" || fail "не удалось прочитать DATABASE_URL из ${ENV_FILE}"
 
