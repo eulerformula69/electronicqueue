@@ -1,0 +1,233 @@
+body.admin-page .admin-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    width: min(430px, 100vw);
+    height: 100vh;
+    background: var(--card-bg);
+    border-left: 1px solid var(--admin-border);
+    box-shadow: var(--shadow);
+    transform: translateX(105%);
+    transition: transform 0.2s ease;
+}
+
+body.admin-page .admin-drawer.open {
+    transform: translateX(0);
+}
+
+body.admin-page .admin-drawer-header,
+body.admin-page .admin-drawer-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+body.admin-page .admin-drawer-header h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 20px;
+}
+
+body.admin-page .admin-drawer-footer {
+    justify-content: flex-end;
+    margin-top: auto;
+    border-top: 1px solid var(--admin-border);
+    border-bottom: 0;
+}
+
+body.admin-page .admin-drawer-body {
+    min-height: 0;
+    overflow: auto;
+    padding: 20px;
+}
+
+body.admin-page .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+body.admin-page .admin-form h2,
+body.admin-page .admin-form h3 {
+    margin: 0;
+}
+
+body.admin-page .admin-field {
+    display: grid;
+    gap: 8px;
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+body.admin-page .admin-field small,
+body.admin-page .admin-muted {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+body.admin-page .admin-input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 7px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    font: inherit;
+}
+
+body.admin-page .admin-input:focus {
+    outline: 0;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--admin-accent-soft);
+}
+
+body.admin-page .admin-textarea {
+    min-height: 110px;
+    padding-top: 10px;
+    resize: vertical;
+}
+
+body.admin-page .admin-switch {
+    display: inline-flex;
+    align-items: center;
+}
+
+body.admin-page .admin-switch input {
+    position: absolute;
+    opacity: 0;
+}
+
+body.admin-page .admin-switch span {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--admin-border-strong);
+    transition: background 0.15s ease;
+}
+
+body.admin-page .admin-switch span::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    transition: transform 0.15s ease;
+}
+
+body.admin-page .admin-switch input:checked + span {
+    background: var(--primary);
+}
+
+body.admin-page .admin-switch input:checked + span::after {
+    transform: translateX(20px);
+}
+
+body.admin-page .admin-inline-form,
+body.admin-page .admin-upload-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+}
+
+body.admin-page .admin-upload-form .admin-input {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 40px;
+}
+
+body.admin-page .admin-upload-form select.admin-input {
+    width: 202px;
+}
+
+body.admin-page .admin-upload-form > button.admin-btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+}
+
+body.admin-page .admin-upload-form .admin-checkbox {
+    flex: 0 0 auto;
+    min-height: 40px;
+    white-space: nowrap;
+}
+
+body.admin-page .admin-upload-form .admin-checkbox input {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+body.admin-page .admin-file-picker {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 1 340px;
+    width: 340px;
+    max-width: 100%;
+    height: 40px;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid var(--admin-border);
+    border-radius: 7px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+body.admin-page .admin-file-picker:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--admin-accent-soft);
+}
+
+body.admin-page .admin-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.admin-page .admin-file-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    flex: 0 0 auto;
+    padding: 0 14px;
+    border-right: 1px solid var(--admin-border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+body.admin-page .admin-file-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 12px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 40px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.admin-page .admin-upload-status {
+    width: 100%;
+    color: var(--text-muted);
+}
+

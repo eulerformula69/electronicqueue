@@ -1,0 +1,368 @@
+/* ===== board-media.css ===== */
+html,
+body.board-media-page{
+    height: 100%;
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f9f9f9;
+    color: #1a1d23;
+    overflow: hidden;
+}
+body.board-media-page h1{
+    text-align: center;
+    margin: 15px 0;
+    font-size: 30px;
+    color: #1a1d23;
+}
+body.board-media-page .clock-container{
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+body.board-media-page .board-wrapper{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 430px);
+    gap: 20px;
+    height: calc(100vh - 170px);
+    padding: 20px;
+    box-sizing: border-box;
+    align-items: start;
+}
+body.board-media-page .media-panel{
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    position: relative;
+}
+body.board-media-page .media-panel video{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+}
+body.board-media-page .board{
+    width: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(7, minmax(85px, 1fr));
+    gap: 10px;
+}
+body.board-media-page .card{
+    background: #ffffff;
+    border-radius: 12px; /* Matching the image's rounded corners */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    padding: 10px;
+}
+body.board-media-page .line{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px; /* Space between the Ticket side and Window side */
+    width: 100%;
+}
+body.board-media-page .ticket,
+body.board-media-page .window{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+    font-weight: 800;
+    text-transform: uppercase;
+    /* Adjust these values to change ticket's font size */
+    font-size: 39px; 
+}
+body.board-media-page .ticket span:last-child,
+body.board-media-page .window span:last-child{
+    /* Adjust these values to change ticket's font size */
+    font-size: 39px;
+}
+body.board-media-page .ticket{
+    color: #2d89ef;
+}
+body.board-media-page .window{
+    color: #ff7f50;
+}
+body.board-media-page .arrow{
+    font-size: 40px;
+    color: #666;
+    opacity: 0.8;
+}
+body.board-media-page .status-indicator{
+    position: fixed;
+    bottom: 10px;
+    right: 15px;
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+
+@keyframes call-flash {
+    0% { background: #ffffff; transform: scale(1); }
+    20% { background: #2d89ef; transform: scale(1.05); }
+    40% { background: #ffffff; transform: scale(1); }
+    60% { background: #2d89ef; transform: scale(1.05); }
+    100% { background: #ffffff; transform: scale(1); }
+}
+body.board-media-page .calling{
+    animation: call-flash 1.5s ease-in-out;
+    border: 3px solid #2d89ef;
+    z-index: 10;
+}
+body.board-media-page .line{
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 56px 1fr;
+    align-items: center;
+    column-gap: 18px;
+}
+body.board-media-page .ticket{
+    justify-self: end;
+    text-align: center;
+    white-space: normal;
+}
+body.board-media-page .arrow{
+    justify-self: center;
+    text-align: center;
+    white-space: nowrap;
+    line-height: 1;
+}
+body.board-media-page .window{
+    justify-self: start;
+    text-align: center;
+    white-space: normal;
+}
+/* ================================
+   LG LITE tuning
+   ================================ */
+
+body.board-media-page.lite-version {
+    --board-width: 250px;   /* ширина правой панели */
+    --gap: 16px;            /* расстояние между видео и панелью */
+    --side-padding: 22px;   /* отступы слева/справа: больше = видео чуть меньше по ширине */
+    --top-offset: 135px;    /* больше = видео ниже/меньше по высоте */
+}
+
+/* Заголовок */
+body.board-media-page.lite-version #title {
+    margin: 18px 0 10px 0 !important;
+    font-size: 30px !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+}
+
+/* Часы */
+body.board-media-page.lite-version .clock-container {
+    margin: 0 0 22px 0 !important;
+    font-size: 26px !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+}
+
+/* Главная сетка: видео + табло */
+body.board-media-page.lite-version .board-wrapper {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) var(--board-width) !important;
+    gap: var(--gap) !important;
+
+    width: 100vw !important;
+    height: calc(100vh - var(--top-offset)) !important;
+
+    padding: 0 var(--side-padding) !important;
+    box-sizing: border-box !important;
+
+    align-items: start !important;
+}
+
+/* Видео-блок */
+body.board-media-page.lite-version .media-panel {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Само видео */
+body.board-media-page.lite-version #media-video {
+    width: 100% !important;
+    height: 100% !important;
+
+    /* contain — видно всё видео, могут быть пустые поля */
+    /* cover — видео заполняет весь блок, но может обрезать края */
+    object-fit: contain !important;
+
+    display: block !important;
+}
+
+/* Правая панель */
+body.board-media-page.lite-version .board {
+    width: var(--board-width) !important;
+    min-width: var(--board-width) !important;
+    max-width: var(--board-width) !important;
+
+    height: auto !important;
+    padding: 8px 0 0 0 !important;
+    box-sizing: border-box !important;
+
+    overflow: hidden !important;
+}
+
+/* Карточка */
+body.board-media-page.lite-version #board .card {
+    width: 100% !important;
+
+    height: 86px !important;
+    min-height: 86px !important;
+
+    margin: 0 0 8px 0 !important;
+    padding: 0 10px !important;
+
+    box-sizing: border-box !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Строка внутри карточки */
+body.board-media-page.lite-version #board .card .line {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    box-sizing: border-box !important;
+}
+
+/* Талон и окно */
+body.board-media-page.lite-version #board .ticket,
+body.board-media-page.lite-version #board .window {
+    display: flex !important;
+    flex-direction: column !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+
+    box-sizing: border-box !important;
+}
+
+/* Span */
+body.board-media-page.lite-version #board .ticket span,
+body.board-media-page.lite-version #board .window span {
+    display: block !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+}
+
+/* Подписи ТАЛОН / ОКНО */
+body.board-media-page.lite-version #board .ticket span:first-child,
+body.board-media-page.lite-version #board .window span:first-child {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 4px !important;
+}
+
+/* Номера */
+body.board-media-page.lite-version #board .ticket span:last-child,
+body.board-media-page.lite-version #board .window span:last-child {
+    font-size: 36px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+}
+
+/* Стрелка */
+body.board-media-page.lite-version #board .arrow {
+    font-size: 32px !important;
+    line-height: 1 !important;
+
+    padding: 0 5px !important;
+    margin: 0 !important;
+
+    flex: 0 0 auto !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Колонка правого табло: карточки остаются на старом месте */
+body.board-media-page.lite-version .board-column {
+    width: var(--board-width) !important;
+    min-width: var(--board-width) !important;
+    max-width: var(--board-width) !important;
+
+    position: relative !important;
+    box-sizing: border-box !important;
+    margin-top: 18px !important; /* двигает билет вниз */
+}
+
+/* Заголовок поверх панели, не занимает место в потоке */
+body.board-media-page.lite-version .board-header {
+    position: absolute !important;
+    left: 0 !important;
+    top: -26px !important;
+
+    width: 100% !important;
+    height: 20px !important;
+
+    display: grid !important;
+    grid-template-columns: 0.8fr 34px 1fr !important;
+    align-items: center !important;
+
+    padding: 0 10px !important;
+    box-sizing: border-box !important;
+
+    font-size: 24px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+
+    pointer-events: none !important;
+}
+
+/* БИЛЕТ над левой частью карточки */
+body.board-media-page.lite-version .board-header span:first-child {
+    grid-column: 1 !important;
+    justify-self: center !important;
+    color: #2d89ef !important;
+}
+
+/* ОПЕРАТОР над правой частью карточки */
+body.board-media-page.lite-version .board-header span:last-child {
+    grid-column: 3 !important;
+    justify-self: center !important;
+    color: #ff7f50 !important;
+}
+
+/* Возвращаем карточки на прежнюю высоту/позицию */
+body.board-media-page.lite-version .board-column .board {
+    padding: 2px 0 0 0 !important;
+}
+
+@media print {
+    body::after {
+      display: none !important;
+      content: none !important;
+    }
+}
+/* Redirected tickets in operator queue */

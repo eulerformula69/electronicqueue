@@ -1,0 +1,173 @@
+body.admin-page .admin-list {
+    display: grid;
+    gap: 10px;
+}
+
+body.admin-page .admin-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+}
+
+body.admin-page .admin-service-group-create {
+    margin-left: auto;
+    width: auto;
+}
+
+body.admin-page .admin-service-group-create .admin-input {
+    width: 260px;
+}
+
+body.admin-page .admin-service-board {
+    display: grid;
+    gap: 18px;
+}
+
+body.admin-page .admin-service-group {
+    background: var(--card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+body.admin-page .admin-service-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 68px;
+    padding: 14px 18px;
+    background: var(--admin-soft-bg);
+    border-bottom: 1px solid var(--admin-border);
+}
+
+body.admin-page .admin-service-group-header h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--text-main);
+}
+
+body.admin-page .admin-service-group-header span {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+body.admin-page .admin-service-group-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+body.admin-page .admin-service-dropzone {
+    display: grid;
+    gap: 0;
+    min-height: 58px;
+}
+
+body.admin-page .admin-service-empty {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+    padding: 0 18px;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg) 65%, var(--card-bg));
+}
+
+body.admin-page .admin-service-dropzone:has(.admin-service-item) .admin-service-empty {
+    display: none;
+}
+
+body.admin-page .admin-service-sort-row {
+    display: grid;
+    grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;
+    align-items: center;
+    gap: 14px;
+    min-height: 42px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--admin-border);
+    background: var(--admin-soft-bg);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+body.admin-page .admin-service-item {
+    display: grid;
+    grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;
+    align-items: center;
+    gap: 14px;
+    min-height: 58px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--admin-border);
+    background: var(--card-bg);
+}
+
+body.admin-page .admin-service-item:last-child {
+    border-bottom: 0;
+}
+
+body.admin-page .admin-service-item.dragging {
+    opacity: 0.58;
+    background: var(--admin-accent-soft);
+}
+
+body.admin-page .admin-drag-handle {
+    width: 28px;
+    color: var(--text-muted);
+    cursor: grab;
+    user-select: none;
+}
+
+body.admin-page .admin-service-item strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+body.admin-page .admin-service-actions {
+    justify-self: end;
+}
+
+body.admin-page .admin-check-list {
+    display: grid;
+    gap: 10px;
+}
+
+body.admin-page .admin-check-row,
+body.admin-page .admin-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+}
+
+body.admin-page .admin-check-row span {
+    flex: 1 1 auto;
+}
+
+body.admin-page .admin-priority-input {
+    width: 80px;
+}
+
+body.admin-page .admin-settings-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+body.admin-page .admin-settings-layout .admin-card {
+    padding: 22px;
+}
+
+body.admin-page .admin-settings-wide {
+    grid-column: 1 / -1;
+}
+

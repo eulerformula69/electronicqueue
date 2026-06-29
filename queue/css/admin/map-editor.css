@@ -1,0 +1,329 @@
+/* --- Редактор карты --- */
+body.admin-page #form:has(.map-editor){
+    padding: 0;
+    overflow: hidden;
+}
+
+body.admin-page .map-editor{
+    min-width: 0;
+}
+
+body.admin-page .map-toolbar{
+    min-height: 66px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+}
+
+body.admin-page .map-toolbar-spacer{
+    flex: 1;
+}
+
+body.admin-page .map-zoom-controls{
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+    border: 1px solid #dce4ec;
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+body.admin-page .map-zoom-controls button{
+    min-width: 38px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 0;
+    background: white;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+body.admin-page .map-zoom-controls button + button{
+    border-left: 1px solid #dce4ec;
+}
+
+body.admin-page .map-zoom-controls .map-zoom-value{
+    min-width: 64px;
+    font-size: 0.8rem;
+}
+
+body.admin-page .map-snap-toggle{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 10px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+body.admin-page .map-tools-menu{
+    position: relative;
+}
+
+body.admin-page .map-tools-menu summary{
+    padding: 10px 13px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: var(--primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+body.admin-page .map-tools-menu summary::-webkit-details-marker{ display: none; }
+
+body.admin-page .map-tools-popover{
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    display: grid;
+    min-width: 190px;
+    padding: 8px;
+    gap: 5px;
+    border: 1px solid #dce4ec;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 12px 30px rgba(15, 34, 58, 0.18);
+}
+
+body.admin-page .map-tools-popover button{
+    width: 100%;
+    text-align: left;
+    background: #f8fafc;
+    color: var(--primary);
+}
+
+body.admin-page .map-template-select{
+    width: auto;
+    max-width: 190px;
+    margin: 0;
+}
+
+body.admin-page .map-filterbar{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+body.admin-page #form .map-filterbar input{
+    flex: 1;
+    width: auto;
+    min-width: 180px;
+    margin: 0;
+}
+
+body.admin-page .map-filterbar select{
+    width: auto;
+    margin: 0;
+}
+
+body.admin-page .map-filter-hint{
+    color: var(--text-muted);
+    font-size: 0.76rem;
+}
+
+body.admin-page #form .map-snap-toggle input[type="checkbox"]{
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+body.admin-page .map-toolbar .map-tool-room{
+    background: #e8f2ff;
+    color: #245ca6;
+}
+
+body.admin-page .map-toolbar .map-tool-workplace{
+    background: #e9f9ee;
+    color: #18723b;
+}
+
+body.admin-page .map-toolbar .map-save-button{
+    background: var(--primary);
+    color: white;
+}
+
+body.admin-page .map-save-state{
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+body.admin-page .map-save-state.dirty{
+    color: #9a6500;
+}
+
+body.admin-page .map-editor-body{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 390px);
+    align-items: start;
+    min-width: 0;
+}
+
+body.admin-page .map-canvas-scroll{
+    padding: 28px;
+    height: clamp(520px, calc(100vh - 220px), 780px);
+    min-width: 0;
+    overflow: auto;
+    background: #eef2f6;
+    cursor: grab;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+body.admin-page .map-canvas-scroll::-webkit-scrollbar{
+    display: none;
+}
+
+body.admin-page .map-canvas-scroll.panning{
+    cursor: grabbing;
+}
+
+body.admin-page .map-canvas-stage{
+    position: relative;
+}
+
+body.admin-page .map-canvas{
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    overflow: hidden;
+    background-color: white;
+    background-image:
+        linear-gradient(#edf1f5 1px, transparent 1px),
+        linear-gradient(90deg, #edf1f5 1px, transparent 1px);
+    background-size: 20px 20px;
+    box-shadow: 0 6px 24px rgba(15, 34, 58, 0.12);
+    user-select: none;
+    touch-action: none;
+}
+
+body.admin-page .map-object{
+    position: absolute;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    box-sizing: border-box;
+    cursor: move;
+    touch-action: none;
+}
+
+body.admin-page .map-object.map-filtered-out{
+    opacity: 0.12;
+    pointer-events: none;
+}
+
+body.admin-page .map-room{
+    z-index: 1;
+    border: 3px solid #4384c4;
+    background: rgba(104, 167, 225, 0.09);
+    color: #245b91;
+}
+
+body.admin-page .map-workplace{
+    z-index: 2;
+    align-items: center;
+    border: 3px solid #35a85c;
+    border-radius: 6px;
+    background: #effaf2;
+    color: #176832;
+}
+
+body.admin-page .map-wall{
+    z-index: 3;
+    background: #34495e;
+    color: white;
+}
+
+body.admin-page .map-door{
+    z-index: 4;
+    border: 3px solid #a66b2b;
+    border-radius: 999px 999px 0 0;
+    background: #f6dfbd;
+    color: #744515;
+}
+
+body.admin-page .map-label{
+    z-index: 6;
+    align-items: center;
+    border: 1px dashed #7b8794;
+    background: rgba(255,255,255,0.75);
+    color: var(--primary);
+}
+
+body.admin-page .map-zone{
+    z-index: 0;
+    border: 2px dashed #8a63b8;
+    background: rgba(138, 99, 184, 0.08);
+    color: #694092;
+}
+
+body.admin-page .map-workplace.map-status-online{ border-color: #28a745; background: #effaf2; }
+body.admin-page .map-workplace.map-status-break{ border-color: #e6a100; background: #fff8df; }
+body.admin-page .map-workplace.map-status-offline{ border-color: #8996a3; background: #f2f4f6; }
+body.admin-page .map-workplace.map-status-unconfigured{ border-color: #dc3545; border-style: dashed; }
+body.admin-page .map-workplace.map-status-conflict{ border-color: #dc3545; box-shadow: 0 0 0 4px rgba(220,53,69,.18); }
+
+body.admin-page .map-object.selected{
+    outline: 3px solid #f3a712;
+    outline-offset: 2px;
+}
+
+body.admin-page .map-object-title{
+    max-width: calc(100% - 14px);
+    padding: 5px 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+body.admin-page .map-object-subtitle{
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    bottom: 4px;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.62rem;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+body.admin-page .map-selection-marquee{
+    position: absolute;
+    z-index: 20;
+    border: 1px solid #1688d4;
+    background: rgba(22,136,212,.12);
+    pointer-events: none;
+}
+
+body.admin-page .map-smart-guide{
+    position: absolute;
+    z-index: 19;
+    background: #ef3f7a;
+    pointer-events: none;
+}
+
+body.admin-page .map-guide-x{ top: 0; bottom: 0; width: 1px; }
+body.admin-page .map-guide-y{ left: 0; right: 0; height: 1px; }
+

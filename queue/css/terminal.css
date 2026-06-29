@@ -1,0 +1,433 @@
+/* ===== terminal.css ===== */
+/* --- Константы из интерфейса оператора --- */
+
+
+/* --- Страница --- */
+body.terminal-page{
+    margin: 0;
+    padding: 60px 20px;
+    font-family: 'Inter', -apple-system, sans-serif; /* Шрифт как у оператора */
+    background-color: var(--bg);
+    color: var(--text-main);
+    min-height: 100vh;
+    box-sizing: border-box;
+    cursor: none;
+}
+body.terminal-page h1{
+	text-align: center; 
+    margin-bottom: 50px;
+    color: var(--primary);
+    font-size: 42px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+
+/* --- Контейнер кнопок --- */
+body.terminal-page #services{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--button-gap);
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+}
+
+body.terminal-page .terminal-service-section{
+    width: 100%;
+}
+
+body.terminal-page .terminal-service-section-title{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 8px 0 22px;
+    color: var(--primary);
+    font-size: 24px;
+    font-weight: 800;
+    text-align: left;
+}
+
+body.terminal-page .terminal-service-section-title::after{
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: rgba(0, 51, 102, 0.18);
+}
+
+body.terminal-page .terminal-service-section-list{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--button-gap);
+    margin-bottom: 34px;
+}
+
+
+/* --- Кнопки (в стиле Glass Card) --- */
+body.terminal-page button.service-btn{
+    width: var(--button-width);
+    height: var(--button-height);
+    font-size: 20px;
+    font-weight: 700;
+    background: var(--card-bg);
+    color: var(--primary);
+    border: 2px solid transparent;
+    border-radius: 20px; /* Более мягкое скругление */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    line-height: 1.3;
+}
+body.terminal-page button.service-btn:hover{
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 51, 102, 0.15);
+}
+body.terminal-page button.service-btn:active{
+    transform: translateY(-1px);
+}
+
+
+/* --- Неактивная услуга --- */
+body.terminal-page button.service-btn.unavailable{
+    background: #e2e8f0;
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+}
+
+
+/* --- Уведомление --- */
+body.terminal-page #ticket-notice{
+    display: none; /* Переключается через JS */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8); /* Затемнение фона, чтобы скрыть заглушку */
+    z-index: 10000;
+    
+    /* Центрирование контента */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+body.terminal-page #ticket-notice-close{
+    position: absolute;
+    top: 28px;
+    right: 36px;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 58px;
+    line-height: 60px;
+    cursor: pointer;
+}
+body.terminal-page #ticket-notice span{
+    display: block;
+    background: var(--card-bg);
+    color: var(--primary);
+    
+    /* Увеличенные размеры */
+    padding: 80px 100px; 
+    font-size: 56px; 
+    line-height: 1.2;
+    
+    border-radius: 40px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    font-weight: 800;
+    text-align: center;
+    max-width: 85%;
+    box-sizing: border-box;
+    white-space: pre-line;
+}
+body.terminal-page #ticket-notice .timer{
+    font-size: 42px;    
+    color: var(--accent);
+    margin-top: 30px;
+    font-weight: bold;
+}
+
+
+/* --- Стили чека (оставляем строгими для принтера) --- */
+body.terminal-page #print-receipt{
+    /* Эти стили обычно не меняют на "цветные", 
+       так как термопринтер печатает только черным */
+    width: 280px;
+    background: #fff;
+    color: #000;
+}
+body.terminal-page .print-mode-badge{
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 10001;
+    background: rgba(0, 51, 102, 0.9);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    user-select: none;
+}
+body.terminal-page .terminal-service-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    background: rgba(0, 0, 0, 0.72);
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+body.terminal-page .terminal-service-modal{
+    width: min(620px, 88vw);
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px;
+    box-sizing: border-box;
+    box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+body.terminal-page .terminal-service-modal h2{
+    margin: 0 0 28px 0;
+    color: var(--primary);
+    font-size: 34px;
+    line-height: 1.15;
+    font-weight: 800;
+}
+body.terminal-page .terminal-service-actions{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+body.terminal-page .terminal-service-actions button{
+    min-height: 72px;
+    border: none;
+    border-radius: 16px;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    background: var(--primary);
+}
+body.terminal-page .terminal-service-actions button:active{
+    transform: translateY(2px);
+}
+body.terminal-page .terminal-service-cancel{
+    background: #6c757d !important;
+}
+body.terminal-page #vkb{
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+body.terminal-page .vkb-row{
+    display: grid;
+    gap: 10px;
+}
+body.terminal-page #vkb-row-num{ 
+	grid-template-columns: repeat(13, 1fr); 
+}
+body.terminal-page #vkb-row-q{
+	grid-template-columns: 1.3fr repeat(12, 1fr); 
+}
+body.terminal-page #vkb-row-a{
+	grid-template-columns: 1.3fr repeat(10, 1fr) 1.5fr; 
+}
+body.terminal-page #vkb-row-z{ 
+	grid-template-columns: 1.8fr repeat(10, 1fr); 
+}
+body.terminal-page #vkb-row-space{
+    grid-template-columns: 1fr;
+}
+body.terminal-page #vkb-row-actions{
+    grid-template-columns: 1fr 1fr;
+}
+
+
+/* Кнопки */
+body.terminal-page .vkb-key{
+    height: 60px;
+    border-radius: 12px;
+    border: none;
+    background: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+
+/* Нажатие */
+body.terminal-page .vkb-key:active{
+    transform: translateY(2px);
+    box-shadow: none;
+    background: #f1f5f9;
+}
+
+
+/* Цвета */
+body.terminal-page .vkb-key.action-dark{
+    background: #003366;
+    color: white;
+}
+body.terminal-page .vkb-key.action-green{
+    background: #28a745;
+    color: white;
+}
+body.terminal-page .vkb-key.danger{
+    background: #e11d48;
+    color: white;
+}
+body.terminal-page .vkb-key.shift-active{
+    background: #00aaff;
+    color: white;
+}
+
+
+
+/* ===== FIX terminal operator choice touch cards ===== */
+body.terminal-page .operator-choice-overlay{
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 20000 !important;
+    background: rgba(0,0,0,0.72) !important;
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+}
+body.terminal-page .operator-choice-overlay.visible{
+    display: flex !important;
+}
+body.terminal-page .operator-choice-modal{
+    width: min(900px, 92vw) !important;
+    max-height: 88vh !important;
+    background: #fff !important;
+    border-radius: 32px !important;
+    padding: 42px !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 35px 90px rgba(0,0,0,0.45) !important;
+    position: relative !important;
+}
+body.terminal-page .operator-choice-select{
+    display: none !important;
+}
+body.terminal-page .operator-choice-list{
+    max-height: 46vh !important;
+    overflow-y: auto !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding: 6px 12px 6px 6px !important;
+    margin: 20px 0 28px 0 !important;
+}
+body.terminal-page .operator-choice-list::-webkit-scrollbar{
+    width: 18px !important;
+}
+body.terminal-page .operator-choice-list::-webkit-scrollbar-track{
+    background: #edf2f7 !important;
+    border-radius: 999px !important;
+}
+body.terminal-page .operator-choice-list::-webkit-scrollbar-thumb{
+    background: var(--primary) !important;
+    border-radius: 999px !important;
+    border: 4px solid #edf2f7 !important;
+}
+body.terminal-page .operator-choice-card{
+    min-height: 88px !important;
+    border: 3px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    background: #f8fafc !important;
+    color: var(--primary) !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 18px 22px !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
+}
+body.terminal-page .operator-choice-card.selected{
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+}
+body.terminal-page .operator-choice-actions{
+    display: flex !important;
+    justify-content: center !important;
+    gap: 28px !important;
+}
+body.terminal-page .operator-choice-confirm,
+body.terminal-page .operator-choice-cancel{
+    min-width: 230px !important;
+    min-height: 74px !important;
+    border-radius: 18px !important;
+    border: none !important;
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+}
+
+body.terminal-page .operator-choice-close{
+   display: none !important;
+}
+
+body.terminal-page .opetator-choice-modal h2{
+   font-size: 48px !important;
+   line-height: 1.1 !important;
+   text-align: center !important;
+   margin: 0 0 18px 0 !important;
+}
+
+body.terminal-page .operator-choice-service{
+   font-size: 34px !important;
+   line-height: 1.2 !important;
+   text-align: center !important;
+   font-weight: 800 !important;
+   color: var(--primary) !important;
+   margin-bottom: 28px !important;
+}
+
+/* FIX: center operator modal header */
+body.terminal-page .operator-choice-modal{
+    text-align: center !important;
+}
+
+body.terminal-page .operator-choice-modal h2,
+body.terminal-page .operator-choice-service{
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center !important;
+}
+
+body.terminal-page .operator-choice-modal h2{
+    font-size: 54px !important;
+    font-weight: 800; 
+}
+
+body.terminal-page .operator-choice-service{
+    font-size: 38px !important;
+}

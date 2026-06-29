@@ -1,0 +1,52 @@
+/* Shared variables and baseline styles for queue pages. */
+
+:root {
+    --primary: #003366;
+    --primary-hover: #004080;
+    --accent: #00aaff;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --button-action: #e05d1b;
+    --bg: #f4f7f9;
+    --card-bg: #ffffff;
+    --text-main: #002244;
+    --text-muted: #6c757d;
+    --shadow: 0 4px 12px rgba(0, 51, 102, 0.08);
+
+    --button-height: 160px;
+    --button-width: 320px;
+    --button-gap: 24px;
+}
+
+html {
+    height: 100%;
+}
+
+body::after {
+    content: "@2026 ВСГУТУ кафедра ВиРС, Баташов Д. И.";
+    position: fixed;
+    left: 16px;
+    bottom: 12px;
+    z-index: 9999;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    user-select: none;
+}
+
+body.operator-page::after,
+body.admin-page::after {
+    left: auto;
+    right: 16px;
+}
+
+body.operator-page::after {
+    bottom: 10px;
+    font-size: 12px;
+    line-height: 1;
+    color: rgba(0, 0, 0, 0.28);
+}
+
+

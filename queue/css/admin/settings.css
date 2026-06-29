@@ -1,0 +1,155 @@
+/* --- Поля ввода в формах --- */
+body.admin-page input,
+body.admin-page select{
+    padding: 10px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+body.admin-page input:focus{
+    border-color: var(--accent);
+}
+
+
+/* --- Доп. настройки (единый стиль) --- */
+body.admin-page .settings-form{
+    width: 100%;
+    max-width: none;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    align-items: stretch !important;
+    gap: 18px;
+    box-sizing: border-box;
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 14px;
+    scrollbar-gutter: stable;
+}
+body.admin-page .settings-title{
+    margin: 0;
+    color: var(--primary);
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+body.admin-page .settings-section{
+    border: 1px solid #e8eef5;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 0;
+    background: #fcfdff;
+    align-self: stretch;
+    box-sizing: border-box;
+    min-width: 0;
+}
+body.admin-page .settings-section-title{
+    margin: 0 0 8px 0;
+    color: var(--primary);
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+body.admin-page .settings-checkbox-row{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+    font-size: 1.08rem;
+    color: var(--text-main);
+    min-width: 0;
+}
+body.admin-page .settings-checkbox-row input[type="checkbox"]{
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
+    flex: 0 0 16px;
+    padding: 0;
+    margin: 0;
+    accent-color: var(--primary);
+}
+body.admin-page .settings-field-row{
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    margin: 18px 0;
+}
+body.admin-page .settings-label{
+    min-width: 0;
+    width: 100%;
+    font-size: 1.08rem;
+    color: var(--text-main);
+}
+body.admin-page .settings-select{
+    min-width: 120px;
+    max-width: 100%;
+    margin: 0;
+}
+body.admin-page .settings-select-wide{
+    width: 100%;
+    min-width: 0;
+}
+body.admin-page .settings-input,
+body.admin-page .settings-input-wide{
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+body.admin-page .settings-textarea{
+    min-height: 96px;
+    resize: vertical;
+    line-height: 1.35;
+}
+body.admin-page .settings-hint{
+    display: block;
+    max-width: 100%;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+body.admin-page .settings-actions{
+    margin-top: 4px;
+    grid-column: 1;
+    align-self: start;
+}
+body.admin-page .settings-form::-webkit-scrollbar{
+    width: 10px;
+}
+body.admin-page .settings-form::-webkit-scrollbar-track{
+    background: #edf2f7;
+    border-radius: 999px;
+}
+body.admin-page .settings-form::-webkit-scrollbar-thumb{
+    background: #b8c7d9;
+    border-radius: 999px;
+    border: 2px solid #edf2f7;
+}
+body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
+    background: #8fa4bd;
+}
+
+@media (max-width: 900px){
+    body.admin-page .settings-form{
+        max-width: none;
+        max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+    }
+
+    body.admin-page .settings-title{
+        margin: 0;
+    }
+
+    body.admin-page .settings-actions{
+        grid-column: 1;
+    }
+}
+
+

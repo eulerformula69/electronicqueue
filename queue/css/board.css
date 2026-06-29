@@ -1,0 +1,299 @@
+/* ===== board.css ===== */
+html,
+body.board-page{
+    height: 100%;
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f9f9f9;
+    color: #1a1d23;
+    overflow: hidden;
+}
+body.board-page h1{
+    text-align: center;
+    margin: 15px 0;
+    font-size: 30px;
+    color: #1a1d23;
+}
+body.board-page .clock-container{
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+body.board-page .board-wrapper{
+    height: calc(100vh - 120px);
+    padding: 20px;
+}
+body.board-page .board{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 15px;
+    height: 95%;
+}
+body.board-page .card{
+    background: #ffffff;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+body.board-page .ticket,
+body.board-page .arrow,
+body.board-page .window{
+    font-size: 48px;
+    font-weight: 700;
+}
+body.board-page .ticket{
+    color: #2d89ef;
+}
+body.board-page .window{
+    color: #ff7f50;
+}
+body.board-page .arrow{
+    opacity: 0.6;
+}
+body.board-page .status-indicator{
+    position: fixed;
+    bottom: 10px;
+    right: 15px;
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+
+@keyframes call-flash {
+    0% { background: #ffffff; transform: scale(1); }
+    20% { background: #2d89ef; transform: scale(1.05); }
+    40% { background: #ffffff; transform: scale(1); }
+    60% { background: #2d89ef; transform: scale(1.05); }
+    100% { background: #ffffff; transform: scale(1); }
+}
+body.board-page .calling{
+    animation: call-flash 1.5s ease-in-out;
+    border: 3px solid #2d89ef;
+    z-index: 10;
+}
+body.board-page .ticket-display-text{
+    font-size: 3rem;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.2;
+    word-break: break-word;
+}
+body.board-page .line{
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 56px 1fr;
+    align-items: center;
+    column-gap: 18px;
+}
+body.board-page .ticket{
+    justify-self: end;
+    text-align: center;
+    white-space: normal;
+}
+body.board-page .arrow{
+    justify-self: center;
+    text-align: center;
+    white-space: nowrap;
+    line-height: 1;
+}
+body.board-page .window{
+    justify-self: start;
+    text-align: center;
+    white-space: normal;
+}
+
+
+
+/* ===== board.html: вызванные + очередь ожидания ===== */
+body.board-page .board-wrapper-with-waiting{
+    height: calc(100vh - 120px);
+    padding: 18px 20px 24px 20px;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* 2/3 под вызванные, 1/3 под ожидание */
+    gap: 20px;
+}
+
+body.board-page .board-section{
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+body.board-page .board-section-header{
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+    box-sizing: border-box;
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #2d89ef;
+}
+
+body.board-page .board-page-indicator{
+    font-size: 20px;
+    font-weight: 700;
+    color: #6c757d;
+}
+
+/* Вызванные: две колонки, одинаковые плитки */
+body.board-page .board-section-called .board{
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 10px 12px;
+}
+
+/* Ожидание: одна колонка, справа, содержимое по центру */
+body.board-page .waiting-board{
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+body.board-page .board-section-called .card,
+body.board-page .waiting-card{
+    min-height: 0;
+    padding: 10px 16px;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    border-left: none;
+}
+
+body.board-page .board-section-called .line{
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+}
+
+body.board-page .waiting-line{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+
+body.board-page .board-section-called .ticket,
+body.board-page .board-section-called .arrow,
+body.board-page .board-section-called .window,
+body.board-page .waiting-card .ticket,
+body.board-page .waiting-card .arrow{
+    font-size: clamp(26px, 2.25vw, 42px);
+    font-weight: 700;
+    line-height: 1.08;
+}
+
+body.board-page .board-section-called .ticket{
+    justify-self: end;
+    text-align: center;
+    white-space: normal;
+    color: #2d89ef;
+}
+
+body.board-page .board-section-called .arrow{
+    justify-self: center;
+    text-align: center;
+    white-space: nowrap;
+    color: #666;
+    opacity: 0.8;
+    line-height: 1;
+}
+
+body.board-page .board-section-called .window{
+    justify-self: start;
+    text-align: center;
+    white-space: normal;
+    color: #ff7f50;
+}
+
+body.board-page .waiting-card .ticket{
+    text-align: center;
+    white-space: normal;
+    color: #2d89ef;
+}
+
+
+body.board-page .waiting-service{
+    display: none;
+}
+
+body.board-page .board-page-dots{
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+    flex: 0 0 28px;
+}
+
+body.board-page .board-page-dot{
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.35);
+    display: inline-block;
+}
+
+body.board-page .board-page-dot.active{
+    background: #2d89ef;
+}
+
+body.board-page .board-empty,
+body.board-page .waiting-empty{
+    height: 100%;
+    min-height: 160px;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #6c757d;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+    body.board-page .board-wrapper-with-waiting{
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    body.board-page .board-section-called .board{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+
+    body.board-page .waiting-board{
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+}
