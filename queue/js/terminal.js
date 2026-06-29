@@ -182,6 +182,7 @@ function ensureTerminalServiceModal() {
             <div class="terminal-service-actions">
                 <button type="button" class="terminal-service-refresh">\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0432\u043a\u043b\u0430\u0434\u043a\u0443</button>
                 <button type="button" class="terminal-service-test-print">\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u043f\u0435\u0447\u0430\u0442\u044c \u0442\u0430\u043b\u043e\u043d\u0430</button>
+                <button type="button" class="terminal-service-reprint">\u041f\u0435\u0447\u0430\u0442\u044c \u0440\u0430\u043d\u0435\u0435 \u0432\u044b\u0434\u0430\u043d\u043d\u043e\u0433\u043e \u0442\u0430\u043b\u043e\u043d\u0430</button>
                 <button type="button" class="terminal-service-cancel">\u041e\u0442\u043c\u0435\u043d\u0430</button>
             </div>
         </div>
@@ -191,6 +192,9 @@ function ensureTerminalServiceModal() {
         window.location.reload();
     });
     overlay.querySelector(".terminal-service-test-print").addEventListener("click", printTestTicket);
+    overlay.querySelector(".terminal-service-reprint").addEventListener("click", () => {
+        if (typeof openReprintTicketPanel === "function") openReprintTicketPanel();
+    });
     overlay.querySelector(".terminal-service-cancel").addEventListener("click", closeTerminalServiceModal);
     overlay.addEventListener("click", (event) => {
         if (event.target === overlay) closeTerminalServiceModal();
@@ -502,29 +506,7 @@ async function createTicket(serviceId, serviceName, windowId = null) {
             showNotice(errorMsg, 3);
             return; 
         }
-        // Настройка форматирования даты
-        const dateOptions = { 
-            weekday: 'long', 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit' 
-        };
-
-        const formattedDate = new Date().toLocaleString('ru-RU', dateOptions).replace(' г.', 'г.');
-        // Заполнение данными для печати
-        document.getElementById("receipt-number").textContent = data.number;
-        document.getElementById("receipt-service").textContent = data.service_name || serviceName;
-        document.getElementById("receipt-date").textContent = formattedDate;
-
-        const waitEl = document.getElementById("receipt-wait-count");
-        if (waitEl) {
-            waitEl.textContent = data.waiting_before > 0 
-                ? `ПЕРЕД ВАМИ В ОЧЕРЕДИ: ~ ${data.waiting_before} ЧЕЛ.` 
-                : "ВЫ СЛЕДУЮЩИЙ В ОЧЕРЕДИ!";
-        }
+        fillTicketReceipt(data, serviceName);
         // Печать, если включена в админке
         if (terminalSettings.print_ticket) {
             printTicket();
@@ -610,16 +592,27 @@ function formatReceiptDate(date = new Date()) {
     return date.toLocaleString('ru-RU', dateOptions).replace(' \u0433.', '\u0433.');
 }
 
-function printTestTicket() {
-    closeTerminalServiceModal();
-    document.getElementById("receipt-number").textContent = "000";
-    document.getElementById("receipt-service").textContent = "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u043f\u0435\u0447\u0430\u0442\u044c";
-    document.getElementById("receipt-date").textContent = formatReceiptDate();
+function fillTicketReceipt(data, fallbackServiceName = "") {
+    document.getElementById("receipt-number").textContent = data.number;
+    document.getElementById("receipt-service").textContent = data.service_name || fallbackServiceName;
+    document.getElementById("receipt-date").textContent = data.date || formatReceiptDate();
 
     const waitEl = document.getElementById("receipt-wait-count");
     if (waitEl) {
-        waitEl.textContent = "\u041e\u0416\u0418\u0414\u0410\u042e\u0429\u0418\u0425 \u041f\u0415\u0420\u0415\u0414 \u0412\u0410\u041c\u0418: \u0422\u0415\u0421\u0422";
+        waitEl.textContent = data.waiting_text || (data.waiting_before > 0
+            ? `\u041f\u0415\u0420\u0415\u0414 \u0412\u0410\u041c\u0418 \u0412 \u041e\u0427\u0415\u0420\u0415\u0414\u0418: ~ ${data.waiting_before} \u0427\u0415\u041b.`
+            : "\u0412\u042b \u0421\u041b\u0415\u0414\u0423\u042e\u0429\u0418\u0419 \u0412 \u041e\u0427\u0415\u0420\u0415\u0414\u0418!");
     }
+}
+
+function printTestTicket() {
+    closeTerminalServiceModal();
+    fillTicketReceipt({
+        number: "000",
+        service_name: "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u043f\u0435\u0447\u0430\u0442\u044c",
+        waiting_text: "\u041e\u0416\u0418\u0414\u0410\u042e\u0429\u0418\u0425 \u041f\u0415\u0420\u0415\u0414 \u0412\u0410\u041c\u0418: \u0422\u0415\u0421\u0422",
+        date: formatReceiptDate()
+    });
 
     printTicket();
 }

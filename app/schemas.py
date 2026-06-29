@@ -96,6 +96,14 @@ class TicketRead(BaseModel):
         from_attributes = True
 
 
+class TicketReprintResponse(BaseModel):
+    id: int
+    number: int
+    service_name: str
+    waiting_before: int
+    date: str
+
+
 class OperatorCreate(BaseModel):
     name: str
     login: str

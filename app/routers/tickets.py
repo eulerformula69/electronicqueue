@@ -35,6 +35,7 @@ from app.dependencies import (
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.schemas import (
     CallSpecificRequest, RedirectRequest, RedirectToWindowRequest, TicketCreate,
+    TicketReprintResponse,
 )
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
@@ -44,6 +45,52 @@ from app.services.tickets import (
 )
 
 router = APIRouter()
+
+
+def _today_bounds(now: datetime | None = None):
+    current = now or datetime.now()
+    today_start = current.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow_start = today_start + timedelta(days=1)
+    return today_start, tomorrow_start
+
+
+def build_reprint_ticket_payload(
+    db: Session,
+    number: int,
+    now: datetime | None = None,
+) -> dict:
+    today_start, tomorrow_start = _today_bounds(now)
+
+    ticket = (
+        db.query(Ticket)
+        .filter(
+            Ticket.number == number,
+            Ticket.created_at >= today_start,
+            Ticket.created_at < tomorrow_start,
+        )
+        .order_by(Ticket.created_at.desc())
+        .first()
+    )
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Талон за сегодня не найден")
+
+    waiting_before = (
+        db.query(Ticket)
+        .filter(
+            Ticket.status == "waiting",
+            Ticket.id < ticket.id,
+        )
+        .count()
+    )
+
+    return {
+        "id": ticket.id,
+        "number": ticket.number,
+        "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
+        "waiting_before": waiting_before,
+        "date": ticket.created_at.strftime("%d.%m.%Y %H:%M") if ticket.created_at else "",
+    }
 
 
 @router.post("/tickets/", tags=["Tickets"])
@@ -153,6 +200,18 @@ async def create_ticket(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@router.get("/tickets/reprint/{number}", response_model=TicketReprintResponse, tags=["Tickets"])
+def reprint_ticket(
+    number: int = Path(..., gt=0),
+    _auth = Depends(get_current_terminal),
+):
+    db = SessionLocal()
+    try:
+        return build_reprint_ticket_payload(db, number)
     finally:
         db.close()
 
