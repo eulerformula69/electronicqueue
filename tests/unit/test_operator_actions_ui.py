@@ -22,12 +22,15 @@ def test_operator_rare_actions_are_only_in_more_menu():
     assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" in more_menu
 
 
-def test_operator_return_to_queue_uses_explaining_popup():
+def test_operator_return_to_queue_warns_only_after_first_return():
     source = read_text("queue/js/operator.js")
 
+    assert "operatorReturnedTicketIds" in source
+    assert "wasTicketReturnedToQueue(currentTicketId)" in source
+    assert "await confirmReturnCurrentToQueue();" in source
     assert "showOperatorPopup({" in source
     assert 'title: "Вернуть в очередь?"' in source
-    assert "Возврат в очередь нужен только если талон действительно нужно снова поставить в ожидание" in source
+    assert "Похоже, вы возвращаете в очередь не в первый раз" in source
     assert 'text: "Вернуть в очередь"' in source
     assert 'text: "Отмена"' in source
 

@@ -179,6 +179,33 @@ let allServices = [];
 let allWindows = [];
 const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
 const RECALL_FINISH_WARNING_COUNT = 2;
+const RETURNED_TICKETS_STORAGE_KEY = "operatorReturnedTicketIds";
+
+function getReturnedTicketIds() {
+    try {
+        return JSON.parse(localStorage.getItem(RETURNED_TICKETS_STORAGE_KEY) || "[]");
+    } catch (e) {
+        return [];
+    }
+}
+
+function wasTicketReturnedToQueue(ticketId) {
+    return getReturnedTicketIds().includes(Number(ticketId));
+}
+
+function rememberReturnedTicket(ticketId) {
+    const ticketIds = getReturnedTicketIds();
+    const normalizedTicketId = Number(ticketId);
+
+    if (!ticketIds.includes(normalizedTicketId)) {
+        ticketIds.push(normalizedTicketId);
+    }
+
+    localStorage.setItem(
+        RETURNED_TICKETS_STORAGE_KEY,
+        JSON.stringify(ticketIds.slice(-200))
+    );
+}
 
 function parseTicketCalledAt(ticket) {
     if (!ticket || !ticket.called_at) return null;
@@ -1260,9 +1287,14 @@ async function returnCurrentToQueue() {
         return;
     }
 
+    if (!wasTicketReturnedToQueue(currentTicketId)) {
+        await confirmReturnCurrentToQueue();
+        return;
+    }
+
     showOperatorPopup({
         title: "Вернуть в очередь?",
-        message: "Возврат в очередь нужен только если талон действительно нужно снова поставить в ожидание. Если клиент не подошёл, используйте «Клиент не явился». Если обслуживание завершено, используйте «Завершить».",
+        message: "Похоже, вы возвращаете в очередь не в первый раз. Возврат нужен только если талон действительно нужно снова поставить в ожидание. Если клиент не подошёл, используйте «Клиент не явился». Если обслуживание завершено, используйте «Завершить».",
         actions: [
             {
                 text: "Вернуть в очередь",
@@ -1278,6 +1310,7 @@ async function returnCurrentToQueue() {
 }
 
 async function confirmReturnCurrentToQueue() {
+    const returnedTicketId = currentTicketId;
     const button = document.getElementById("return-to-queue-btn");
     if (button) button.disabled = true;
 
@@ -1292,6 +1325,7 @@ async function confirmReturnCurrentToQueue() {
             throw new Error(data.detail || "Не удалось вернуть клиента в очередь");
         }
 
+        rememberReturnedTicket(returnedTicketId);
         clearCurrentTicket();
         document.getElementById("current").textContent = "Рабочее место свободно";
         document.getElementById("current-service").textContent = "";
