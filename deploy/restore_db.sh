@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -L "${SOURCE_PATH}" ]]; do
+    SOURCE_DIR="$(cd -- "$(dirname -- "${SOURCE_PATH}")" && pwd)"
+    SOURCE_TARGET="$(readlink -- "${SOURCE_PATH}")"
+    if [[ "${SOURCE_TARGET}" == /* ]]; then
+        SOURCE_PATH="${SOURCE_TARGET}"
+    else
+        SOURCE_PATH="${SOURCE_DIR}/${SOURCE_TARGET}"
+    fi
+done
+SCRIPT_DIR="$(cd -- "$(dirname -- "${SOURCE_PATH}")" && pwd)"
 # shellcheck source=db_common.sh
 source "${SCRIPT_DIR}/db_common.sh"
 
