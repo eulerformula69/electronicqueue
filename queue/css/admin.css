@@ -297,6 +297,7 @@ body.admin-page .admin-table-scroll {
 
 body.admin-page .admin-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     background: transparent;
     box-shadow: none;
@@ -311,6 +312,13 @@ body.admin-page .admin-table td {
     text-align: left;
     color: var(--text-main);
     vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+body.admin-page .admin-table th:last-child,
+body.admin-page .admin-table td:last-child {
+    width: 150px;
+    white-space: nowrap;
 }
 
 body.admin-page .admin-table th {
@@ -336,7 +344,10 @@ body.admin-page .admin-sort-header {
 }
 
 body.admin-page .admin-sort-indicator {
+    display: inline-flex;
+    justify-content: center;
     width: 12px;
+    flex: 0 0 12px;
     color: var(--text-main);
 }
 
@@ -782,7 +793,7 @@ body.admin-page .admin-service-dropzone:has(.admin-service-item) .admin-service-
 
 body.admin-page .admin-service-sort-row {
     display: grid;
-    grid-template-columns: 34px minmax(260px, 1fr) auto auto 120px auto;
+    grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;
     align-items: center;
     gap: 14px;
     min-height: 42px;
@@ -796,7 +807,7 @@ body.admin-page .admin-service-sort-row {
 
 body.admin-page .admin-service-item {
     display: grid;
-    grid-template-columns: 34px minmax(260px, 1fr) auto auto 120px auto;
+    grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;
     align-items: center;
     gap: 14px;
     min-height: 58px;

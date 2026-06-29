@@ -3,6 +3,7 @@ let windows = [];
 let services = [];
 let windowServices = new Map();
 let sortState = {key: "name", direction: "asc"};
+const sortStorageKey = "admin.windows.sort";
 
 const statuses = [
     {value: "online", label: "online"},
@@ -12,6 +13,7 @@ const statuses = [
 
 export async function mount(context) {
     ctx = context;
+    sortState = loadSortState(sortState);
     await load();
     render();
 }
@@ -72,6 +74,7 @@ function setSort(key) {
         key,
         direction: sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"
     };
+    saveSortState(sortState);
 }
 
 function sortWindows(items) {
@@ -90,6 +93,26 @@ function windowSortValue(windowItem, key) {
 function compareValues(a, b) {
     if (typeof a === "number" && typeof b === "number") return a - b;
     return String(a ?? "").localeCompare(String(b ?? ""), "ru", {numeric: true, sensitivity: "base"});
+}
+
+function loadSortState(fallback) {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
+        if (parsed && ["name", "status", "services"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
+            return parsed;
+        }
+    } catch (error) {
+        return fallback;
+    }
+    return fallback;
+}
+
+function saveSortState(state) {
+    try {
+        localStorage.setItem(sortStorageKey, JSON.stringify(state));
+    } catch (error) {
+        // Ignore storage failures; sorting still works for the current render.
+    }
 }
 
 function openDrawer(windowItem = null) {

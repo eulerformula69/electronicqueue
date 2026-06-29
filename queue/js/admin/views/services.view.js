@@ -3,6 +3,7 @@ let services = [];
 let groups = [];
 let draggedServiceId = null;
 let sortState = {key: "name", direction: "asc"};
+const sortStorageKey = "admin.services.sort";
 
 const statusOptions = [
     {value: "active", label: "active"},
@@ -11,6 +12,7 @@ const statusOptions = [
 
 export async function mount(context) {
     ctx = context;
+    sortState = loadSortState(sortState);
     await load();
     render();
 }
@@ -157,6 +159,7 @@ function setSort(key) {
         key,
         direction: sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"
     };
+    saveSortState(sortState);
 }
 
 function sortServices(items) {
@@ -176,6 +179,26 @@ function serviceSortValue(service, key) {
 function compareValues(a, b) {
     if (typeof a === "number" && typeof b === "number") return a - b;
     return String(a ?? "").localeCompare(String(b ?? ""), "ru", {numeric: true, sensitivity: "base"});
+}
+
+function loadSortState(fallback) {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
+        if (parsed && ["name", "status", "visible", "choice"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
+            return parsed;
+        }
+    } catch (error) {
+        return fallback;
+    }
+    return fallback;
+}
+
+function saveSortState(state) {
+    try {
+        localStorage.setItem(sortStorageKey, JSON.stringify(state));
+    } catch (error) {
+        // Ignore storage failures; sorting still works for the current render.
+    }
 }
 
 function groupOptions(selectedId) {

@@ -45,6 +45,19 @@ def test_admin_views_use_click_sorting_with_direction_toggle():
         assert 'sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"' in source
 
 
+def test_admin_views_persist_sort_state():
+    for path, key in [
+        ("queue/js/admin/views/services.view.js", "admin.services.sort"),
+        ("queue/js/admin/views/operators.view.js", "admin.operators.sort"),
+        ("queue/js/admin/views/windows.view.js", "admin.windows.sort"),
+    ]:
+        source = _read(path)
+        assert f'const sortStorageKey = "{key}"' in source
+        assert "sortState = loadSortState(sortState)" in source
+        assert "saveSortState(sortState)" in source
+        assert "localStorage.setItem(sortStorageKey, JSON.stringify(state))" in source
+
+
 def test_table_helper_renders_sortable_headers():
     source = _read("queue/js/admin/ui.js")
 
@@ -52,3 +65,11 @@ def test_table_helper_renders_sortable_headers():
     assert "headers.map(renderTableHeader)" in source
     assert 'data-action="sort"' in source
     assert 'data-sort-key="${escapeHtml(header.sortKey)}"' in source
+
+
+def test_sorting_layout_has_stable_column_widths():
+    source = _read("queue/css/admin.css")
+
+    assert "table-layout: fixed;" in source
+    assert "flex: 0 0 12px;" in source
+    assert "grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;" in source
