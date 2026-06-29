@@ -496,7 +496,7 @@ async function loadQueue(options = {}) {
             panel.innerHTML = "<div style='color:var(--text-muted); padding:20px;'>Нет ожидающих</div>";
         } else {
             panel.innerHTML = tickets.map(t => {
-                const redirected = Boolean(t.is_redirected_to_window || t.target_window_id);
+                const redirected = Boolean(t.is_redirected_to_window);
                 return `
                 <div class="queue-item ${redirected ? 'queue-item-redirected' : ''}">
                     <div style="display:flex; justify-content:space-between; align-items:baseline; width:100%;">

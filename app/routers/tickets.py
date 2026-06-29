@@ -47,6 +47,29 @@ from app.services.tickets import (
 router = APIRouter()
 
 
+def is_ticket_redirected_to_operator_window(ticket, operator_window_id: int | None) -> bool:
+    return (
+        ticket.target_window_id == operator_window_id
+        and ticket.completion_reason == "redirected"
+    )
+
+
+def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) -> dict:
+    return {
+        "id": ticket.id,
+        "number": ticket.number,
+        "service_id": ticket.service_id,
+        "service_name": ticket.service_name or "Неизвестно",
+        "created_at": ticket.created_at.strftime("%H:%M") if ticket.created_at else "—",
+        "priority": getattr(ticket, "priority", None),
+        "target_window_id": ticket.target_window_id,
+        "is_redirected_to_window": is_ticket_redirected_to_operator_window(
+            ticket,
+            operator_window_id,
+        ),
+    }
+
+
 def _today_bounds(now: datetime | None = None):
     current = now or datetime.now()
     today_start = current.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -510,6 +533,7 @@ def get_my_queue(
                 Ticket.number,
                 Ticket.service_id,
                 Ticket.created_at,
+                Ticket.completion_reason,
                 Ticket.target_window_id,
                 Service.name.label("service_name"),
                 literal(0).label("priority")
@@ -530,6 +554,7 @@ def get_my_queue(
                     Ticket.number,
                     Ticket.service_id,
                     Ticket.created_at,
+                    Ticket.completion_reason,
                     Ticket.target_window_id,
                     Service.name.label("service_name"),
                     literal(None).label("priority")
@@ -549,6 +574,7 @@ def get_my_queue(
                     Ticket.number,
                     Ticket.service_id,
                     Ticket.created_at,
+                    Ticket.completion_reason,
                     Ticket.target_window_id,
                     Service.name.label("service_name"),
                     WindowService.priority.label("priority")
@@ -577,16 +603,7 @@ def get_my_queue(
 
         result = []
         for t in tickets:
-            result.append({
-                "id": t.id,
-                "number": t.number,
-                "service_id": t.service_id,
-                "service_name": t.service_name or "Неизвестно",
-                "created_at": t.created_at.strftime("%H:%M") if t.created_at else "—",
-                "priority": getattr(t, "priority", None),
-                "target_window_id": t.target_window_id,
-                "is_redirected_to_window": t.target_window_id == operator.window_id
-            })
+            result.append(build_operator_queue_ticket_payload(t, operator.window_id))
 
         return {
             "tickets": result,
@@ -618,7 +635,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
 
         ticket.status = "waiting"
-        ticket.completion_reason = None
+        ticket.completion_reason = "redirected"
         ticket.operator_id = None
         ticket.window_id = None
         ticket.target_window_id = target_window.id
