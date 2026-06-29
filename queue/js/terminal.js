@@ -181,6 +181,7 @@ function ensureTerminalServiceModal() {
             <h2>\u0421\u0435\u0440\u0432\u0438\u0441\u043d\u043e\u0435 \u043c\u0435\u043d\u044e</h2>
             <div class="terminal-service-actions">
                 <button type="button" class="terminal-service-refresh">\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0432\u043a\u043b\u0430\u0434\u043a\u0443</button>
+                <button type="button" class="terminal-service-test-print">\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u043f\u0435\u0447\u0430\u0442\u044c \u0442\u0430\u043b\u043e\u043d\u0430</button>
                 <button type="button" class="terminal-service-cancel">\u041e\u0442\u043c\u0435\u043d\u0430</button>
             </div>
         </div>
@@ -189,6 +190,7 @@ function ensureTerminalServiceModal() {
     overlay.querySelector(".terminal-service-refresh").addEventListener("click", () => {
         window.location.reload();
     });
+    overlay.querySelector(".terminal-service-test-print").addEventListener("click", printTestTicket);
     overlay.querySelector(".terminal-service-cancel").addEventListener("click", closeTerminalServiceModal);
     overlay.addEventListener("click", (event) => {
         if (event.target === overlay) closeTerminalServiceModal();
@@ -593,6 +595,34 @@ function closeNotice() {
 }
 
 document.getElementById("ticket-notice-close").addEventListener("click", closeNotice);
+
+function formatReceiptDate(date = new Date()) {
+    const dateOptions = {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    };
+
+    return date.toLocaleString('ru-RU', dateOptions).replace(' \u0433.', '\u0433.');
+}
+
+function printTestTicket() {
+    closeTerminalServiceModal();
+    document.getElementById("receipt-number").textContent = "000";
+    document.getElementById("receipt-service").textContent = "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u043f\u0435\u0447\u0430\u0442\u044c";
+    document.getElementById("receipt-date").textContent = formatReceiptDate();
+
+    const waitEl = document.getElementById("receipt-wait-count");
+    if (waitEl) {
+        waitEl.textContent = "\u041e\u0416\u0418\u0414\u0410\u042e\u0429\u0418\u0425 \u041f\u0415\u0420\u0415\u0414 \u0412\u0410\u041c\u0418: \u0422\u0415\u0421\u0422";
+    }
+
+    printTicket();
+}
 
 // Оставляем только ОДНУ функцию printTicket
 function printTicket() {
