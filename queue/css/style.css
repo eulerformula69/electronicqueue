@@ -439,6 +439,72 @@ body.operator-page .secondary-actions{
     margin-top: 15px;
     width: 100%;
 }
+body.operator-page .operator-more-actions{
+    position: relative;
+}
+body.operator-page .operator-more-menu{
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 20;
+    min-width: 260px;
+    padding: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+body.operator-page .operator-more-menu.visible{
+    display: grid;
+    gap: 6px;
+}
+body.operator-page .operator-more-menu button{
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    color: var(--text-main);
+    text-align: left;
+    border-radius: 8px;
+}
+body.operator-page .operator-more-menu button:hover{
+    background: #f1f5f9;
+}
+body.operator-page .operator-popup-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.4);
+}
+body.operator-page .operator-popup{
+    width: min(520px, 100%);
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
+}
+body.operator-page .operator-popup h2{
+    margin: 0 0 12px;
+    color: var(--text-main);
+    font-size: 1.3rem;
+}
+body.operator-page .operator-popup p{
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+body.operator-page .operator-popup-actions{
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+}
 body.operator-page .btn-success.status-active{
     background-color: var(--success) !important;
     box-shadow: 0 0 10px rgba(46, 196, 182, 0.5);

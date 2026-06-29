@@ -173,8 +173,96 @@ setInterval(() => {
 
 // ==================== Основная логика ====================
 let currentTicketId = null;
+let currentTicketCalledAt = null;
+let currentTicketRecallCount = 0;
 let allServices = [];
 let allWindows = [];
+const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
+const RECALL_FINISH_WARNING_COUNT = 2;
+
+function parseTicketCalledAt(ticket) {
+    if (!ticket || !ticket.called_at) return null;
+
+    const calledAt = new Date(ticket.called_at);
+    return Number.isNaN(calledAt.getTime()) ? null : calledAt;
+}
+
+function setCurrentTicket(ticket) {
+    const isSameTicket = currentTicketId === ticket.id;
+
+    currentTicketId = ticket.id;
+    if (!isSameTicket) {
+        currentTicketCalledAt = parseTicketCalledAt(ticket) || new Date();
+        currentTicketRecallCount = 0;
+    }
+}
+
+function clearCurrentTicket() {
+    currentTicketId = null;
+    currentTicketCalledAt = null;
+    currentTicketRecallCount = 0;
+}
+
+function showOperatorPopup({ title, message, actions }) {
+    const existing = document.querySelector(".operator-popup-overlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "operator-popup-overlay";
+
+    const popup = document.createElement("div");
+    popup.className = "operator-popup";
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-modal", "true");
+
+    const titleElement = document.createElement("h2");
+    titleElement.textContent = title;
+
+    const messageElement = document.createElement("p");
+    messageElement.textContent = message;
+
+    const actionsElement = document.createElement("div");
+    actionsElement.className = "operator-popup-actions";
+
+    actions.forEach(action => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = action.className || "btn-outline";
+        button.textContent = action.text;
+        button.addEventListener("click", () => {
+            overlay.remove();
+            if (typeof action.onClick === "function") action.onClick();
+        });
+        actionsElement.appendChild(button);
+    });
+
+    popup.appendChild(titleElement);
+    popup.appendChild(messageElement);
+    popup.appendChild(actionsElement);
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+}
+
+function toggleOperatorMoreMenu() {
+    const menu = document.getElementById("operator-more-menu");
+    if (!menu) return;
+
+    menu.classList.toggle("visible");
+}
+
+function closeOperatorMoreMenu() {
+    const menu = document.getElementById("operator-more-menu");
+    if (menu) menu.classList.remove("visible");
+}
+
+document.addEventListener("click", event => {
+    const container = event.target.closest(".operator-more-actions");
+    const menu = document.getElementById("operator-more-menu");
+
+    if (!container && menu) {
+        menu.classList.remove("visible");
+    }
+});
 
 /* =========================
    Загрузка информации об операторе
@@ -541,9 +629,9 @@ async function callNext() {
         const ticket = await res.json();
         if (res.ok && ticket.id) {
             // Обновляем текущий билет и услугу
-            currentTicketId = ticket.id;
+            setCurrentTicket(ticket);
             document.getElementById("current").textContent = ticket.number;
-			recallCurrent();
+			recallCurrent({ trackRepeat: false });
 			
             document.getElementById("current-service").textContent =
                 ticket.service_name || "Услуга не указана";
@@ -585,7 +673,45 @@ function showToast(message, type = "danger") {
 /* =========================
    Завершение обслуживания
 ========================= */
-async function finishCurrent() {
+function shouldWarnBeforeFinish() {
+    if (!currentTicketId) return false;
+
+    const isShortService =
+        currentTicketCalledAt &&
+        Date.now() - currentTicketCalledAt.getTime() < SHORT_SERVICE_WARNING_MS;
+
+    return isShortService || currentTicketRecallCount >= RECALL_FINISH_WARNING_COUNT;
+}
+
+function showFinishWarningPopup() {
+    showOperatorPopup({
+        title: "Проверьте действие",
+        message: "Похоже, клиент мог не подойти. Если клиент не подошёл, выберите «Клиент не явился». Если обслуживание действительно завершено, подтвердите завершение.",
+        actions: [
+            {
+                text: "Завершить",
+                className: "btn-danger",
+                onClick: () => finishCurrent({ skipWarning: true })
+            },
+            {
+                text: "Клиент не явился",
+                className: "btn-outline",
+                onClick: () => cancelCurrent({ skipConfirm: true })
+            },
+            {
+                text: "Отмена",
+                className: "btn-outline"
+            }
+        ]
+    });
+}
+
+async function finishCurrent(options = {}) {
+    if (!options.skipWarning && shouldWarnBeforeFinish()) {
+        showFinishWarningPopup();
+        return;
+    }
+
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/finish`, {
             method: "POST",
@@ -598,7 +724,7 @@ async function finishCurrent() {
         const result = await res.json();
 
         if (res.ok) {
-            currentTicketId = null; 
+            clearCurrentTicket();
             document.getElementById("current").textContent = "Рабочее место свободно";
             // Также скрываем уведомление, если оно висело
             document.getElementById("toast-notification").style.display = "none";
@@ -608,7 +734,7 @@ async function finishCurrent() {
             
             // Если билета на сервере уже нет, синхронизируем локальное состояние
             if (res.status === 404 || res.status === 400) {
-                currentTicketId = null;
+                clearCurrentTicket();
                 document.getElementById("current").textContent = "Рабочее место свободно";
             }
         }
@@ -712,7 +838,7 @@ async function confirmRedirect() {
         alert(result.warning || result.message || "Билет перенаправлен");
         document.getElementById("current").textContent = "Рабочее место свободно";
         document.getElementById("current-service").textContent = "";
-        currentTicketId = null;
+        clearCurrentTicket();
         document.getElementById("redirect-panel").style.display = "none";
         loadQueue();
         loadCurrentTicket();
@@ -828,7 +954,7 @@ async function confirmRedirectToWindow() {
         }
 
         alert(result.warning || result.message || "Билет перенаправлен");
-        currentTicketId = null;
+        clearCurrentTicket();
         currentNumber = null;
         currentServiceName = null;
         document.getElementById("current").textContent = "Рабочее место свободно";
@@ -947,7 +1073,7 @@ async function loadCurrentTicket() {
         const data = await res.json();
 
         if (data.ticket) {
-            currentTicketId = data.ticket.id;
+            setCurrentTicket(data.ticket);
             document.getElementById("current").textContent = data.ticket.number;
             // Ищем название услуги по service_id
             const service = allServices.find(s => s.id === data.ticket.service_id);
@@ -955,7 +1081,7 @@ async function loadCurrentTicket() {
                 service?.name || "Услуга не указана";
 
         } else {
-            currentTicketId = null;
+            clearCurrentTicket();
             document.getElementById("current").textContent = "Рабочее место свободно";
             document.getElementById("current-service").textContent = "";
         }
@@ -1026,7 +1152,7 @@ if (sessionStorage.getItem("refresh")) {
 let recallCooldown = false;
 const RECALL_CD_TIME = 10000; // 10 секунд ограничения
 
-async function recallCurrent() {
+async function recallCurrent(options = {}) {
     if (recallCooldown) return;
 
     try {
@@ -1036,6 +1162,9 @@ async function recallCurrent() {
         });
 
         if (res.ok) {
+            if (options.trackRepeat !== false && currentTicketId) {
+                currentTicketRecallCount += 1;
+            }
             startRecallTimer();
         } else {
             const err = await res.json();
@@ -1070,14 +1199,14 @@ let cancelInterval = null;
 let cancelCooldown = false;
 const CANCEL_CD_TIME = 60000;
 
-async function cancelCurrent() {
+async function cancelCurrent(options = {}) {
     // есть ли вообще кого отменять?
     if (!currentTicketId) {
         alert("Нет активного клиента для отмены.");
         return;
     }
 
-    if (!confirm("Отменить билет? Клиент будет помечен как неявившийся.")) return;
+    if (!options.skipConfirm && !confirm("Отменить билет? Клиент будет помечен как неявившийся.")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/cancel`, {
@@ -1104,7 +1233,7 @@ async function cancelCurrent() {
 				document.getElementById("current-service").textContent = "";
             }
             // Сбрасываем ID текущего билета, так как его больше нет
-            currentTicketId = null; 
+            clearCurrentTicket(); 
             loadQueue(); 
             if (typeof updateStatus === "function") updateStatus(); 
             
@@ -1112,7 +1241,7 @@ async function cancelCurrent() {
             alert(data.detail || `Ошибка сервера: ${res.status}`);
             
             if (res.status === 404 || data.detail === "Нет активного билета для отмены") {
-                currentTicketId = null;
+                clearCurrentTicket();
                 document.getElementById("current").textContent = "Рабочее место свободно";
 				document.getElementById("current-service").textContent = "";
             }
@@ -1124,13 +1253,31 @@ async function cancelCurrent() {
 }
 
 async function returnCurrentToQueue() {
+    closeOperatorMoreMenu();
+
     if (!currentTicketId) {
         alert("Нет активного клиента для возврата в очередь.");
         return;
     }
 
-    if (!confirm("Вернуть текущего клиента обратно в очередь?")) return;
+    showOperatorPopup({
+        title: "Вернуть в очередь?",
+        message: "Возврат в очередь нужен только если талон действительно нужно снова поставить в ожидание. Если клиент не подошёл, используйте «Клиент не явился». Если обслуживание завершено, используйте «Завершить».",
+        actions: [
+            {
+                text: "Вернуть в очередь",
+                className: "btn-primary",
+                onClick: confirmReturnCurrentToQueue
+            },
+            {
+                text: "Отмена",
+                className: "btn-outline"
+            }
+        ]
+    });
+}
 
+async function confirmReturnCurrentToQueue() {
     const button = document.getElementById("return-to-queue-btn");
     if (button) button.disabled = true;
 
@@ -1145,7 +1292,7 @@ async function returnCurrentToQueue() {
             throw new Error(data.detail || "Не удалось вернуть клиента в очередь");
         }
 
-        currentTicketId = null;
+        clearCurrentTicket();
         document.getElementById("current").textContent = "Рабочее место свободно";
         document.getElementById("current-service").textContent = "";
         showToast(
@@ -1254,6 +1401,8 @@ if (autoCallToggle) {
    Вызов по конкретному номеру
 ========================= */
 async function promptCallByNumber() {
+    closeOperatorMoreMenu();
+
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
@@ -1282,7 +1431,7 @@ async function promptCallByNumber() {
 
         if (res.ok && data.id) {
             // Успешно вызвали
-            currentTicketId = data.id;
+            setCurrentTicket(data);
             document.getElementById("current").textContent = data.number;
             document.getElementById("current-service").textContent = data.service_name || "Услуга не указана";
             

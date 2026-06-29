@@ -92,10 +92,15 @@
 
         <div class="button-group secondary-actions">
             <button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-			<button class="btn-outline" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
-			<button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
             <button class="btn-outline" onclick="showRedirectToService()">ПЕРЕНАПРАВИТЬ НА УСЛУГУ</button>
             <button class="btn-outline" onclick="showRedirectToWindow()">ПЕРЕНАПРАВИТЬ НА РАБОЧЕЕ МЕСТО</button>
+            <div class="operator-more-actions">
+                <button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
+                <div id="operator-more-menu" class="operator-more-menu">
+                    <button type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
+                    <button type="button" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
+                </div>
+            </div>
         </div>
 
 		<div id="redirect-panel" style="display:none; margin-top:20px; background: #f8f9fc; padding: 15px; border-radius: 12px;">
