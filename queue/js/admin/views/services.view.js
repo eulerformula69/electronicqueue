@@ -2,6 +2,7 @@ let ctx;
 let services = [];
 let groups = [];
 let draggedServiceId = null;
+let sortState = {key: "name", direction: "asc"};
 
 const statusOptions = [
     {value: "active", label: "active"},
@@ -60,13 +61,13 @@ function renderGroupSections() {
             id: group.id,
             name: group.name,
             isSystem: false,
-            items: services.filter(service => service.service_group_id === group.id)
+            items: sortServices(services.filter(service => service.service_group_id === group.id))
         })),
         {
             id: "",
             name: "Без группы",
             isSystem: true,
-            items: services.filter(service => service.service_group_id === null || service.service_group_id === undefined)
+            items: sortServices(services.filter(service => service.service_group_id === null || service.service_group_id === undefined))
         }
     ];
 
@@ -86,6 +87,7 @@ function renderGroupSections() {
                     </div>
                 `}
             </header>
+            ${renderServiceSortHeader()}
             <div class="admin-service-dropzone" data-group-id="${section.id}">
                 ${section.items.length ? section.items.map(renderServiceCard).join("") : `
                     <div class="admin-service-empty">Перетащите сюда услугу</div>
@@ -95,11 +97,33 @@ function renderGroupSections() {
     `).join("");
 }
 
+function renderServiceSortHeader() {
+    return `
+        <div class="admin-service-sort-row">
+            <span></span>
+            ${renderServiceSortButton("Название", "name")}
+            ${renderServiceSortButton("Статус", "status")}
+            ${renderServiceSortButton("Терминал", "visible")}
+            ${renderServiceSortButton("Выбор", "choice")}
+            <span></span>
+        </div>
+    `;
+}
+
+function renderServiceSortButton(label, key) {
+    const direction = sortState.key === key ? sortState.direction : null;
+    return `
+        <button class="admin-sort-header" type="button" data-action="sort" data-sort-key="${ctx.ui.escapeHtml(key)}">
+            <span>${ctx.ui.escapeHtml(label)}</span>
+            <span class="admin-sort-indicator" aria-hidden="true">${direction === "asc" ? "↑" : direction === "desc" ? "↓" : ""}</span>
+        </button>
+    `;
+}
+
 function renderServiceCard(service) {
     return `
         <div class="admin-service-item" draggable="true" data-service-id="${service.id}">
             <span class="admin-drag-handle" title="Перетащить">☰</span>
-            <span class="admin-service-id">${service.id}</span>
             <strong>${ctx.ui.escapeHtml(service.name)}</strong>
             ${ctx.ui.badge(service.status, service.status === "active" ? "success" : "neutral")}
             ${service.visible_on_terminal ? ctx.ui.badge("Показывается", "success") : ctx.ui.badge("Скрыта", "warning")}
@@ -112,6 +136,11 @@ function renderServiceCard(service) {
 async function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) return;
+    if (button.dataset.action === "sort") {
+        setSort(button.dataset.sortKey);
+        render();
+        return;
+    }
     const id = Number(button.dataset.id);
 
     if (button.dataset.action === "create-service") openServiceDrawer();
@@ -121,6 +150,32 @@ async function handleClick(event) {
     if (button.dataset.action === "delete-group") await deleteGroup(id);
     if (button.dataset.action === "group-up") await moveGroup(id, -1);
     if (button.dataset.action === "group-down") await moveGroup(id, 1);
+}
+
+function setSort(key) {
+    sortState = {
+        key,
+        direction: sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"
+    };
+}
+
+function sortServices(items) {
+    return [...items].sort((a, b) => {
+        const result = compareValues(serviceSortValue(a, sortState.key), serviceSortValue(b, sortState.key));
+        return sortState.direction === "asc" ? result : -result;
+    });
+}
+
+function serviceSortValue(service, key) {
+    if (key === "status") return service.status || "";
+    if (key === "visible") return service.visible_on_terminal ? 1 : 0;
+    if (key === "choice") return service.operator_choice_enabled ? 1 : 0;
+    return service.name || "";
+}
+
+function compareValues(a, b) {
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    return String(a ?? "").localeCompare(String(b ?? ""), "ru", {numeric: true, sensitivity: "base"});
 }
 
 function groupOptions(selectedId) {

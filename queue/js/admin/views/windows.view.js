@@ -2,6 +2,7 @@ let ctx;
 let windows = [];
 let services = [];
 let windowServices = new Map();
+let sortState = {key: "name", direction: "asc"};
 
 const statuses = [
     {value: "online", label: "online"},
@@ -30,11 +31,10 @@ async function load() {
 }
 
 function render() {
-    const rows = windows.map(windowItem => {
+    const rows = sortWindows(windows).map(windowItem => {
         const linked = windowServices.get(windowItem.id) || [];
         return `
             <tr>
-                <td>${windowItem.id}</td>
                 <td><strong>${ctx.ui.escapeHtml(windowItem.name)}</strong></td>
                 <td>${ctx.ui.badge(windowItem.status, windowItem.status === "online" ? "success" : windowItem.status === "break" ? "warning" : "neutral")}</td>
                 <td>${linked.length} услуг</td>
@@ -45,7 +45,12 @@ function render() {
 
     ctx.view.innerHTML = `
         <div class="admin-toolbar">${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create"})}</div>
-        ${ctx.ui.table(["ID", "Название", "Статус", "Услуги", "Действия"], rows)}
+        ${ctx.ui.table([
+            ctx.ui.sortHeader("Название", "name", sortState),
+            ctx.ui.sortHeader("Статус", "status", sortState),
+            ctx.ui.sortHeader("Услуги", "services", sortState),
+            "Действия"
+        ], rows)}
     `;
     ctx.view.onclick = handleClick;
 }
@@ -53,8 +58,38 @@ function render() {
 function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) return;
+    if (button.dataset.action === "sort") {
+        setSort(button.dataset.sortKey);
+        render();
+        return;
+    }
     if (button.dataset.action === "create") openDrawer();
     if (button.dataset.action === "edit") openDrawer(windows.find(item => item.id === Number(button.dataset.id)));
+}
+
+function setSort(key) {
+    sortState = {
+        key,
+        direction: sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"
+    };
+}
+
+function sortWindows(items) {
+    return [...items].sort((a, b) => {
+        const result = compareValues(windowSortValue(a, sortState.key), windowSortValue(b, sortState.key));
+        return sortState.direction === "asc" ? result : -result;
+    });
+}
+
+function windowSortValue(windowItem, key) {
+    if (key === "status") return windowItem.status || "";
+    if (key === "services") return windowServices.get(windowItem.id)?.length || 0;
+    return windowItem.name || "";
+}
+
+function compareValues(a, b) {
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    return String(a ?? "").localeCompare(String(b ?? ""), "ru", {numeric: true, sensitivity: "base"});
 }
 
 function openDrawer(windowItem = null) {

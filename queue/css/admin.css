@@ -320,6 +320,34 @@ body.admin-page .admin-table th {
     font-weight: 800;
 }
 
+body.admin-page .admin-sort-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+body.admin-page .admin-sort-indicator {
+    width: 12px;
+    color: var(--text-main);
+}
+
+body.admin-page .admin-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
 body.admin-page .admin-table tr:hover td {
     background: var(--admin-soft-bg);
 }
@@ -752,9 +780,23 @@ body.admin-page .admin-service-dropzone:has(.admin-service-item) .admin-service-
     display: none;
 }
 
+body.admin-page .admin-service-sort-row {
+    display: grid;
+    grid-template-columns: 34px minmax(260px, 1fr) auto auto 120px auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 42px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--admin-border);
+    background: var(--admin-soft-bg);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
 body.admin-page .admin-service-item {
     display: grid;
-    grid-template-columns: 34px 64px minmax(260px, 1fr) auto auto 120px auto;
+    grid-template-columns: 34px minmax(260px, 1fr) auto auto 120px auto;
     align-items: center;
     gap: 14px;
     min-height: 58px;
@@ -777,10 +819,6 @@ body.admin-page .admin-drag-handle {
     color: var(--text-muted);
     cursor: grab;
     user-select: none;
-}
-
-body.admin-page .admin-service-id {
-    color: var(--text-muted);
 }
 
 body.admin-page .admin-service-item strong {
@@ -970,19 +1008,27 @@ body.admin-page .admin-map-host .map-editor {
     }
 
     body.admin-page .admin-service-item {
-        grid-template-columns: 28px 48px minmax(0, 1fr);
+        grid-template-columns: 28px minmax(0, 1fr);
         grid-auto-rows: auto;
         padding: 12px;
     }
 
+    body.admin-page .admin-service-sort-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+        grid-auto-rows: auto;
+        padding: 10px 12px;
+    }
+
     body.admin-page .admin-service-item .admin-badge,
-    body.admin-page .admin-service-item > span:not(.admin-drag-handle):not(.admin-service-id):not(.admin-service-actions) {
-        grid-column: 3;
+    body.admin-page .admin-service-item > span:not(.admin-drag-handle):not(.admin-service-actions),
+    body.admin-page .admin-service-sort-row .admin-sort-header,
+    body.admin-page .admin-service-sort-row > span:not(:first-child) {
+        grid-column: 2;
         justify-self: start;
     }
 
     body.admin-page .admin-service-actions {
-        grid-column: 3;
+        grid-column: 2;
         justify-self: start;
     }
 

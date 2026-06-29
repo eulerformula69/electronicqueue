@@ -1,6 +1,7 @@
 let ctx;
 let operators = [];
 let windows = [];
+let sortState = {key: "name", direction: "asc"};
 
 export async function mount(context) {
     ctx = context;
@@ -13,14 +14,13 @@ async function load() {
         ctx.api.request("/operators/"),
         ctx.api.request("/windows/")
     ]);
-    operators = Array.isArray(operatorData) ? operatorData.sort((a, b) => a.id - b.id) : [];
+    operators = Array.isArray(operatorData) ? operatorData : [];
     windows = Array.isArray(windowData) ? windowData : [];
 }
 
 function render() {
-    const rows = operators.map(operator => `
+    const rows = sortOperators(operators).map(operator => `
         <tr>
-            <td>${operator.id}</td>
             <td><strong>${ctx.ui.escapeHtml(operator.name)}</strong></td>
             <td>${ctx.ui.escapeHtml(operator.login || "-")}</td>
             <td>${ctx.ui.escapeHtml(windowName(operator.window_id))}</td>
@@ -30,7 +30,12 @@ function render() {
 
     ctx.view.innerHTML = `
         <div class="admin-toolbar">${ctx.ui.button("Добавить оператора", {variant: "primary", action: "create"})}</div>
-        ${ctx.ui.table(["ID", "ФИО", "Логин", "Рабочее место", "Действия"], rows)}
+        ${ctx.ui.table([
+            ctx.ui.sortHeader("ФИО", "name", sortState),
+            ctx.ui.sortHeader("Логин", "login", sortState),
+            ctx.ui.sortHeader("Рабочее место", "window", sortState),
+            "Действия"
+        ], rows)}
     `;
     ctx.view.onclick = handleClick;
 }
@@ -38,8 +43,37 @@ function render() {
 function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) return;
+    if (button.dataset.action === "sort") {
+        setSort(button.dataset.sortKey);
+        render();
+        return;
+    }
     if (button.dataset.action === "create") openDrawer();
     if (button.dataset.action === "edit") openDrawer(operators.find(item => item.id === Number(button.dataset.id)));
+}
+
+function setSort(key) {
+    sortState = {
+        key,
+        direction: sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"
+    };
+}
+
+function sortOperators(items) {
+    return [...items].sort((a, b) => {
+        const result = compareValues(operatorSortValue(a, sortState.key), operatorSortValue(b, sortState.key));
+        return sortState.direction === "asc" ? result : -result;
+    });
+}
+
+function operatorSortValue(operator, key) {
+    if (key === "login") return operator.login || "";
+    if (key === "window") return windowName(operator.window_id);
+    return operator.name || "";
+}
+
+function compareValues(a, b) {
+    return String(a ?? "").localeCompare(String(b ?? ""), "ru", {numeric: true, sensitivity: "base"});
 }
 
 function windowName(id) {

@@ -41,11 +41,34 @@ export function table(headers, rows, options = {}) {
             ${options.title ? `<div class="admin-card-title">${escapeHtml(options.title)}</div>` : ""}
             <div class="admin-table-scroll">
                 <table class="admin-table">
-                    <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+                    <thead><tr>${headers.map(renderTableHeader).join("")}</tr></thead>
                     <tbody>${rows.length ? rows.join("") : `<tr><td colspan="${headers.length}" class="admin-empty-cell">Нет данных</td></tr>`}</tbody>
                 </table>
             </div>
         </div>
+    `;
+}
+
+export function sortHeader(label, key, sortState) {
+    return {
+        label,
+        sortKey: key,
+        direction: sortState?.key === key ? sortState.direction : null
+    };
+}
+
+function renderTableHeader(header) {
+    if (!header || typeof header !== "object") return `<th>${escapeHtml(header)}</th>`;
+    if (!header.sortKey) return `<th>${escapeHtml(header.label)}</th>`;
+    const directionLabel = header.direction === "asc" ? " по возрастанию" : header.direction === "desc" ? " по убыванию" : "";
+    return `
+        <th>
+            <button class="admin-sort-header" type="button" data-action="sort" data-sort-key="${escapeHtml(header.sortKey)}">
+                <span>${escapeHtml(header.label)}</span>
+                <span class="admin-sort-indicator" aria-hidden="true">${header.direction === "asc" ? "↑" : header.direction === "desc" ? "↓" : ""}</span>
+                <span class="admin-sr-only">${escapeHtml(directionLabel)}</span>
+            </button>
+        </th>
     `;
 }
 
