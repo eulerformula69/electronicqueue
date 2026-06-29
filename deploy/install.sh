@@ -161,7 +161,7 @@ install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/boo
 install -m 0750 "${SOURCE_DIR}/deploy/db_common.sh" "${APP_DIR}/deploy/db_common.sh"
 install -m 0750 "${SOURCE_DIR}/deploy/backup_db.sh" "${APP_DIR}/deploy/backup_db.sh"
 install -m 0750 "${SOURCE_DIR}/deploy/restore_db.sh" "${APP_DIR}/deploy/restore_db.sh"
-install -d -m 0750 -o root -g "${APP_USER}" /var/backups/queue/db
+install -d -m 0770 -o root -g "${APP_USER}" /var/backups/queue/db
 install -d -o "${APP_USER}" -g "${APP_USER}" "${APP_DIR}/queue"
 rsync -a --delete \
     --exclude 'media/' \

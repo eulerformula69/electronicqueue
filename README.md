@@ -130,7 +130,7 @@ cd /home/queue/queue_project
 ./deploy/update_from_git.py --repo https://github.com/USER/REPOSITORY.git --apply
 
 # 3. Создать каталог для дампов (если install.sh после этого не запускали)
-sudo install -d -m 0750 -o root -g queue /var/backups/queue/db
+sudo install -d -m 0770 -o root -g queue /var/backups/queue/db
 
 # 4. Проверочный бэкап — работает сразу, без queue-backup
 sudo bash /home/queue/queue_project/deploy/backup_db.sh

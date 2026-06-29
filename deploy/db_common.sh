@@ -95,7 +95,7 @@ run_as_app_user() {
 ensure_backup_root() {
     local mode owner group
     if [[ ${EUID} -eq 0 ]]; then
-        install -d -m 0750 -o root -g "${APP_USER}" "${BACKUP_ROOT}"
+        install -d -m 0770 -o root -g "${APP_USER}" "${BACKUP_ROOT}"
     else
         [[ -d "${BACKUP_ROOT}" ]] || fail "каталог бэкапов не существует: ${BACKUP_ROOT} (нужен sudo для создания)"
         [[ -w "${BACKUP_ROOT}" ]] || fail "нет прав на запись в ${BACKUP_ROOT}"
