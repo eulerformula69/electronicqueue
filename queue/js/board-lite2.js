@@ -2,9 +2,9 @@
    Older TV WebViews can stop repainting HTML overlays after long playback.
    Keep the DOM changing and refresh the page before that state usually starts. */
 (function () {
-    var REPAINT_INTERVAL_MS = 15000;
+    var REPAINT_INTERVAL_MS = 10000;
     var VIDEO_CHECK_INTERVAL_MS = 30000;
-    var SOFT_RELOAD_AFTER_MS = 24 * 60 * 1000;
+    var HARD_RELOAD_AFTER_MS = 10 * 60 * 1000;
     var startedAt = new Date().getTime();
     var repaintTick = 0;
     var screenWakeLock = null;
@@ -19,11 +19,12 @@
             el.style.position = "fixed";
             el.style.left = "0";
             el.style.bottom = "0";
-            el.style.width = "1px";
-            el.style.height = "1px";
-            el.style.zIndex = "-1";
+            el.style.width = "3px";
+            el.style.height = "3px";
+            el.style.zIndex = "2147483647";
             el.style.pointerEvents = "none";
-            el.style.background = "transparent";
+            el.style.background = "#ffffff";
+            el.style.borderRadius = "3px";
             document.body.appendChild(el);
         }
 
@@ -32,25 +33,21 @@
 
     function repaintInterface() {
         var title = document.getElementById("title");
-        var boardColumn = document.querySelector(".board-column");
         var wrapper = document.querySelector(".board-wrapper");
         var heartbeat = ensureHeartbeatElement();
 
         if (title) title.style.visibility = "visible";
+        if (wrapper) wrapper.style.visibility = "visible";
 
         repaintTick = repaintTick + 1;
-        heartbeat.style.opacity = repaintTick % 2 ? "0.01" : "0.02";
+        heartbeat.style.left = repaintTick % 2 ? "0" : "6px";
+        heartbeat.style.bottom = repaintTick % 2 ? "0" : "6px";
+        heartbeat.style.opacity = repaintTick % 2 ? "0.15" : "0.08";
         heartbeat.setAttribute("data-tick", String(repaintTick));
 
         if (wrapper) {
-            wrapper.style.webkitTransform = repaintTick % 2 ? "translateZ(0)" : "translateZ(0.001px)";
-            wrapper.style.transform = wrapper.style.webkitTransform;
-        }
-
-        if (boardColumn) {
-            boardColumn.style.visibility = "hidden";
-            void boardColumn.offsetHeight;
-            boardColumn.style.visibility = "visible";
+            wrapper.style.webkitTransform = "translateZ(0)";
+            wrapper.style.transform = "translateZ(0)";
         }
     }
 
@@ -96,9 +93,13 @@
         } catch (e) {}
     }
 
-    function reloadBeforeWebOsStalls() {
-        if (new Date().getTime() - startedAt < SOFT_RELOAD_AFTER_MS) return;
-        window.location.reload();
+    function hardReloadBeforeWebOsStalls() {
+        var url;
+
+        if (new Date().getTime() - startedAt < HARD_RELOAD_AFTER_MS) return;
+
+        url = window.location.pathname + "?lgLiteReload=" + new Date().getTime();
+        window.location.replace(url);
     }
 
     function init() {
@@ -108,7 +109,7 @@
 
         setInterval(repaintInterface, REPAINT_INTERVAL_MS);
         setInterval(keepVideoPlaying, VIDEO_CHECK_INTERVAL_MS);
-        setInterval(reloadBeforeWebOsStalls, 60000);
+        setInterval(hardReloadBeforeWebOsStalls, 30000);
 
         document.addEventListener("visibilitychange", function () {
             if (!document.hidden) {
