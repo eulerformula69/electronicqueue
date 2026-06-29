@@ -25,14 +25,26 @@ function openReprintTicketPanel() {
     panel.innerHTML = `
         <input
             id="terminal-reprint-number"
-            type="number"
-            min="1"
-            step="1"
-            inputmode="numeric"
+            type="text"
+            readonly
             autocomplete="off"
             placeholder="\u041d\u043e\u043c\u0435\u0440 \u0442\u0430\u043b\u043e\u043d\u0430"
-            style="font-size:1.1rem; padding:14px 16px; border:2px solid #e2e8f0; border-radius:10px;"
+            style="font-size:2rem; padding:14px 16px; border:2px solid #e2e8f0; border-radius:10px; text-align:center; font-weight:800;"
         >
+        <div class="terminal-reprint-keypad" style="display:grid; grid-template-columns:repeat(3, minmax(72px, 1fr)); gap:10px;">
+            <button type="button" data-reprint-digit="1">1</button>
+            <button type="button" data-reprint-digit="2">2</button>
+            <button type="button" data-reprint-digit="3">3</button>
+            <button type="button" data-reprint-digit="4">4</button>
+            <button type="button" data-reprint-digit="5">5</button>
+            <button type="button" data-reprint-digit="6">6</button>
+            <button type="button" data-reprint-digit="7">7</button>
+            <button type="button" data-reprint-digit="8">8</button>
+            <button type="button" data-reprint-digit="9">9</button>
+            <button type="button" class="terminal-reprint-clear">\u0421\u0442\u0435\u0440\u0435\u0442\u044c</button>
+            <button type="button" data-reprint-digit="0">0</button>
+            <button type="button" class="terminal-reprint-backspace">\u232b</button>
+        </div>
         <div id="terminal-reprint-error" style="min-height:22px; color:#dc3545; font-weight:700;"></div>
         <div class="terminal-service-actions">
             <button type="button" class="terminal-reprint-submit">\u041f\u0435\u0447\u0430\u0442\u044c</button>
@@ -40,14 +52,34 @@ function openReprintTicketPanel() {
         </div>
     `;
 
+    panel.querySelectorAll("[data-reprint-digit]").forEach((button) => {
+        button.addEventListener("click", () => appendReprintDigit(button.dataset.reprintDigit));
+    });
+    panel.querySelector(".terminal-reprint-clear").addEventListener("click", clearReprintNumber);
+    panel.querySelector(".terminal-reprint-backspace").addEventListener("click", backspaceReprintNumber);
     panel.querySelector(".terminal-reprint-submit").addEventListener("click", reprintIssuedTicket);
     panel.querySelector(".terminal-reprint-cancel").addEventListener("click", closeReprintTicketPanel);
-    panel.querySelector("#terminal-reprint-number").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") reprintIssuedTicket();
-    });
 
     modal.appendChild(panel);
-    panel.querySelector("#terminal-reprint-number").focus();
+}
+
+function appendReprintDigit(digit) {
+    const input = document.getElementById("terminal-reprint-number");
+    if (!input || input.value.length >= 8) return;
+
+    input.value += digit;
+    const errorEl = document.getElementById("terminal-reprint-error");
+    if (errorEl) errorEl.textContent = "";
+}
+
+function clearReprintNumber() {
+    const input = document.getElementById("terminal-reprint-number");
+    if (input) input.value = "";
+}
+
+function backspaceReprintNumber() {
+    const input = document.getElementById("terminal-reprint-number");
+    if (input) input.value = input.value.slice(0, -1);
 }
 
 async function reprintIssuedTicket() {
