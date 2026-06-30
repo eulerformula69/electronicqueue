@@ -780,7 +780,7 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "Обслужено"
+            "displayName": "Этапов закрыто"
           }
         ]
       },
@@ -791,7 +791,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH base_stats AS (\r\n\r\n    SELECT\r\n\r\n        o.name AS operator_name,\r\n\r\n        COUNT(t.id) AS served_count,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS p90_wait,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS p90_service,\r\n\r\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS p90_total\r\n\r\n    FROM tickets t\r\n\r\n    JOIN windows w ON t.window_id = w.id\r\n\r\n    LEFT JOIN operators o ON o.id = t.operator_id\r\n\r\n    WHERE t.called_at IS NOT NULL\r\n\r\n      AND t.finished_at IS NOT NULL\r\n\r\n      AND t.completion_reason = 'completed'\r\n\r\n      -- Глобальный фильтр времени Grafana (заменяет весь блок с day/week/month)\r\n\r\n      AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n\r\n      -- Фильтр по сотрудникам\r\n\r\n      AND (\r\n\r\n          'All' IN (${operator_name:sqlstring})\r\n\r\n          OR o.name IN (${operator_name:sqlstring})\r\n\r\n      )\r\n\r\n    GROUP BY o.name\r\n\r\n)\r\n\r\nSELECT\r\n\r\n    operator_name AS \"Сотрудник\",\r\n\r\n    served_count AS \"Обслужено\",\r\n\r\n    ROUND(p90_wait::numeric, 2) AS \"p90 ожид. (мин)\",\r\n\r\n    ROUND(p90_service::numeric, 2) AS \"p90 обслуж. (мин)\",\r\n\r\n    ROUND(p90_total::numeric, 2) AS \"p90 сумм. (мин)\",\r\n\r\n    -- KPI оставляем на переменных, так как это ручной ввод лимитов\r\n\r\n    CASE WHEN p90_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\r\n\r\n    CASE WHEN p90_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\r\n\r\n    CASE WHEN p90_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\r\n\r\nFROM base_stats\r\n\r\nORDER BY \"Обслужено\" DESC;",
+          "rawSql": "WITH base_stats AS (\n\n    SELECT\n\n        o.name AS operator_name,\n\n        COUNT(t.id) AS served_count,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS p90_wait,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS p90_service,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS p90_total\n\n    FROM tickets t\n\n    JOIN windows w ON t.window_id = w.id\n\n    LEFT JOIN operators o ON o.id = t.operator_id\n\n    WHERE t.called_at IS NOT NULL\n\n      AND t.finished_at IS NOT NULL\n\n      AND t.completion_reason IN ('completed', 'redirected')\n\n      -- Глобальный фильтр времени Grafana (заменяет весь блок с day/week/month)\n\n      AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n\n      -- Фильтр по сотрудникам\n\n      AND (\n\n          'All' IN (${operator_name:sqlstring})\n\n          OR o.name IN (${operator_name:sqlstring})\n\n      )\n\n    GROUP BY o.name\n\n)\n\nSELECT\n\n    operator_name AS \"Сотрудник\",\n\n    served_count AS \"Этапов закрыто\",\n\n    ROUND(p90_wait::numeric, 2) AS \"p90 ожид. (мин)\",\n\n    ROUND(p90_service::numeric, 2) AS \"p90 обслуж. (мин)\",\n\n    ROUND(p90_total::numeric, 2) AS \"p90 сумм. (мин)\",\n\n    -- KPI оставляем на переменных, так как это ручной ввод лимитов\n\n    CASE WHEN p90_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\n\n    CASE WHEN p90_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\n\n    CASE WHEN p90_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\n\nFROM base_stats\n\nORDER BY \"Этапов закрыто\" DESC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -839,7 +839,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 4,
         "x": 20,
         "y": 2
@@ -894,7 +894,7 @@
           }
         }
       ],
-      "title": "Вызвано за период",
+      "title": "Вызовов к операторам",
       "type": "stat"
     },
     {
@@ -921,10 +921,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 4,
         "x": 20,
-        "y": 5
+        "y": 4
       },
       "id": 1,
       "options": {
@@ -955,7 +955,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS served\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "rawSql": "SELECT count(DISTINCT COALESCE(t.root_ticket_id, t.id)) AS completed_clients\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.completion_reason = 'completed'\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
           "refId": "A",
           "sql": {
             "columns": [
@@ -976,7 +976,89 @@
           }
         }
       ],
-      "title": "Завершено успешно",
+      "title": "Клиентов завершено",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 20,
+        "y": 6
+      },
+      "id": 35,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(t.id) AS closed_operator_stages\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Этапов закрыто оператором",
       "type": "stat"
     },
     {
@@ -1119,7 +1201,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1201,7 +1283,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1361,7 +1443,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1443,7 +1525,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason = 'completed'\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1521,7 +1603,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS problematic_unfinished\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND t.completion_reason IS DISTINCT FROM 'completed'\r\n  AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n  AND (\r\n      t.completion_reason = 'cancelled'\r\n      OR t.finished_at IS NULL\r\n      OR t.status IS DISTINCT FROM 'finished'\r\n  )\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT count(t.id) AS problematic_unfinished\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      t.completion_reason = 'cancelled'\r\n      OR (\r\n          t.status IS DISTINCT FROM 'called'\r\n          AND t.completion_reason IS DISTINCT FROM 'completed'\r\n          AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n      )\r\n  )\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1919,7 +2001,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(\r\n    ROUND(\r\n        100.0 * count(*) FILTER (\r\n            WHERE t.completion_reason = 'completed'\r\n              AND t.finished_at IS NOT NULL\r\n        ) / NULLIF(count(*), 0),\r\n        1\r\n    ),\r\n    0\r\n) AS success_percent\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT COALESCE(\n    ROUND(\n        100.0 * count(*) FILTER (\n            WHERE t.completion_reason IN ('completed', 'redirected')\n              AND t.finished_at IS NOT NULL\n        ) / NULLIF(count(*), 0),\n        1\n    ),\n    0\n) AS closed_stage_percent\nFROM tickets t\nJOIN windows w ON t.window_id = w.id\nLEFT JOIN operators o ON o.id = t.operator_id\nWHERE t.called_at IS NOT NULL\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n  AND (\n      'All' IN (${operator_name:sqlstring})\n      OR o.name IN (${operator_name:sqlstring})\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1940,7 +2022,7 @@
           }
         }
       ],
-      "title": "Успешность обслуживания, %",
+      "title": "Закрытие этапов, %",
       "type": "stat"
     },
     {
@@ -1994,7 +2076,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH called_tickets AS (\r\n    SELECT\r\n        CASE\r\n            WHEN t.completion_reason = 'completed' AND t.finished_at IS NOT NULL THEN 'Завершено успешно'\r\n            WHEN t.completion_reason = 'cancelled' THEN 'Отменено'\r\n            WHEN t.completion_reason = 'redirected' THEN 'Перенаправлено'\r\n            WHEN t.status = 'called' THEN 'В обслуживании сейчас'\r\n            ELSE 'Не завершено / прочее'\r\n        END AS outcome\r\n    FROM tickets t\r\n    JOIN windows w ON t.window_id = w.id\r\n    LEFT JOIN operators o ON o.id = t.operator_id\r\n    WHERE t.called_at IS NOT NULL\r\n      AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n      AND (\r\n          'All' IN (${operator_name:sqlstring})\r\n          OR o.name IN (${operator_name:sqlstring})\r\n      )\r\n)\r\nSELECT\r\n    outcome AS \"Исход\",\r\n    count(*) AS \"Клиентов\",\r\n    ROUND(100.0 * count(*) / NULLIF(sum(count(*)) OVER (), 0), 1) AS \"Доля, %\"\r\nFROM called_tickets\r\nGROUP BY outcome\r\nORDER BY \"Клиентов\" DESC;",
+          "rawSql": "WITH called_tickets AS (\n    SELECT\n        CASE\n            WHEN t.completion_reason = 'completed' AND t.finished_at IS NOT NULL THEN 'Этап завершен успешно'\n            WHEN t.completion_reason = 'redirected' AND t.finished_at IS NOT NULL THEN 'Этап перенаправлен'\n            WHEN t.completion_reason = 'cancelled' THEN 'Отменено'\n            WHEN t.status = 'called' THEN 'В обслуживании сейчас'\n            ELSE 'Не завершено / прочее'\n        END AS outcome\n    FROM tickets t\n    JOIN windows w ON t.window_id = w.id\n    LEFT JOIN operators o ON o.id = t.operator_id\n    WHERE t.called_at IS NOT NULL\n      AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n      AND (\n          'All' IN (${operator_name:sqlstring})\n          OR o.name IN (${operator_name:sqlstring})\n      )\n)\nSELECT\n    outcome AS \"Исход\",\n    count(*) AS \"Этапов\",\n    ROUND(100.0 * count(*) / NULLIF(sum(count(*)) OVER (), 0), 1) AS \"Доля, %\"\nFROM called_tickets\nGROUP BY outcome\nORDER BY \"Этапов\" DESC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -2015,7 +2097,7 @@
           }
         }
       ],
-      "title": "Итог вызванных за период",
+      "title": "Итог вызовов к операторам",
       "type": "table"
     },
     {
