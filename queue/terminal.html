@@ -82,21 +82,38 @@
 
         /* Специфические правила для вывода на принтер */
         @media print {
-            body * { 
-                visibility: hidden !important; 
+            html,
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                overflow: visible !important;
             }
-            #print-receipt, #print-receipt * { 
-                visibility: visible !important; 
+
+            body::after {
+                display: none !important;
+                content: none !important;
             }
+
+            body > :not(#print-receipt) {
+                display: none !important;
+            }
+
             #print-receipt {
                 display: block !important; /* Гарантируем появление блока при печати */
-                position: absolute;
+                position: static !important;
                 left: 45px;
                 top: 0;
                 width: 80% !important;
                 margin: 0;
                 padding: 0;
+                visibility: visible !important;
             }
+
+            #print-receipt * {
+                visibility: visible !important;
+            }
+
             @page {
                 margin: 0;
             }
