@@ -95,3 +95,15 @@ def test_settings_view_does_not_show_template_hint_caption():
     source = _read("queue/js/admin/views/settings.view.js")
 
     assert "В шаблонах должны остаться параметры" not in source
+
+
+def test_board_status_moves_with_ticker_offset():
+    board_css = _read("queue/css/board.css")
+    media_css = _read("queue/css/board-media/main.css")
+    lite_css = _read("queue/css/board-media/lite.css")
+
+    assert "--board-ticker-offset: 0px;" in board_css
+    assert "bottom: calc(10px + var(--board-ticker-offset));" in board_css
+    assert "--board-ticker-offset: 0px;" in media_css
+    assert "bottom: calc(10px + var(--board-ticker-offset));" in media_css
+    assert "--board-ticker-offset: 38px;" in lite_css

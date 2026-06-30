@@ -1,12 +1,16 @@
 /* ===== board-media.css ===== */
 html,
 body.board-media-page{
+    --board-ticker-offset: 0px;
     height: 100%;
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
     background: #f9f9f9;
     color: #1a1d23;
     overflow: hidden;
+}
+body.board-media-page.has-board-ticker{
+    --board-ticker-offset: 48px;
 }
 body.board-media-page h1{
     text-align: center;
@@ -60,9 +64,6 @@ body.board-media-page .board-ticker__text{
     font-weight: 700;
     line-height: 48px;
     white-space: nowrap;
-}
-body.board-media-page.has-board-ticker .status-indicator{
-    bottom: 58px;
 }
 body.board-media-page .media-panel{
     flex: 1;
@@ -133,10 +134,11 @@ body.board-media-page .arrow{
 }
 body.board-media-page .status-indicator{
     position: fixed;
-    bottom: 10px;
+    bottom: calc(10px + var(--board-ticker-offset));
     right: 15px;
     font-size: 13px;
     opacity: 0.6;
+    transition: bottom 0.2s ease;
 }
 
 @keyframes board-ticker-scroll {

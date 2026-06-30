@@ -16,6 +16,10 @@ body.board-media-page.lite-version .board-ticker {
     height: 38px !important;
 }
 
+body.board-media-page.lite-version.has-board-ticker {
+    --board-ticker-offset: 38px;
+}
+
 body.board-media-page.lite-version .board-ticker__text {
     padding: 0 48px !important;
     font-size: 22px !important;
@@ -23,7 +27,7 @@ body.board-media-page.lite-version .board-ticker__text {
 }
 
 body.board-media-page.lite-version.has-board-ticker .status-indicator {
-    bottom: 48px !important;
+    bottom: calc(10px + var(--board-ticker-offset)) !important;
 }
 
 body.board-media-page.lite-version .lite-board-section {

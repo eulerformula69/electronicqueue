@@ -1,12 +1,16 @@
 /* ===== board.css ===== */
 html,
 body.board-page{
+    --board-ticker-offset: 0px;
     height: 100%;
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
     background: #f9f9f9;
     color: #1a1d23;
     overflow: hidden;
+}
+body.board-page.has-board-ticker{
+    --board-ticker-offset: 48px;
 }
 body.board-page h1{
     text-align: center;
@@ -56,9 +60,6 @@ body.board-page .board-ticker__text{
     line-height: 48px;
     white-space: nowrap;
 }
-body.board-page.has-board-ticker .status-indicator{
-    bottom: 58px;
-}
 body.board-page .board{
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -93,10 +94,11 @@ body.board-page .arrow{
 }
 body.board-page .status-indicator{
     position: fixed;
-    bottom: 10px;
+    bottom: calc(10px + var(--board-ticker-offset));
     right: 15px;
     font-size: 13px;
     opacity: 0.6;
+    transition: bottom 0.2s ease;
 }
 
 @keyframes board-ticker-scroll {
