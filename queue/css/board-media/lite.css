@@ -21,9 +21,13 @@ body.board-media-page.lite-version.has-board-ticker {
 }
 
 body.board-media-page.lite-version .board-ticker__text {
-    padding: 0 48px !important;
+    padding-left: 56px !important;
     font-size: 22px !important;
     line-height: 38px !important;
+}
+
+body.board-media-page.lite-version .board-ticker__text::after {
+    margin-left: 56px !important;
 }
 
 body.board-media-page.lite-version.has-board-ticker .status-indicator {

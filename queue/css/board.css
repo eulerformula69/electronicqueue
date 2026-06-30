@@ -55,11 +55,21 @@ body.board-page .board-ticker__track{
 }
 body.board-page .board-ticker__text{
     flex: 0 0 auto;
-    padding: 0 64px;
+    padding-left: 72px;
     font-size: 28px;
     font-weight: 700;
     line-height: 48px;
     white-space: nowrap;
+}
+body.board-page .board-ticker__text::after{
+    content: "|";
+    display: inline-block;
+    margin-left: 72px;
+    color: rgba(255, 255, 255, 0.82);
+}
+body.board-page .board-ticker__text--last::after{
+    content: "";
+    margin-left: 0;
 }
 body.board-page .board{
     display: grid;

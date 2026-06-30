@@ -1,5 +1,5 @@
 (function () {
-    var tickerText = "";
+    var tickerMessages = [];
     var resizeTimer = null;
     var resizeListenerAttached = false;
 
@@ -23,52 +23,57 @@
         return ticker;
     }
 
-    function createTextItem(text, hidden) {
+    function createTextItem(text, isLast, hidden) {
         var item = document.createElement("span");
-        item.className = "board-ticker__text";
+        item.className = "board-ticker__text" + (isLast ? " board-ticker__text--last" : "");
         item.textContent = text;
         if (hidden) item.setAttribute("aria-hidden", "true");
         return item;
     }
 
-    function formatTickerText(value) {
-        var messages = String(value || "")
+    function parseTickerMessages(value) {
+        return String(value || "")
             .split(/\r?\n/)
             .map(function (line) {
                 return line.trim();
             })
             .filter(Boolean);
-
-        if (messages.length <= 1) return messages[0] || "";
-        return messages.join("   |   ") + "   |   ";
     }
 
-    function renderTickerText() {
-        var text = tickerText;
+    function appendMessageSet(track, messages, hidden) {
+        var i;
+
+        for (i = 0; i < messages.length; i++) {
+            track.appendChild(createTextItem(messages[i], i === messages.length - 1, hidden));
+        }
+    }
+
+    function renderTickerMessages() {
+        var messages = tickerMessages;
         var ticker = ensureTicker();
         var track = ticker.getElementsByClassName("board-ticker__track")[0];
         var tickerWidth;
-        var itemWidth;
+        var setWidth;
         var repeatCount;
         var distance;
         var i;
 
-        ticker.hidden = !text;
-        document.body.classList.toggle("has-board-ticker", Boolean(text));
+        ticker.hidden = !messages.length;
+        document.body.classList.toggle("has-board-ticker", Boolean(messages.length));
 
         track.innerHTML = "";
 
-        if (!text) return;
+        if (!messages.length) return;
 
-        track.appendChild(createTextItem(text, false));
+        appendMessageSet(track, messages, false);
         tickerWidth = ticker.clientWidth || window.innerWidth || 1920;
-        itemWidth = track.firstChild.offsetWidth || tickerWidth;
-        repeatCount = Math.max(2, Math.ceil(tickerWidth / itemWidth) + 2);
-        distance = itemWidth * repeatCount;
+        setWidth = track.scrollWidth || tickerWidth;
+        repeatCount = Math.max(2, Math.ceil(tickerWidth / setWidth) + 2);
+        distance = setWidth * repeatCount;
 
         track.innerHTML = "";
         for (i = 0; i < repeatCount * 2; i++) {
-            track.appendChild(createTextItem(text, i >= repeatCount));
+            appendMessageSet(track, messages, i >= repeatCount);
         }
 
         track.style.setProperty("--board-ticker-distance", distance + "px");
@@ -77,12 +82,12 @@
 
     function scheduleRender() {
         if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(renderTickerText, 100);
+        resizeTimer = setTimeout(renderTickerMessages, 100);
     }
 
     window.setBoardTickerText = function (value) {
-        tickerText = formatTickerText(value);
-        renderTickerText();
+        tickerMessages = parseTickerMessages(value);
+        renderTickerMessages();
 
         if (!resizeListenerAttached) {
             window.addEventListener("resize", scheduleRender);

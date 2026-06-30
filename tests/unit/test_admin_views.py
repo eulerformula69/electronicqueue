@@ -122,7 +122,7 @@ def test_board_ticker_uses_seamless_repeated_segment():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")
 
-    assert "repeatCount = Math.max(2, Math.ceil(tickerWidth / itemWidth) + 2)" in script
+    assert "repeatCount = Math.max(2, Math.ceil(tickerWidth / setWidth) + 2)" in script
     assert "track.style.setProperty(\"--board-ticker-distance\"" in script
     assert "track.style.setProperty(\"--board-ticker-duration\"" in script
     assert "i < repeatCount * 2" in script
@@ -134,8 +134,16 @@ def test_board_ticker_uses_seamless_repeated_segment():
 
 def test_board_ticker_splits_multiline_messages_with_separator():
     script = _read("queue/js/board-ticker.js")
+    board_css = _read("queue/css/board.css")
+    media_css = _read("queue/css/board-media/main.css")
 
     assert ".split(/\\r?\\n/)" in script
     assert ".filter(Boolean)" in script
-    assert 'messages.join("   |   ") + "   |   "' in script
-    assert "tickerText = formatTickerText(value)" in script
+    assert "tickerMessages = parseTickerMessages(value)" in script
+    assert "appendMessageSet(track, messages" in script
+    assert "board-ticker__text--last" in script
+    assert 'content: "|";' in board_css
+    assert ".board-ticker__text--last::after" in board_css
+    assert "margin-left: 72px;" in board_css
+    assert 'content: "|";' in media_css
+    assert ".board-ticker__text--last::after" in media_css
