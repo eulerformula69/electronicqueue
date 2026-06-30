@@ -65,7 +65,7 @@ body.board-media-page.lite-version .board-column-split {
     height: 100% !important;
     margin: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(330px, 1.42fr) minmax(240px, 1fr) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
     gap: 16px !important;
     align-items: stretch !important;
     overflow: hidden !important;
@@ -270,11 +270,6 @@ body.board-media-page.lite-version.has-board-ticker .status-indicator {
         --lite-board-width: clamp(540px, 42vw, 620px);
         --lite-media-top: clamp(36px, 6vh, 64px);
         --lite-card-gap: 8px;
-    }
-
-    body.board-media-page.lite-version .board-column,
-    body.board-media-page.lite-version .board-column-split {
-        grid-template-columns: minmax(290px, 1.35fr) minmax(220px, 1fr) !important;
     }
 
     body.board-media-page.lite-version .lite-board-section-header {
