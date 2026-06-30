@@ -1,84 +1,129 @@
-/* board-media-lite2 compatibility layout. */
+/* Dedicated full-screen layout for board-media-lite pages. */
 body.board-media-page.lite-version {
+    --lite-bg: #f6f7f9;
+    --lite-ink: #1a1d23;
+    --lite-muted: #667085;
     --lite-cyan: #138c9d;
     --lite-orange: #ff6b35;
-    --lite-shell-x: clamp(28px, 2.1vw, 42px);
-    --lite-gap: clamp(24px, 1.8vw, 36px);
-    --lite-board-width: clamp(580px, 33.5vw, 640px);
-    --lite-media-width: 1050px;
-    --lite-media-top: clamp(58px, 7.8vh, 86px);
-    --lite-top-offset: 128px;
+    --lite-shell-x: clamp(24px, 2vw, 40px);
+    --lite-gap: clamp(18px, 1.5vw, 30px);
+    --lite-header-height: clamp(92px, 10.5vh, 120px);
     --lite-ticker-height: 76px;
-    --lite-board-bottom-gap: 18px;
-    --lite-work-height: calc(100vh - var(--lite-top-offset) - var(--lite-ticker-height));
-    --lite-card-height: 60px;
+    --lite-board-width: clamp(620px, 35vw, 700px);
+    --lite-section-gap: 16px;
+    --lite-section-header-height: 42px;
+    --lite-card-height: 64px;
     --lite-card-gap: 8px;
     --board-ticker-offset: var(--lite-ticker-height);
+
     width: 100vw;
+    height: 100vh;
     min-height: 100vh;
     max-height: 100vh;
+    margin: 0;
+    display: grid;
+    grid-template-areas:
+        "header"
+        "main"
+        "ticker";
+    grid-template-rows: var(--lite-header-height) minmax(0, 1fr) var(--lite-ticker-height);
     overflow: hidden;
+    background: var(--lite-bg);
+    color: var(--lite-ink);
 }
 
-body.board-media-page.lite-version.has-board-ticker {
-    --board-ticker-offset: var(--lite-ticker-height);
+body.board-media-page.lite-version,
+body.board-media-page.lite-version * {
+    box-sizing: border-box;
 }
 
 body.board-media-page.lite-version.lite2-version {
-    --lite-board-width: clamp(560px, 32vw, 620px);
-    --lite-card-height: 58px;
+    --lite-board-width: clamp(600px, 34vw, 680px);
+}
+
+body.board-media-page.lite-version .lite-header {
+    grid-area: header;
+    min-height: 0;
+    padding: clamp(12px, 1.4vh, 18px) var(--lite-shell-x) 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 body.board-media-page.lite-version #title {
-    margin: 16px 0 8px 0 !important;
-    font-size: 30px !important;
-    line-height: 1.12 !important;
+    margin: 0 0 8px 0 !important;
+    max-width: 100%;
+    text-align: center;
+    color: var(--lite-ink);
+    font-size: clamp(28px, 2.2vw, 38px) !important;
+    line-height: 1.08 !important;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.board-media-page.lite-version .clock-container {
-    margin: 0 0 18px 0 !important;
-    font-size: 26px !important;
-    line-height: 1.15 !important;
+    margin: 0 !important;
+    max-width: 100%;
+    text-align: center;
+    color: var(--lite-muted);
+    font-size: clamp(22px, 1.65vw, 30px) !important;
+    line-height: 1.12 !important;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.board-media-page.lite-version .board-wrapper,
 body.board-media-page.lite-version.has-board-ticker .board-wrapper {
+    grid-area: main;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    padding: 0 var(--lite-shell-x) var(--lite-gap);
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, var(--lite-board-width)) !important;
+    grid-template-areas: "media queues";
     gap: var(--lite-gap) !important;
-    width: 100vw !important;
-    height: var(--lite-work-height) !important;
-    min-height: 0 !important;
-    max-height: var(--lite-work-height) !important;
-    padding: 0 var(--lite-shell-x) var(--lite-board-bottom-gap) var(--lite-shell-x) !important;
-    box-sizing: border-box !important;
     align-items: stretch !important;
     overflow: hidden !important;
 }
 
 body.board-media-page.lite-version .media-panel {
+    grid-area: media;
     width: 100% !important;
-    max-width: var(--lite-media-width) !important;
-    height: auto !important;
-    max-height: calc(100% - var(--lite-media-top)) !important;
-    aspect-ratio: 16 / 9 !important;
-    align-self: start !important;
-    justify-self: start !important;
-    margin-top: var(--lite-media-top) !important;
+    height: 100% !important;
     min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden !important;
+    background: #000000;
 }
 
 body.board-media-page.lite-version #media-video {
     width: 100% !important;
     height: 100% !important;
-    object-fit: contain !important;
     display: block !important;
+    object-fit: contain !important;
+    background: #000000;
 }
 
 body.board-media-page.lite-version .board-column,
 body.board-media-page.lite-version .board-column-split {
-    width: auto !important;
+    grid-area: queues;
+    width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
     height: 100% !important;
@@ -87,7 +132,8 @@ body.board-media-page.lite-version .board-column-split {
     margin: 0 !important;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-    gap: 16px !important;
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--lite-section-gap) !important;
     align-items: stretch !important;
     overflow: hidden !important;
 }
@@ -95,25 +141,33 @@ body.board-media-page.lite-version .board-column-split {
 body.board-media-page.lite-version .lite-board-section {
     min-width: 0 !important;
     min-height: 0 !important;
-    max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
+    height: 100%;
+    display: grid !important;
+    grid-template-rows: var(--lite-section-header-height) minmax(0, 1fr);
     overflow: hidden !important;
 }
 
 body.board-media-page.lite-version .lite-board-section-header {
-    flex: 0 0 34px !important;
-    height: 34px !important;
+    min-width: 0;
+    height: var(--lite-section-header-height) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    gap: 8px;
     padding: 0 4px !important;
-    box-sizing: border-box !important;
-    font-size: 26px !important;
+    color: var(--lite-cyan) !important;
+    font-size: clamp(22px, 1.55vw, 30px) !important;
     line-height: 1 !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
-    color: var(--lite-cyan) !important;
+    overflow: hidden;
+}
+
+body.board-media-page.lite-version .lite-board-section-header span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 body.board-media-page.lite-version .lite-board-section-called .lite-board-section-header,
@@ -122,25 +176,26 @@ body.board-media-page.lite-version .lite-board-section-called .board-page-indica
 }
 
 body.board-media-page.lite-version .board-page-indicator {
-    font-size: 16px !important;
+    flex: 0 0 auto;
     color: var(--lite-cyan) !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
 }
 
 body.board-media-page.lite-version #board,
 body.board-media-page.lite-version #waiting-board {
-    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: 100% !important;
     min-height: 0 !important;
     max-height: 100% !important;
-    width: 100% !important;
-    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
     display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-template-rows: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     grid-auto-rows: var(--lite-card-height) !important;
     gap: var(--lite-card-gap) !important;
     align-content: start !important;
-    padding: 0 !important;
-    margin: 0 !important;
     overflow: hidden !important;
 }
 
@@ -151,20 +206,21 @@ body.board-media-page.lite-version #waiting-board .waiting-card {
     min-height: var(--lite-card-height) !important;
     margin: 0 !important;
     padding: 0 10px !important;
-    box-sizing: border-box !important;
-    background: #ffffff !important;
-    border-radius: 8px !important;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 3px 10px rgba(16, 24, 40, 0.1) !important;
 }
 
 body.board-media-page.lite-version #board .card .line {
     width: 100% !important;
     height: 100% !important;
+    min-width: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr) !important;
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) !important;
     column-gap: 4px !important;
     align-items: center !important;
 }
@@ -172,6 +228,7 @@ body.board-media-page.lite-version #board .card .line {
 body.board-media-page.lite-version #waiting-board .waiting-line {
     width: 100% !important;
     height: 100% !important;
+    min-width: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -188,6 +245,16 @@ body.board-media-page.lite-version #board .window {
     text-align: center !important;
 }
 
+body.board-media-page.lite-version #board .ticket,
+body.board-media-page.lite-version #board .ticket span {
+    color: var(--lite-orange) !important;
+}
+
+body.board-media-page.lite-version #board .window,
+body.board-media-page.lite-version #board .window span {
+    color: var(--lite-orange) !important;
+}
+
 body.board-media-page.lite-version #board .ticket span,
 body.board-media-page.lite-version #board .window span {
     display: block !important;
@@ -201,38 +268,29 @@ body.board-media-page.lite-version #board .window span {
 
 body.board-media-page.lite-version #board .ticket span:first-child,
 body.board-media-page.lite-version #board .window span:first-child {
+    margin-bottom: 3px !important;
     font-size: 9px !important;
     line-height: 1.1 !important;
-    margin-bottom: 3px !important;
     font-weight: 800 !important;
 }
 
 body.board-media-page.lite-version #board .ticket span:last-child,
 body.board-media-page.lite-version #board .window span:last-child {
-    font-size: 31px !important;
+    font-size: clamp(26px, 1.85vw, 34px) !important;
     line-height: 1 !important;
     font-weight: 800 !important;
-}
-
-body.board-media-page.lite-version #board .ticket,
-body.board-media-page.lite-version #board .ticket span {
-    color: var(--lite-orange) !important;
-}
-
-body.board-media-page.lite-version #board .window,
-body.board-media-page.lite-version #board .window span {
-    color: var(--lite-orange) !important;
 }
 
 body.board-media-page.lite-version #board .arrow {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    color: #777 !important;
+    color: #777777 !important;
     font-size: 24px !important;
     line-height: 1 !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: hidden !important;
 }
 
 body.board-media-page.lite-version #waiting-board .ticket {
@@ -241,7 +299,7 @@ body.board-media-page.lite-version #waiting-board .ticket {
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     color: var(--lite-cyan) !important;
-    font-size: 34px !important;
+    font-size: clamp(28px, 2vw, 38px) !important;
     line-height: 1 !important;
     font-weight: 800 !important;
     text-align: center !important;
@@ -249,20 +307,21 @@ body.board-media-page.lite-version #waiting-board .ticket {
 
 body.board-media-page.lite-version .board-empty,
 body.board-media-page.lite-version .waiting-empty {
-    height: 100% !important;
-    min-height: 62px !important;
-    border-radius: 8px !important;
-    background: #ffffff !important;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+    width: 100% !important;
+    min-height: var(--lite-card-height) !important;
+    padding: 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    overflow: hidden !important;
     text-align: center !important;
-    color: #6c757d !important;
+    color: var(--lite-muted) !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.08) !important;
     font-size: 20px !important;
+    line-height: 1.15 !important;
     font-weight: 700 !important;
-    padding: 12px !important;
-    box-sizing: border-box !important;
 }
 
 body.board-media-page.lite-version .board-page-dots,
@@ -271,43 +330,65 @@ body.board-media-page.lite-version .board-page-dot {
 }
 
 body.board-media-page.lite-version .board-ticker {
+    grid-area: ticker;
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100%;
     height: var(--lite-ticker-height) !important;
+    min-height: var(--lite-ticker-height);
+    overflow: hidden !important;
+    background: #1a1d23 !important;
+    color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    z-index: 20;
+}
+
+body.board-media-page.lite-version .board-ticker[hidden] {
+    display: none !important;
+}
+
+body.board-media-page.lite-version .board-ticker__track {
+    display: flex;
+    min-width: max-content;
+    animation: board-ticker-scroll var(--board-ticker-duration, 24s) linear infinite;
+    will-change: transform;
 }
 
 body.board-media-page.lite-version .board-ticker__text {
+    flex: 0 0 auto;
     padding-left: 88px !important;
-    font-size: 38px !important;
+    font-size: clamp(30px, 2vw, 38px) !important;
     line-height: var(--lite-ticker-height) !important;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 body.board-media-page.lite-version .board-ticker__text::after {
+    content: "|";
+    display: inline-block;
     margin-left: 88px !important;
+    color: rgba(255, 255, 255, 0.82);
 }
 
+body.board-media-page.lite-version .status-indicator,
 body.board-media-page.lite-version.has-board-ticker .status-indicator {
     bottom: calc(10px + var(--board-ticker-offset)) !important;
 }
 
 @media (max-width: 1500px) {
     body.board-media-page.lite-version {
+        --lite-header-height: 88px;
+        --lite-ticker-height: 64px;
         --lite-board-width: clamp(540px, 42vw, 620px);
-        --lite-media-top: clamp(36px, 6vh, 64px);
-        --lite-card-gap: 8px;
+        --lite-card-height: 56px;
+        --lite-section-header-height: 36px;
     }
 
     body.board-media-page.lite-version .lite-board-section-header {
         font-size: 20px !important;
-    }
-
-    body.board-media-page.lite-version #board,
-    body.board-media-page.lite-version #waiting-board {
-        grid-auto-rows: 56px !important;
-    }
-
-    body.board-media-page.lite-version #board .card,
-    body.board-media-page.lite-version #waiting-board .waiting-card {
-        height: 56px !important;
-        min-height: 56px !important;
     }
 
     body.board-media-page.lite-version #board .ticket span:last-child,
