@@ -360,7 +360,8 @@ async def update_admin_settings(
         record_queue_mode(db, data.queue_mode)
         settings.queue_mode = data.queue_mode
         settings.call_message_template = data.call_message_template
-        settings.board_ticket_template = data.board_ticket_template        
+        settings.board_ticket_template = data.board_ticket_template
+        settings.board_ticker_text = data.board_ticker_text.strip()
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]
@@ -388,6 +389,7 @@ async def get_public_settings():
             "ticket_notice_printed_text": settings["ticket_notice_printed_text"],
             "ticket_notice_unprinted_text": settings["ticket_notice_unprinted_text"],
             "board_ticket_template": settings["board_ticket_template"],
+            "board_ticker_text": settings["board_ticker_text"],
         }
     finally:
         db.close()

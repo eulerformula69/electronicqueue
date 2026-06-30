@@ -8,6 +8,24 @@ body.board-media-page.lite-version .board-column-split {
     overflow: hidden !important;
 }
 
+body.board-media-page.lite-version.has-board-ticker .board-wrapper {
+    height: calc(100vh - var(--top-offset) - 48px) !important;
+}
+
+body.board-media-page.lite-version .board-ticker {
+    height: 38px !important;
+}
+
+body.board-media-page.lite-version .board-ticker__text {
+    padding: 0 48px !important;
+    font-size: 22px !important;
+    line-height: 38px !important;
+}
+
+body.board-media-page.lite-version.has-board-ticker .status-indicator {
+    bottom: 48px !important;
+}
+
 body.board-media-page.lite-version .lite-board-section {
     min-height: 0 !important;
     display: flex !important;

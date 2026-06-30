@@ -202,6 +202,7 @@ class SystemSettingsUpdate(BaseModel):
     queue_mode: str
     call_message_template: str
     board_ticket_template: str
+    board_ticker_text: str = Field(default="", max_length=500)
 
 
 class SystemSettingsResponse(BaseModel):
@@ -217,6 +218,7 @@ class SystemSettingsResponse(BaseModel):
     queue_mode: str
     call_message_template: str
     board_ticket_template: str
+    board_ticker_text: str
 
 
 class PublicSettingsResponse(BaseModel):
@@ -227,3 +229,4 @@ class PublicSettingsResponse(BaseModel):
     ticket_notice_printed_text: str
     ticket_notice_unprinted_text: str
     board_ticket_template: str
+    board_ticker_text: str

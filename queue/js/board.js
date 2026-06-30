@@ -42,6 +42,9 @@ async function loadBoardSettings() {
             boardTicketTemplate = settings.board_ticket_template;
             renderLatestTickets();
         }
+        if (window.setBoardTickerText) {
+            window.setBoardTickerText(settings.board_ticker_text || "");
+        }
     } catch (error) {
         console.error("Не удалось загрузить настройки табло:", error);
     }

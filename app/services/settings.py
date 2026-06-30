@@ -45,4 +45,5 @@ def get_system_settings_dict(db: Session) -> dict:
         "queue_mode": settings.queue_mode or "priority_fifo",
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
+        "board_ticker_text": settings.board_ticker_text or "",
     }

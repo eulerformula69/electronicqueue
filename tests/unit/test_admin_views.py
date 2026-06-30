@@ -68,8 +68,16 @@ def test_table_helper_renders_sortable_headers():
 
 
 def test_sorting_layout_has_stable_column_widths():
-    source = _read("queue/css/admin.css")
+    source = _read("queue/css/admin/shell.css") + _read("queue/css/admin/services.css")
 
     assert "table-layout: fixed;" in source
     assert "flex: 0 0 12px;" in source
     assert "grid-template-columns: 34px minmax(260px, 1fr) 120px 150px 120px 140px;" in source
+
+
+def test_settings_view_renders_and_saves_board_ticker_text():
+    source = _read("queue/js/admin/views/settings.view.js")
+
+    assert "setting-board-ticker-text" in source
+    assert "board_ticker_text" in source
+    assert "data.board_ticker_text.trim()" in source

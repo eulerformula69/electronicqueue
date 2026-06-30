@@ -29,6 +29,41 @@ body.board-media-page .board-wrapper{
     box-sizing: border-box;
     align-items: start;
 }
+body.board-media-page.has-board-ticker .board-wrapper{
+    height: calc(100vh - 226px);
+}
+body.board-media-page .board-ticker{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48px;
+    overflow: hidden;
+    background: #1a1d23;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+}
+body.board-media-page .board-ticker[hidden]{
+    display: none;
+}
+body.board-media-page .board-ticker__track{
+    display: flex;
+    min-width: max-content;
+    animation: board-ticker-scroll 24s linear infinite;
+}
+body.board-media-page .board-ticker__text{
+    flex: 0 0 auto;
+    padding: 0 64px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 48px;
+    white-space: nowrap;
+}
+body.board-media-page.has-board-ticker .status-indicator{
+    bottom: 58px;
+}
 body.board-media-page .media-panel{
     flex: 1;
     min-width: 0;
@@ -104,6 +139,10 @@ body.board-media-page .status-indicator{
     opacity: 0.6;
 }
 
+@keyframes board-ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
 
 @keyframes call-flash {
     0% { background: #ffffff; transform: scale(1); }

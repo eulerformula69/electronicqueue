@@ -43,6 +43,7 @@ function render() {
                 <h2>Табло и озвучка</h2>
                 ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
                 ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
+                ${ctx.ui.field("Текст бегущей строки", ctx.ui.textarea("board_ticker_text", settings.board_ticker_text || "", "id=\"setting-board-ticker-text\" maxlength=\"500\""))}
                 <p class="admin-muted">В шаблонах должны остаться параметры &lt;number&gt; и &lt;window&gt;.</p>
                 ${ctx.ui.button("Сохранить изменения", {variant: "primary", action: "save-settings"})}
             </section>
@@ -72,7 +73,8 @@ async function save() {
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
         queue_mode: data.queue_mode,
         call_message_template: data.call_message_template.trim(),
-        board_ticket_template: data.board_ticket_template.trim()
+        board_ticket_template: data.board_ticket_template.trim(),
+        board_ticker_text: data.board_ticker_text.trim()
     };
 
     if (!validDuration(payload.ticket_notice_duration_printed_seconds) || !validDuration(payload.ticket_notice_duration_unprinted_seconds)) {

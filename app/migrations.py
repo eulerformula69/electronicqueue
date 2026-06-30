@@ -357,6 +357,22 @@ def migrate_ticket_notice_settings_schema(engine):
     with engine.begin() as conn:
         conn.execute(text(ddl))
 
+
+def migrate_board_ticker_settings_schema(engine):
+    """Add configurable ticker text for queue boards."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS board_ticker_text varchar(500) DEFAULT '';
+
+    UPDATE system_settings
+    SET board_ticker_text = ''
+    WHERE board_ticker_text IS NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

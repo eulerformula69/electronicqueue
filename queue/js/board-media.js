@@ -14,11 +14,26 @@ let pageTimer = null;
 
 
 document.addEventListener("DOMContentLoaded", () => {
+    loadBoardSettings();
     connectWS();
     updateClock();
     setInterval(updateClock, 1000);
 	initPlaylist();
 });
+
+async function loadBoardSettings() {
+    if (!window.setBoardTickerText) return;
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/settings/public`);
+        if (!response.ok) return;
+
+        const settings = await response.json();
+        window.setBoardTickerText(settings.board_ticker_text || "");
+    } catch (error) {
+        console.error("Could not load board settings:", error);
+    }
+}
 
 function connectWS() {
     ws = new WebSocket(CONFIG.WS_BOARD_URL); 
@@ -49,6 +64,11 @@ updateClock();
 
 function handleMessage(event) {
 	const data = JSON.parse(event.data);
+
+    if (data.type === "settings_updated") {
+        loadBoardSettings();
+        return;
+    }
 	
 	if (data.type === "playlist_updated") {
         console.log("Received playlist update signal");

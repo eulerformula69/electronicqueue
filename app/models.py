@@ -217,6 +217,7 @@ class SystemSettings(Base):
         String,
         default="Билет <number> -> Окно <window>"
     )
+    board_ticker_text = Column(String(500), default="")
 
 
 class QueueModePeriod(Base):

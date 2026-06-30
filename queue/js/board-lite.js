@@ -133,6 +133,21 @@
         title.innerHTML = "Табло очереди Приемной комиссии";
     }
 
+    function loadBoardSettings() {
+        if (!window.fetch || !window.setBoardTickerText) return;
+
+        fetch(CONFIG.API_URL + "/settings/public")
+            .then(function (response) {
+                if (!response.ok) return null;
+                return response.json();
+            })
+            .then(function (settings) {
+                if (!settings) return;
+                window.setBoardTickerText(settings.board_ticker_text || "");
+            })
+            .catch(function () {});
+    }
+
     function buildPages(tickets, pageSize) {
         var result = [];
         var i;
@@ -428,6 +443,11 @@
             return;
         }
 
+        if (data.type === "settings_updated") {
+            loadBoardSettings();
+            return;
+        }
+
         boardState = normalizeBoardState(data);
         if (boardState) {
             handleBoardState(boardState);
@@ -476,6 +496,7 @@
         setInterval(updateClock, 1000);
 
         renderBoard([], []);
+        loadBoardSettings();
         connectWS();
 
         setInterval(function () {

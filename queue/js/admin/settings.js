@@ -154,6 +154,15 @@ export async function loadExtraSettings() {
             <small class="settings-hint">
                 Например: <b>&lt;number&gt; → &lt;window&gt;</b> или <b>Билет &lt;number&gt; / окно &lt;window&gt;</b>
             </small>
+
+            <label class="settings-field-row">
+                <span class="settings-label">Текст бегущей строки на табло:</span>
+                <textarea
+                    id="setting-board-ticker-text"
+                    class="settings-input settings-textarea"
+                    maxlength="500"
+                >${escapeHtml(settings.board_ticker_text || "")}</textarea>
+            </label>
         </section>
 
             <div class="settings-actions">
@@ -177,7 +186,8 @@ export async function saveExtraSettings() {
 		queue_mode: document.getElementById("setting-queue-mode").value,
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
-		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim()
+		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
+		board_ticker_text: document.getElementById("setting-board-ticker-text").value.trim()
 	};
 
     if (
