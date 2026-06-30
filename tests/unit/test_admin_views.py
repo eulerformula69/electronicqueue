@@ -26,6 +26,16 @@ def test_window_admin_table_hides_visible_id_but_keeps_internal_id():
     assert "windows.find(item => item.id === Number(button.dataset.id))" in source
 
 
+def test_window_admin_loads_hidden_terminal_services_for_internal_assignment():
+    modern_source = _read("queue/js/admin/views/windows.view.js")
+    legacy_source = _read("queue/js/admin/windows.js")
+    map_source = _read("queue/js/admin/map.js")
+
+    assert 'ctx.api.request("/services/?include_hidden=true")' in modern_source
+    assert "fetchJSON(`${API}/services/?include_hidden=true`)" in legacy_source
+    assert "fetchJSON(`${API}/services/?limit=500&include_hidden=true`)" in map_source
+
+
 def test_service_admin_list_hides_visible_id_but_keeps_data_id():
     source = _read("queue/js/admin/views/services.view.js")
 

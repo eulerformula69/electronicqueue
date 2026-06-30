@@ -21,7 +21,7 @@ export async function mount(context) {
 async function load() {
     const [windowData, serviceData] = await Promise.all([
         ctx.api.request("/windows/"),
-        ctx.api.request("/services/")
+        ctx.api.request("/services/?include_hidden=true")
     ]);
     windows = Array.isArray(windowData) ? windowData : [];
     services = Array.isArray(serviceData) ? serviceData : [];

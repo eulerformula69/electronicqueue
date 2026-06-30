@@ -228,7 +228,7 @@ export async function editServices(window_id) {
                 <b>Настройка услуг (меньше число - выше приоритет)</b><br><br>`;
 
 	if (!services.length) {
-    services = await fetchJSON(`${API}/services/`);
+    services = await fetchJSON(`${API}/services/?include_hidden=true`);
 }
 
     for (let s of services) {

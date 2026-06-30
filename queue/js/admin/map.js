@@ -53,7 +53,7 @@ export async function loadMapEditor() {
             mapRequest(`${API}/admin/map`),
             fetchJSON(`${API}/windows/?limit=500`),
             fetchJSON(`${API}/operators/?limit=500`),
-            fetchJSON(`${API}/services/?limit=500`),
+            fetchJSON(`${API}/services/?limit=500&include_hidden=true`),
             fetchJSON(`${API}/window-services/?limit=500`)
         ]);
         officeMap = loadedMap;
