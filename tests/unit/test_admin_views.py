@@ -36,7 +36,6 @@ def test_service_admin_list_hides_visible_id_but_keeps_data_id():
 
 def test_admin_views_use_click_sorting_with_direction_toggle():
     for path in [
-        "queue/js/admin/views/services.view.js",
         "queue/js/admin/views/operators.view.js",
         "queue/js/admin/views/windows.view.js",
     ]:
@@ -47,7 +46,6 @@ def test_admin_views_use_click_sorting_with_direction_toggle():
 
 def test_admin_views_persist_sort_state():
     for path, key in [
-        ("queue/js/admin/views/services.view.js", "admin.services.sort"),
         ("queue/js/admin/views/operators.view.js", "admin.operators.sort"),
         ("queue/js/admin/views/windows.view.js", "admin.windows.sort"),
     ]:
@@ -81,3 +79,19 @@ def test_settings_view_renders_and_saves_board_ticker_text():
     assert "setting-board-ticker-text" in source
     assert "board_ticker_text" in source
     assert "data.board_ticker_text.trim()" in source
+
+
+def test_services_view_uses_drag_order_without_click_sorting():
+    source = _read("queue/js/admin/views/services.view.js")
+
+    assert "admin.services.sort" not in source
+    assert 'data-action="sort"' not in source
+    assert "sortServices(" not in source
+    assert "services.filter(service => service.service_group_id === group.id)" in source
+    assert "persistDraggedOrder" in source
+
+
+def test_settings_view_does_not_show_template_hint_caption():
+    source = _read("queue/js/admin/views/settings.view.js")
+
+    assert "В шаблонах должны остаться параметры" not in source

@@ -44,7 +44,6 @@ function render() {
                 ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
                 ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
                 ${ctx.ui.field("Текст бегущей строки", ctx.ui.textarea("board_ticker_text", settings.board_ticker_text || "", "id=\"setting-board-ticker-text\" maxlength=\"500\""))}
-                <p class="admin-muted">В шаблонах должны остаться параметры &lt;number&gt; и &lt;window&gt;.</p>
                 ${ctx.ui.button("Сохранить изменения", {variant: "primary", action: "save-settings"})}
             </section>
         </form>
