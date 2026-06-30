@@ -67,9 +67,6 @@ body.board-page .board-ticker__text::after{
     margin-left: 72px;
     color: rgba(255, 255, 255, 0.82);
 }
-body.board-page .board-ticker__text--segment-end::after{
-    margin-left: 0;
-}
 body.board-page .board{
     display: grid;
     grid-template-columns: repeat(2, 1fr);
