@@ -107,3 +107,11 @@ def test_board_status_moves_with_ticker_offset():
     assert "--board-ticker-offset: 0px;" in media_css
     assert "bottom: calc(10px + var(--board-ticker-offset));" in media_css
     assert "--board-ticker-offset: 38px;" in lite_css
+
+
+def test_global_credentials_move_with_ticker_offset():
+    source = _read("queue/css/base.css")
+
+    assert "body::after" in source
+    assert "bottom: calc(12px + var(--board-ticker-offset, 0px));" in source
+    assert "bottom: calc(10px + var(--board-ticker-offset, 0px));" in source

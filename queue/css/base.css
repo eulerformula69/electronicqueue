@@ -27,13 +27,14 @@ body::after {
     content: "@2026 ВСГУТУ кафедра ВиРС, Баташов Д. И.";
     position: fixed;
     left: 16px;
-    bottom: 12px;
+    bottom: calc(12px + var(--board-ticker-offset, 0px));
     z-index: 9999;
     font-size: 14px;
     font-weight: 500;
     color: rgba(0, 0, 0, 0.35);
     pointer-events: none;
     user-select: none;
+    transition: bottom 0.2s ease;
 }
 
 body.operator-page::after,
@@ -43,7 +44,7 @@ body.admin-page::after {
 }
 
 body.operator-page::after {
-    bottom: 10px;
+    bottom: calc(10px + var(--board-ticker-offset, 0px));
     font-size: 12px;
     line-height: 1;
     color: rgba(0, 0, 0, 0.28);
