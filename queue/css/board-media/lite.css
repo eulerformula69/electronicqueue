@@ -10,7 +10,7 @@ body.board-media-page.lite-version {
     --lite-header-height: clamp(92px, 10.5vh, 120px);
     --lite-ticker-height: 76px;
     --lite-board-width: clamp(620px, 35vw, 700px);
-    --lite-section-gap: 16px;
+    --lite-section-gap: 20px;
     --lite-section-header-height: 42px;
     --lite-card-height: 64px;
     --lite-card-gap: 8px;
@@ -131,7 +131,7 @@ body.board-media-page.lite-version .board-column-split {
     max-height: 100% !important;
     margin: 0 !important;
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, calc((100% - var(--lite-section-gap)) / 2))) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     grid-template-rows: minmax(0, 1fr);
     gap: var(--lite-section-gap) !important;
     align-items: stretch !important;
@@ -146,8 +146,9 @@ body.board-media-page.lite-version .lite-board-section {
     min-height: 0 !important;
     height: 100%;
     justify-self: stretch !important;
-    display: grid !important;
-    grid-template-rows: var(--lite-section-header-height) minmax(0, 1fr);
+    display: flex !important;
+    flex-direction: column !important;
+    background: transparent;
     overflow: hidden !important;
 }
 
@@ -189,9 +190,10 @@ body.board-media-page.lite-version .board-page-indicator {
 
 body.board-media-page.lite-version #board,
 body.board-media-page.lite-version #waiting-board {
+    flex: 1 1 auto !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     min-height: 0 !important;
     max-height: 100% !important;
     margin: 0 !important;
@@ -211,15 +213,16 @@ body.board-media-page.lite-version #waiting-board .waiting-card {
     height: var(--lite-card-height) !important;
     min-height: var(--lite-card-height) !important;
     margin: 0 !important;
-    padding: 0 10px !important;
+    padding: 10px 16px !important;
     display: flex !important;
+    flex-direction: column !important;
     justify-self: stretch !important;
-    align-items: center !important;
+    align-items: stretch !important;
     justify-content: center !important;
     overflow: hidden !important;
     background: #ffffff !important;
-    border-radius: 8px !important;
-    box-shadow: 0 3px 10px rgba(16, 24, 40, 0.1) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
 }
 
 body.board-media-page.lite-version #board .card .line {
@@ -227,8 +230,8 @@ body.board-media-page.lite-version #board .card .line {
     height: 100% !important;
     min-width: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) !important;
-    column-gap: 4px !important;
+    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) !important;
+    column-gap: 10px !important;
     align-items: center !important;
 }
 
@@ -247,9 +250,17 @@ body.board-media-page.lite-version #board .window {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
+    white-space: normal !important;
+}
+
+body.board-media-page.lite-version #board .ticket {
+    justify-self: end !important;
+}
+
+body.board-media-page.lite-version #board .window {
+    justify-self: start !important;
 }
 
 body.board-media-page.lite-version #board .ticket,
@@ -283,7 +294,7 @@ body.board-media-page.lite-version #board .window span:first-child {
 
 body.board-media-page.lite-version #board .ticket span:last-child,
 body.board-media-page.lite-version #board .window span:last-child {
-    font-size: clamp(26px, 1.85vw, 34px) !important;
+    font-size: clamp(26px, 2.25vw, 42px) !important;
     line-height: 1 !important;
     font-weight: 800 !important;
 }
@@ -293,7 +304,7 @@ body.board-media-page.lite-version #board .arrow {
     align-items: center !important;
     justify-content: center !important;
     color: #777777 !important;
-    font-size: 24px !important;
+    font-size: clamp(26px, 2.25vw, 42px) !important;
     line-height: 1 !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -306,9 +317,9 @@ body.board-media-page.lite-version #waiting-board .ticket {
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     color: var(--lite-cyan) !important;
-    font-size: clamp(28px, 2vw, 38px) !important;
-    line-height: 1 !important;
-    font-weight: 800 !important;
+    font-size: clamp(26px, 2.25vw, 42px) !important;
+    line-height: 1.08 !important;
+    font-weight: 700 !important;
     text-align: center !important;
 }
 
