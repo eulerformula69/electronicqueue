@@ -4,13 +4,29 @@ body.board-media-page.lite-version {
     --lite-orange: #ff6b35;
     --lite-shell-x: clamp(28px, 2.1vw, 42px);
     --lite-gap: clamp(24px, 1.8vw, 36px);
-    --lite-board-width: clamp(600px, 33.5vw, 660px);
-    --lite-media-width: min(100%, 1050px);
+    --lite-board-width: clamp(580px, 33.5vw, 640px);
+    --lite-media-width: 1050px;
     --lite-media-top: clamp(58px, 7.8vh, 86px);
     --lite-top-offset: 128px;
     --lite-ticker-height: 76px;
-    --lite-card-gap: 10px;
+    --lite-board-bottom-gap: 18px;
+    --lite-work-height: calc(100vh - var(--lite-top-offset) - var(--lite-ticker-height));
+    --lite-card-height: 60px;
+    --lite-card-gap: 8px;
     --board-ticker-offset: var(--lite-ticker-height);
+    width: 100vw;
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+body.board-media-page.lite-version.has-board-ticker {
+    --board-ticker-offset: var(--lite-ticker-height);
+}
+
+body.board-media-page.lite-version.lite2-version {
+    --lite-board-width: clamp(560px, 32vw, 620px);
+    --lite-card-height: 58px;
 }
 
 body.board-media-page.lite-version #title {
@@ -28,20 +44,23 @@ body.board-media-page.lite-version .clock-container {
 body.board-media-page.lite-version .board-wrapper,
 body.board-media-page.lite-version.has-board-ticker .board-wrapper {
     display: grid !important;
-    grid-template-columns: var(--lite-media-width) var(--lite-board-width) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--lite-board-width)) !important;
     gap: var(--lite-gap) !important;
     width: 100vw !important;
-    height: calc(100vh - var(--lite-top-offset) - var(--board-ticker-offset)) !important;
-    padding: 0 var(--lite-shell-x) 18px var(--lite-shell-x) !important;
+    height: var(--lite-work-height) !important;
+    min-height: 0 !important;
+    max-height: var(--lite-work-height) !important;
+    padding: 0 var(--lite-shell-x) var(--lite-board-bottom-gap) var(--lite-shell-x) !important;
     box-sizing: border-box !important;
     align-items: stretch !important;
     overflow: hidden !important;
 }
 
 body.board-media-page.lite-version .media-panel {
-    width: var(--lite-media-width) !important;
+    width: 100% !important;
+    max-width: var(--lite-media-width) !important;
     height: auto !important;
-    max-height: none !important;
+    max-height: calc(100% - var(--lite-media-top)) !important;
     aspect-ratio: 16 / 9 !important;
     align-self: start !important;
     justify-self: start !important;
@@ -63,6 +82,8 @@ body.board-media-page.lite-version .board-column-split {
     min-width: 0 !important;
     max-width: none !important;
     height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
     margin: 0 !important;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
@@ -74,6 +95,7 @@ body.board-media-page.lite-version .board-column-split {
 body.board-media-page.lite-version .lite-board-section {
     min-width: 0 !important;
     min-height: 0 !important;
+    max-height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
@@ -108,12 +130,13 @@ body.board-media-page.lite-version #board,
 body.board-media-page.lite-version #waiting-board {
     flex: 1 1 auto !important;
     min-height: 0 !important;
+    max-height: 100% !important;
     width: 100% !important;
     height: auto !important;
     display: grid !important;
     grid-template-columns: 1fr !important;
     grid-template-rows: none !important;
-    grid-auto-rows: 62px !important;
+    grid-auto-rows: var(--lite-card-height) !important;
     gap: var(--lite-card-gap) !important;
     align-content: start !important;
     padding: 0 !important;
@@ -124,8 +147,8 @@ body.board-media-page.lite-version #waiting-board {
 body.board-media-page.lite-version #board .card,
 body.board-media-page.lite-version #waiting-board .waiting-card {
     width: 100% !important;
-    height: 62px !important;
-    min-height: 62px !important;
+    height: var(--lite-card-height) !important;
+    min-height: var(--lite-card-height) !important;
     margin: 0 !important;
     padding: 0 10px !important;
     box-sizing: border-box !important;

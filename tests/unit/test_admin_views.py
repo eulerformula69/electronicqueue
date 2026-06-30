@@ -132,6 +132,26 @@ def test_board_status_moves_with_ticker_offset():
     assert "--board-ticker-offset: var(--lite-ticker-height);" in lite_css
 
 
+def test_lite_media_board_reserves_ticker_height():
+    lite_css = _read("queue/css/board-media/lite.css")
+
+    assert "--lite-work-height: calc(100vh - var(--lite-top-offset) - var(--lite-ticker-height));" in lite_css
+    assert "height: var(--lite-work-height) !important;" in lite_css
+    assert "max-height: var(--lite-work-height) !important;" in lite_css
+    assert "max-height: calc(100% - var(--lite-media-top)) !important;" in lite_css
+    assert "grid-template-columns: minmax(0, 1fr) minmax(0, var(--lite-board-width)) !important;" in lite_css
+    assert "max-height: 100% !important;" in lite_css
+    assert "overflow: hidden;" in lite_css
+
+
+def test_lite2_board_uses_smaller_page_sizes():
+    source = _read("queue/board-media-lite2.html")
+
+    assert '<body class="board-media-page lite-version lite2-version">' in source
+    assert "calledPageSize: 8," in source
+    assert "waitingPageSize: 8," in source
+
+
 def test_global_credentials_move_with_ticker_offset():
     source = _read("queue/css/base.css")
 
