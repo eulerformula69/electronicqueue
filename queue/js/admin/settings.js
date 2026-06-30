@@ -34,6 +34,18 @@ export async function loadExtraSettings() {
                     Показывать режим печати на терминале
                 </label>
                 <label class="settings-field-row">
+                    <span class="settings-label">Размер печатного талона, %:</span>
+                    <input
+                        type="number"
+                        id="setting-ticket-print-scale"
+                        class="settings-input"
+                        min="50"
+                        max="150"
+                        step="1"
+                        value="${settings.ticket_print_scale_percent || 94}"
+                    >
+                </label>
+                <label class="settings-field-row">
                     <span class="settings-label">Услуги без активных операторов на терминале:</span>
                     <select id="setting-unavailable-services-mode" class="settings-select settings-select-wide">
                         <option value="hide" ${settings.hide_services_without_online_operators ? "selected" : ""}>Скрывать услуги</option>
@@ -176,6 +188,7 @@ export async function saveExtraSettings() {
 	const payload = {
 		print_ticket: document.getElementById("setting-print-ticket").checked,
 		show_print_badge: document.getElementById("setting-show-print-badge").checked,
+		ticket_print_scale_percent: Number(document.getElementById("setting-ticket-print-scale").value),
 		ticket_notice_duration_printed_seconds: Number(document.getElementById("setting-ticket-notice-duration-printed").value),
 		ticket_notice_duration_unprinted_seconds: Number(document.getElementById("setting-ticket-notice-duration-unprinted").value),
 		ticket_notice_printed_text: document.getElementById("setting-ticket-notice-printed-text").value.trim(),
@@ -199,6 +212,15 @@ export async function saveExtraSettings() {
         payload.ticket_notice_duration_unprinted_seconds > 300
     ) {
         alert("Время показа номера должно быть целым числом от 1 до 300 секунд");
+        return;
+    }
+
+    if (
+        !Number.isInteger(payload.ticket_print_scale_percent) ||
+        payload.ticket_print_scale_percent < 50 ||
+        payload.ticket_print_scale_percent > 150
+    ) {
+        alert("Размер печатного талона должен быть от 50 до 150%");
         return;
     }
 

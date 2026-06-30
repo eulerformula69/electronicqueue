@@ -91,6 +91,7 @@ let socket = connectSocket();
 let terminalSettings = {
     print_ticket: true,
     show_print_badge: true,
+    ticket_print_scale_percent: 94,
     ticket_notice_duration_printed_seconds: 7,
     ticket_notice_duration_unprinted_seconds: 45,
     ticket_notice_printed_text: "Ваш номер: <number>",
@@ -235,16 +236,30 @@ function renderPrintModeBadge() {
     }
 }
 
+function normalizeTicketPrintScalePercent(value) {
+    const percent = Number(value);
+    if (!Number.isFinite(percent)) return 94;
+    return Math.min(150, Math.max(50, Math.round(percent)));
+}
+
+function applyTicketPrintScale() {
+    const percent = normalizeTicketPrintScalePercent(terminalSettings.ticket_print_scale_percent);
+    document.documentElement.style.setProperty("--ticket-print-scale", String(percent / 100));
+}
+
 async function loadTerminalSettings() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/settings/public`);
         if (!res.ok) {
+            applyTicketPrintScale();
             renderPrintModeBadge();
             return;
         }
         const data = await res.json();
         terminalSettings.print_ticket = data.print_ticket !== false;
         terminalSettings.show_print_badge = data.show_print_badge !== false;
+        terminalSettings.ticket_print_scale_percent =
+            normalizeTicketPrintScalePercent(data.ticket_print_scale_percent);
         terminalSettings.ticket_notice_duration_printed_seconds =
             Number(data.ticket_notice_duration_printed_seconds) || 7;
         terminalSettings.ticket_notice_duration_unprinted_seconds =
@@ -253,9 +268,11 @@ async function loadTerminalSettings() {
             data.ticket_notice_printed_text || "Ваш номер: <number>";
         terminalSettings.ticket_notice_unprinted_text =
             data.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>";
+        applyTicketPrintScale();
         renderPrintModeBadge();
     } catch (error) {
         console.warn("Не удалось загрузить публичные настройки терминала:", error);
+        applyTicketPrintScale();
         renderPrintModeBadge();
     }
 }
@@ -620,6 +637,7 @@ function printTestTicket() {
 // Оставляем только ОДНУ функцию printTicket
 function printTicket() {
     const receipt = document.getElementById("print-receipt");  
+    applyTicketPrintScale();
     // Делаем видимым для корректного захвата браузером
     receipt.style.display = "block";
     // Вызов системного диалога печати

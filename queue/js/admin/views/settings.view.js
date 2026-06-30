@@ -14,6 +14,7 @@ function render() {
                 <h2>Терминал</h2>
                 ${ctx.ui.field("Печатать талон", ctx.ui.switchField("print_ticket", settings.print_ticket))}
                 ${ctx.ui.field("Показывать режим печати", ctx.ui.switchField("show_print_badge", settings.show_print_badge))}
+                ${ctx.ui.field("Размер печатного талона, %", ctx.ui.input("ticket_print_scale_percent", settings.ticket_print_scale_percent || 94, "type=\"number\" min=\"50\" max=\"150\" step=\"1\""))}
                 ${ctx.ui.field("Услуги без активных операторов", ctx.ui.select("unavailable_services_mode", [
                     {value: "hide", label: "Скрывать услуги"},
                     {value: "show_inactive", label: "Показывать как неактивные"}
@@ -63,6 +64,7 @@ async function save() {
     const payload = {
         print_ticket: Boolean(data.print_ticket),
         show_print_badge: Boolean(data.show_print_badge),
+        ticket_print_scale_percent: Number(data.ticket_print_scale_percent),
         ticket_notice_duration_printed_seconds: Number(data.ticket_notice_duration_printed_seconds),
         ticket_notice_duration_unprinted_seconds: Number(data.ticket_notice_duration_unprinted_seconds),
         ticket_notice_printed_text: data.ticket_notice_printed_text.trim(),
@@ -78,6 +80,9 @@ async function save() {
 
     if (!validDuration(payload.ticket_notice_duration_printed_seconds) || !validDuration(payload.ticket_notice_duration_unprinted_seconds)) {
         return ctx.toast("Время показа должно быть целым числом от 1 до 300 секунд", "error");
+    }
+    if (!validTicketPrintScale(payload.ticket_print_scale_percent)) {
+        return ctx.toast("Размер печатного талона должен быть от 50 до 150%", "error");
     }
     if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
         return ctx.toast("Тексты терминала должны содержать <number>", "error");
@@ -96,4 +101,8 @@ async function save() {
 
 function validDuration(value) {
     return Number.isInteger(value) && value >= 1 && value <= 300;
+}
+
+function validTicketPrintScale(value) {
+    return Number.isInteger(value) && value >= 50 && value <= 150;
 }

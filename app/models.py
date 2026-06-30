@@ -200,6 +200,7 @@ class SystemSettings(Base):
     id = Column(Integer, primary_key=True, default=1)
     print_ticket = Column(String, default="true")
     show_print_badge = Column(String, default="false")
+    ticket_print_scale_percent = Column(Integer, default=94)
     ticket_notice_duration_printed_seconds = Column(Integer, default=7)
     ticket_notice_duration_unprinted_seconds = Column(Integer, default=45)
     ticket_notice_printed_text = Column(String, default="Ваш номер: <number>")

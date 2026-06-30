@@ -192,6 +192,7 @@ class OfficeMap(BaseModel):
 class SystemSettingsUpdate(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_print_scale_percent: int = Field(default=94, ge=50, le=150)
     ticket_notice_duration_printed_seconds: int = Field(ge=1, le=300)
     ticket_notice_duration_unprinted_seconds: int = Field(ge=1, le=300)
     ticket_notice_printed_text: str = Field(default="Ваш номер: <number>", min_length=1, max_length=500)
@@ -208,6 +209,7 @@ class SystemSettingsUpdate(BaseModel):
 class SystemSettingsResponse(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_print_scale_percent: int
     ticket_notice_duration_printed_seconds: int
     ticket_notice_duration_unprinted_seconds: int
     ticket_notice_printed_text: str
@@ -224,6 +226,7 @@ class SystemSettingsResponse(BaseModel):
 class PublicSettingsResponse(BaseModel):
     print_ticket: bool
     show_print_badge: bool
+    ticket_print_scale_percent: int
     ticket_notice_duration_printed_seconds: int
     ticket_notice_duration_unprinted_seconds: int
     ticket_notice_printed_text: str

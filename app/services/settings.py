@@ -2,6 +2,10 @@ from sqlalchemy.orm import Session
 
 from app.models import SystemSettings
 
+DEFAULT_TICKET_PRINT_SCALE_PERCENT = 94
+MIN_TICKET_PRINT_SCALE_PERCENT = 50
+MAX_TICKET_PRINT_SCALE_PERCENT = 150
+
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
 
@@ -14,6 +18,15 @@ def _str_to_bool(value: str, default: bool = False) -> bool:
 
 def _bool_to_str(value: bool) -> str:
     return "true" if value else "false"
+
+
+def _normalize_ticket_print_scale_percent(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_TICKET_PRINT_SCALE_PERCENT
+    return max(
+        MIN_TICKET_PRINT_SCALE_PERCENT,
+        min(MAX_TICKET_PRINT_SCALE_PERCENT, int(value)),
+    )
 
 
 def get_or_create_system_settings(db: Session) -> SystemSettings:
@@ -33,6 +46,9 @@ def get_system_settings_dict(db: Session) -> dict:
     return {
         "print_ticket": _str_to_bool(settings.print_ticket, default=True),
         "show_print_badge": _str_to_bool(settings.show_print_badge, default=True),
+        "ticket_print_scale_percent": _normalize_ticket_print_scale_percent(
+            settings.ticket_print_scale_percent
+        ),
         "ticket_notice_duration_printed_seconds": settings.ticket_notice_duration_printed_seconds or 7,
         "ticket_notice_duration_unprinted_seconds": settings.ticket_notice_duration_unprinted_seconds or 45,
         "ticket_notice_printed_text": settings.ticket_notice_printed_text or DEFAULT_TICKET_NOTICE_PRINTED_TEXT,

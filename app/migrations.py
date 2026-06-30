@@ -342,13 +342,15 @@ def migrate_ticket_notice_settings_schema(engine):
     """Add configurable terminal notice settings to existing installations."""
     ddl = """
     ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS ticket_print_scale_percent integer DEFAULT 94,
         ADD COLUMN IF NOT EXISTS ticket_notice_duration_printed_seconds integer DEFAULT 7,
         ADD COLUMN IF NOT EXISTS ticket_notice_duration_unprinted_seconds integer DEFAULT 45,
         ADD COLUMN IF NOT EXISTS ticket_notice_printed_text varchar(500) DEFAULT 'Ваш номер: <number>',
         ADD COLUMN IF NOT EXISTS ticket_notice_unprinted_text varchar(500) DEFAULT E'Пожалуйста, запомните свой номер:\\n<number>';
 
     UPDATE system_settings
-    SET ticket_notice_duration_printed_seconds = COALESCE(ticket_notice_duration_printed_seconds, 7),
+    SET ticket_print_scale_percent = COALESCE(ticket_print_scale_percent, 94),
+        ticket_notice_duration_printed_seconds = COALESCE(ticket_notice_duration_printed_seconds, 7),
         ticket_notice_duration_unprinted_seconds = COALESCE(ticket_notice_duration_unprinted_seconds, 45),
         ticket_notice_printed_text = COALESCE(ticket_notice_printed_text, 'Ваш номер: <number>'),
         ticket_notice_unprinted_text = COALESCE(ticket_notice_unprinted_text, E'Пожалуйста, запомните свой номер:\\n<number>');

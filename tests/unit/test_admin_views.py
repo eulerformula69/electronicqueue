@@ -81,6 +81,18 @@ def test_settings_view_renders_and_saves_board_ticker_text():
     assert "data.board_ticker_text.trim()" in source
 
 
+def test_settings_view_renders_and_saves_ticket_print_scale_percent():
+    source = _read("queue/js/admin/views/settings.view.js")
+    terminal = _read("queue/js/terminal.js")
+    terminal_html = _read("queue/terminal.html")
+
+    assert "ticket_print_scale_percent" in source
+    assert "validTicketPrintScale" in source
+    assert "normalizeTicketPrintScalePercent" in terminal
+    assert "--ticket-print-scale" in terminal
+    assert "scale(var(--ticket-print-scale, 0.94))" in terminal_html
+
+
 def test_services_view_uses_drag_order_without_click_sorting():
     source = _read("queue/js/admin/views/services.view.js")
 

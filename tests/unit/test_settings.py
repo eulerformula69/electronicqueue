@@ -50,6 +50,11 @@ def test_board_ticker_text_is_in_settings_schemas():
         assert "board_ticker_text" in _schema_fields(schema)
 
 
+def test_ticket_print_scale_percent_is_in_settings_schemas():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "ticket_print_scale_percent" in _schema_fields(schema)
+
+
 def test_system_settings_dict_includes_board_ticker_text():
     engine = create_engine("sqlite:///:memory:")
     SystemSettings.__table__.create(engine)
@@ -62,6 +67,37 @@ def test_system_settings_dict_includes_board_ticker_text():
         db.commit()
 
         assert get_system_settings_dict(db)["board_ticker_text"] == "Прием документов до 18:00"
+    finally:
+        db.close()
+
+
+def test_system_settings_dict_includes_ticket_print_scale_percent():
+    engine = create_engine("sqlite:///:memory:")
+    SystemSettings.__table__.create(engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    try:
+        settings = SystemSettings(id=1, ticket_print_scale_percent=120)
+        db.add(settings)
+        db.commit()
+
+        assert get_system_settings_dict(db)["ticket_print_scale_percent"] == 120
+    finally:
+        db.close()
+
+
+def test_system_settings_dict_clamps_ticket_print_scale_percent():
+    engine = create_engine("sqlite:///:memory:")
+    SystemSettings.__table__.create(engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    try:
+        db.add(SystemSettings(id=1, ticket_print_scale_percent=300))
+        db.commit()
+
+        assert get_system_settings_dict(db)["ticket_print_scale_percent"] == 150
     finally:
         db.close()
 
@@ -86,4 +122,6 @@ def test_admin_routes_expose_board_ticker_text_in_public_settings():
     source = (ROOT / "app" / "routers" / "admin.py").read_text(encoding="utf-8")
 
     assert "settings.board_ticker_text = data.board_ticker_text.strip()" in source
+    assert "settings.ticket_print_scale_percent = data.ticket_print_scale_percent" in source
+    assert '"ticket_print_scale_percent": settings["ticket_print_scale_percent"]' in source
     assert '"board_ticker_text": settings["board_ticker_text"]' in source
