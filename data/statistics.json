@@ -46,7 +46,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   }
                 ]
               }
@@ -77,7 +77,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -124,7 +124,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   }
                 ]
               }
@@ -155,7 +155,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -202,7 +202,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   }
                 ]
               }
@@ -233,7 +233,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -280,7 +280,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   }
                 ]
               }
@@ -311,7 +311,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -358,7 +358,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   }
                 ]
               }
@@ -389,7 +389,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -435,9 +435,6 @@
                 "cellOptions": {
                   "type": "auto"
                 },
-                "footer": {
-                  "reducers": []
-                },
                 "inspect": false
               },
               "mappings": [],
@@ -446,7 +443,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -503,6 +500,14 @@
           "id": 19,
           "options": {
             "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
             "showHeader": true,
             "sortBy": [
               {
@@ -511,7 +516,7 @@
               }
             ]
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -557,9 +562,6 @@
                 "cellOptions": {
                   "type": "auto"
                 },
-                "footer": {
-                  "reducers": []
-                },
                 "inspect": false
               },
               "mappings": [],
@@ -568,7 +570,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -601,9 +603,17 @@
           "id": 24,
           "options": {
             "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
             "showHeader": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -649,9 +659,6 @@
                 "cellOptions": {
                   "type": "auto"
                 },
-                "footer": {
-                  "reducers": []
-                },
                 "inspect": false
               },
               "mappings": [],
@@ -660,7 +667,7 @@
                 "steps": [
                   {
                     "color": "green",
-                    "value": 0
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -680,9 +687,17 @@
           "id": 16,
           "options": {
             "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
             "showHeader": true
           },
-          "pluginVersion": "12.4.1",
+          "pluginVersion": "11.5.1",
           "targets": [
             {
               "dataset": "postgres",
@@ -745,9 +760,6 @@
             "cellOptions": {
               "type": "auto"
             },
-            "footer": {
-              "reducers": []
-            },
             "inspect": false
           },
           "mappings": [],
@@ -756,7 +768,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -768,7 +780,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 9,
         "w": 20,
         "x": 0,
         "y": 2
@@ -776,6 +788,14 @@
       "id": 14,
       "options": {
         "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": [
           {
@@ -784,7 +804,7 @@
           }
         ]
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -831,7 +851,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -839,7 +859,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 4,
         "x": 20,
         "y": 2
@@ -862,7 +882,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -913,7 +933,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -921,10 +941,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 4,
         "x": 20,
-        "y": 4
+        "y": 5
       },
       "id": 1,
       "options": {
@@ -944,7 +964,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -995,7 +1015,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -1003,10 +1023,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 4,
         "x": 20,
-        "y": 6
+        "y": 8
       },
       "id": 35,
       "options": {
@@ -1026,7 +1046,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1077,7 +1097,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -1092,7 +1112,7 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 8
+        "y": 11
       },
       "id": 6,
       "options": {
@@ -1112,7 +1132,7 @@
         "textMode": "value",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1159,7 +1179,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -1174,7 +1194,7 @@
         "h": 5,
         "w": 4,
         "x": 4,
-        "y": 8
+        "y": 11
       },
       "id": 4,
       "options": {
@@ -1194,7 +1214,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1241,7 +1261,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -1256,7 +1276,7 @@
         "h": 5,
         "w": 4,
         "x": 8,
-        "y": 8
+        "y": 11
       },
       "id": 7,
       "options": {
@@ -1276,7 +1296,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1323,7 +1343,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -1334,7 +1354,7 @@
         "h": 5,
         "w": 4,
         "x": 12,
-        "y": 8
+        "y": 11
       },
       "id": 13,
       "options": {
@@ -1354,7 +1374,7 @@
         "textMode": "value",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1401,7 +1421,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -1416,7 +1436,7 @@
         "h": 5,
         "w": 4,
         "x": 16,
-        "y": 8
+        "y": 11
       },
       "id": 12,
       "options": {
@@ -1436,7 +1456,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1483,7 +1503,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
@@ -1498,7 +1518,7 @@
         "h": 5,
         "w": 4,
         "x": 20,
-        "y": 8
+        "y": 11
       },
       "id": 11,
       "options": {
@@ -1518,7 +1538,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1565,7 +1585,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -1573,10 +1593,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 4,
+        "h": 4,
+        "w": 5,
         "x": 0,
-        "y": 13
+        "y": 16
       },
       "id": 28,
       "options": {
@@ -1596,7 +1616,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1643,7 +1663,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -1651,10 +1671,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 4,
-        "y": 13
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 16
       },
       "id": 29,
       "options": {
@@ -1674,7 +1694,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1721,7 +1741,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -1729,166 +1749,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 8,
-        "y": 13
-      },
-      "id": 30,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.4.1",
-      "targets": [
-        {
-          "dataset": "postgres",
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS redirected\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'redirected'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Перенаправлено",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 12,
-        "y": 13
-      },
-      "id": 31,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.4.1",
-      "targets": [
-        {
-          "dataset": "postgres",
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS in_service_now\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.status = 'called'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "В обслуживании сейчас",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 16,
-        "y": 13
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 16
       },
       "id": 32,
       "options": {
@@ -1908,7 +1772,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -1954,8 +1818,86 @@
             "mode": "absolute",
             "steps": [
               {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 15,
+        "y": 16
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(t.id) AS redirected\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'redirected'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Перенаправлено",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
                 "color": "red",
-                "value": 0
+                "value": null
               },
               {
                 "color": "yellow",
@@ -1971,10 +1913,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 4,
         "w": 4,
         "x": 20,
-        "y": 13
+        "y": 16
       },
       "id": 33,
       "options": {
@@ -1994,7 +1936,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -2040,9 +1982,6 @@
             "cellOptions": {
               "type": "auto"
             },
-            "footer": {
-              "reducers": []
-            },
             "inspect": false
           },
           "mappings": [],
@@ -2051,7 +1990,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -2062,14 +2001,22 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 20
       },
       "id": 34,
       "options": {
         "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -2115,9 +2062,6 @@
             "cellOptions": {
               "type": "auto"
             },
-            "footer": {
-              "reducers": []
-            },
             "inspect": false
           },
           "mappings": [],
@@ -2126,7 +2070,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               }
             ]
           }
@@ -2137,11 +2081,19 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 25
       },
       "id": 27,
       "options": {
         "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": [
           {
@@ -2150,7 +2102,7 @@
           }
         ]
       },
-      "pluginVersion": "12.4.1",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "dataset": "postgres",
@@ -2189,7 +2141,6 @@
   "templating": {
     "list": [
       {
-        "allValue": "",
         "allowCustomValue": false,
         "current": {
           "text": "All",
@@ -2210,8 +2161,9 @@
         "query": "SELECT name from operators ORDER BY id",
         "refresh": 1,
         "regex": "",
-        "regexApplyTo": "value",
-        "type": "query"
+        "type": "query",
+        "allValue": "",
+        "regexApplyTo": "value"
       },
       {
         "current": {
