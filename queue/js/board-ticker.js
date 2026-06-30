@@ -31,6 +31,18 @@
         return item;
     }
 
+    function formatTickerText(value) {
+        var messages = String(value || "")
+            .split(/\r?\n/)
+            .map(function (line) {
+                return line.trim();
+            })
+            .filter(Boolean);
+
+        if (messages.length <= 1) return messages[0] || "";
+        return messages.join("   |   ") + "   |   ";
+    }
+
     function renderTickerText() {
         var text = tickerText;
         var ticker = ensureTicker();
@@ -69,7 +81,7 @@
     }
 
     window.setBoardTickerText = function (value) {
-        tickerText = String(value || "").trim();
+        tickerText = formatTickerText(value);
         renderTickerText();
 
         if (!resizeListenerAttached) {

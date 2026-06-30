@@ -130,3 +130,12 @@ def test_board_ticker_uses_seamless_repeated_segment():
     assert "translateX(-50%)" not in board_css
     assert "var(--board-ticker-distance" in media_css
     assert "translateX(-50%)" not in media_css
+
+
+def test_board_ticker_splits_multiline_messages_with_separator():
+    script = _read("queue/js/board-ticker.js")
+
+    assert ".split(/\\r?\\n/)" in script
+    assert ".filter(Boolean)" in script
+    assert 'messages.join("   |   ") + "   |   "' in script
+    assert "tickerText = formatTickerText(value)" in script
