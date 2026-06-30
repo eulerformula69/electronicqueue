@@ -3,9 +3,9 @@
 <head>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2328a745'/%3E%3Ccircle cx='5' cy='8' r='2' fill='white'/%3E%3Cpath d='M10,4 C12,6 12,10 10,12' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
     <meta charset="UTF-8">
-    <title>Табло очереди Приемной комиссии (LG Lite)</title>
+    <title>Табло очереди Приемной комиссии (LG Lite 2)</title>
     <link rel="stylesheet" href="/queue/css/base.css">
-    <link rel="stylesheet" href="/queue/css/board-media.css?v=lg-lite-4">
+    <link rel="stylesheet" href="/queue/css/board-media.css?v=lg-lite2-5">
 </head>
 <body class="board-media-page lite-version">
 
@@ -39,9 +39,17 @@
 <div class="status-indicator" id="ws-status">WS: connecting...</div>
 
 <script src="/queue/js/config.js"></script>
-<script src="/queue/js/media.js"></script>
+<script src="/queue/js/media-lite.js?v=lg-lite2-4"></script>
 <script src="/queue/js/board-ticker.js"></script>
+<script>
+window.BOARD_CONFIG = {
+    calledPageSize: 12,
+    waitingPageSize: 12,
+    pageIntervalMs: 5000
+};
+</script>
 <script src="/queue/js/board-lite.js"></script>
+<script src="/queue/js/board-lite2.js?v=lg-lite2-4"></script>
 
 </body>
 </html>

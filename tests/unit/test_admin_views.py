@@ -128,7 +128,8 @@ def test_board_status_moves_with_ticker_offset():
     assert "bottom: calc(10px + var(--board-ticker-offset));" in board_css
     assert "--board-ticker-offset: 0px;" in media_css
     assert "bottom: calc(10px + var(--board-ticker-offset));" in media_css
-    assert "--board-ticker-offset: 38px;" in lite_css
+    assert "--lite-ticker-height: 76px;" in lite_css
+    assert "--board-ticker-offset: var(--lite-ticker-height);" in lite_css
 
 
 def test_global_credentials_move_with_ticker_offset():

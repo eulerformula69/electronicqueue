@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Табло очереди Приемной комиссии (LG Lite 2)</title>
     <link rel="stylesheet" href="/queue/css/base.css">
-    <link rel="stylesheet" href="/queue/css/board-media.css?v=lg-lite2-4">
+    <link rel="stylesheet" href="/queue/css/board-media.css?v=lg-lite2-5">
 </head>
 <body class="board-media-page lite-version">
 
@@ -39,10 +39,17 @@
 <div class="status-indicator" id="ws-status">WS: connecting...</div>
 
 <script src="/queue/js/config.js"></script>
-<script src="/queue/js/media-lite.js?v=lg-lite2-3"></script>
+<script src="/queue/js/media-lite.js?v=lg-lite2-4"></script>
 <script src="/queue/js/board-ticker.js"></script>
+<script>
+window.BOARD_CONFIG = {
+    calledPageSize: 12,
+    waitingPageSize: 12,
+    pageIntervalMs: 5000
+};
+</script>
 <script src="/queue/js/board-lite.js"></script>
-<script src="/queue/js/board-lite2.js?v=lg-lite2-3"></script>
+<script src="/queue/js/board-lite2.js?v=lg-lite2-4"></script>
 
 </body>
 </html>

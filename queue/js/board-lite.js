@@ -1,5 +1,5 @@
 /* board-lite.js — ультра-легковесное табло для старых ТВ (Chromium 79 / WebOS).
-   Видео выводит media.js. Здесь только табло: ожидающие + вызванные.
+   Видео выводит media-lite.js на lite2-страницах. Здесь только табло: ожидающие + вызванные.
    Без async/await, стрелок-функций, optional chaining, replaceAll, Set/Map. */
 
 (function () {
