@@ -115,3 +115,18 @@ def test_global_credentials_move_with_ticker_offset():
     assert "body::after" in source
     assert "bottom: calc(12px + var(--board-ticker-offset, 0px));" in source
     assert "bottom: calc(10px + var(--board-ticker-offset, 0px));" in source
+
+
+def test_board_ticker_uses_seamless_repeated_segment():
+    script = _read("queue/js/board-ticker.js")
+    board_css = _read("queue/css/board.css")
+    media_css = _read("queue/css/board-media/main.css")
+
+    assert "repeatCount = Math.max(2, Math.ceil(tickerWidth / itemWidth) + 2)" in script
+    assert "track.style.setProperty(\"--board-ticker-distance\"" in script
+    assert "track.style.setProperty(\"--board-ticker-duration\"" in script
+    assert "i < repeatCount * 2" in script
+    assert "var(--board-ticker-distance" in board_css
+    assert "translateX(-50%)" not in board_css
+    assert "var(--board-ticker-distance" in media_css
+    assert "translateX(-50%)" not in media_css

@@ -1,9 +1,11 @@
 (function () {
+    var tickerText = "";
+    var resizeTimer = null;
+    var resizeListenerAttached = false;
+
     function ensureTicker() {
         var ticker = document.getElementById("board-ticker");
         var track;
-        var firstText;
-        var secondText;
 
         if (ticker) return ticker;
 
@@ -15,32 +17,64 @@
         track = document.createElement("div");
         track.className = "board-ticker__track";
 
-        firstText = document.createElement("span");
-        firstText.className = "board-ticker__text";
-
-        secondText = document.createElement("span");
-        secondText.className = "board-ticker__text";
-        secondText.setAttribute("aria-hidden", "true");
-
-        track.appendChild(firstText);
-        track.appendChild(secondText);
         ticker.appendChild(track);
         document.body.appendChild(ticker);
 
         return ticker;
     }
 
-    window.setBoardTickerText = function (value) {
-        var text = String(value || "").trim();
-        var ticker = ensureTicker();
-        var items = ticker.getElementsByClassName("board-ticker__text");
-        var i;
+    function createTextItem(text, hidden) {
+        var item = document.createElement("span");
+        item.className = "board-ticker__text";
+        item.textContent = text;
+        if (hidden) item.setAttribute("aria-hidden", "true");
+        return item;
+    }
 
-        for (i = 0; i < items.length; i++) {
-            items[i].textContent = text;
-        }
+    function renderTickerText() {
+        var text = tickerText;
+        var ticker = ensureTicker();
+        var track = ticker.getElementsByClassName("board-ticker__track")[0];
+        var tickerWidth;
+        var itemWidth;
+        var repeatCount;
+        var distance;
+        var i;
 
         ticker.hidden = !text;
         document.body.classList.toggle("has-board-ticker", Boolean(text));
+
+        track.innerHTML = "";
+
+        if (!text) return;
+
+        track.appendChild(createTextItem(text, false));
+        tickerWidth = ticker.clientWidth || window.innerWidth || 1920;
+        itemWidth = track.firstChild.offsetWidth || tickerWidth;
+        repeatCount = Math.max(2, Math.ceil(tickerWidth / itemWidth) + 2);
+        distance = itemWidth * repeatCount;
+
+        track.innerHTML = "";
+        for (i = 0; i < repeatCount * 2; i++) {
+            track.appendChild(createTextItem(text, i >= repeatCount));
+        }
+
+        track.style.setProperty("--board-ticker-distance", distance + "px");
+        track.style.setProperty("--board-ticker-duration", Math.max(18, Math.round(distance / 80)) + "s");
+    }
+
+    function scheduleRender() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(renderTickerText, 100);
+    }
+
+    window.setBoardTickerText = function (value) {
+        tickerText = String(value || "").trim();
+        renderTickerText();
+
+        if (!resizeListenerAttached) {
+            window.addEventListener("resize", scheduleRender);
+            resizeListenerAttached = true;
+        }
     };
 })();

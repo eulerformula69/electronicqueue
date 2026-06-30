@@ -55,7 +55,8 @@ body.board-media-page .board-ticker[hidden]{
 body.board-media-page .board-ticker__track{
     display: flex;
     min-width: max-content;
-    animation: board-ticker-scroll 24s linear infinite;
+    animation: board-ticker-scroll var(--board-ticker-duration, 24s) linear infinite;
+    will-change: transform;
 }
 body.board-media-page .board-ticker__text{
     flex: 0 0 auto;
@@ -143,7 +144,7 @@ body.board-media-page .status-indicator{
 
 @keyframes board-ticker-scroll {
     from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+    to { transform: translateX(calc(var(--board-ticker-distance, 50%) * -1)); }
 }
 
 @keyframes call-flash {
