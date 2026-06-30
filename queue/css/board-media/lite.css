@@ -2,9 +2,11 @@
 body.board-media-page.lite-version {
     --lite-cyan: #138c9d;
     --lite-orange: #ff6b35;
-    --lite-shell-x: clamp(18px, 2.2vw, 42px);
-    --lite-gap: clamp(18px, 2vw, 34px);
-    --lite-board-width: clamp(680px, 40vw, 820px);
+    --lite-shell-x: clamp(28px, 2.1vw, 42px);
+    --lite-gap: clamp(24px, 1.8vw, 36px);
+    --lite-board-width: clamp(600px, 33.5vw, 660px);
+    --lite-media-width: min(100%, 1050px);
+    --lite-media-top: clamp(58px, 7.8vh, 86px);
     --lite-top-offset: 128px;
     --lite-ticker-height: 76px;
     --lite-card-gap: 10px;
@@ -26,7 +28,7 @@ body.board-media-page.lite-version .clock-container {
 body.board-media-page.lite-version .board-wrapper,
 body.board-media-page.lite-version.has-board-ticker .board-wrapper {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) var(--lite-board-width) !important;
+    grid-template-columns: var(--lite-media-width) var(--lite-board-width) !important;
     gap: var(--lite-gap) !important;
     width: 100vw !important;
     height: calc(100vh - var(--lite-top-offset) - var(--board-ticker-offset)) !important;
@@ -37,10 +39,13 @@ body.board-media-page.lite-version.has-board-ticker .board-wrapper {
 }
 
 body.board-media-page.lite-version .media-panel {
-    width: 100% !important;
-    max-height: 100% !important;
+    width: var(--lite-media-width) !important;
+    height: auto !important;
+    max-height: none !important;
     aspect-ratio: 16 / 9 !important;
     align-self: start !important;
+    justify-self: start !important;
+    margin-top: var(--lite-media-top) !important;
     min-width: 0 !important;
     overflow: hidden !important;
 }
@@ -60,7 +65,7 @@ body.board-media-page.lite-version .board-column-split {
     height: 100% !important;
     margin: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-columns: minmax(330px, 1.42fr) minmax(240px, 1fr) !important;
     gap: 16px !important;
     align-items: stretch !important;
     overflow: hidden !important;
@@ -82,7 +87,7 @@ body.board-media-page.lite-version .lite-board-section-header {
     justify-content: space-between !important;
     padding: 0 4px !important;
     box-sizing: border-box !important;
-    font-size: 24px !important;
+    font-size: 26px !important;
     line-height: 1 !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
@@ -125,8 +130,8 @@ body.board-media-page.lite-version #waiting-board .waiting-card {
     padding: 0 10px !important;
     box-sizing: border-box !important;
     background: #ffffff !important;
-    border-radius: 10px !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -136,8 +141,8 @@ body.board-media-page.lite-version #board .card .line {
     width: 100% !important;
     height: 100% !important;
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr) !important;
-    column-gap: 6px !important;
+    grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr) !important;
+    column-gap: 4px !important;
     align-items: center !important;
 }
 
@@ -173,7 +178,7 @@ body.board-media-page.lite-version #board .window span {
 
 body.board-media-page.lite-version #board .ticket span:first-child,
 body.board-media-page.lite-version #board .window span:first-child {
-    font-size: 10px !important;
+    font-size: 9px !important;
     line-height: 1.1 !important;
     margin-bottom: 3px !important;
     font-weight: 800 !important;
@@ -181,7 +186,7 @@ body.board-media-page.lite-version #board .window span:first-child {
 
 body.board-media-page.lite-version #board .ticket span:last-child,
 body.board-media-page.lite-version #board .window span:last-child {
-    font-size: 30px !important;
+    font-size: 31px !important;
     line-height: 1 !important;
     font-weight: 800 !important;
 }
@@ -201,7 +206,7 @@ body.board-media-page.lite-version #board .arrow {
     align-items: center !important;
     justify-content: center !important;
     color: #777 !important;
-    font-size: 25px !important;
+    font-size: 24px !important;
     line-height: 1 !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -222,8 +227,8 @@ body.board-media-page.lite-version #waiting-board .ticket {
 body.board-media-page.lite-version .board-empty,
 body.board-media-page.lite-version .waiting-empty {
     height: 100% !important;
-    min-height: 90px !important;
-    border-radius: 10px !important;
+    min-height: 62px !important;
+    border-radius: 8px !important;
     background: #ffffff !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
     display: flex !important;
@@ -262,8 +267,14 @@ body.board-media-page.lite-version.has-board-ticker .status-indicator {
 
 @media (max-width: 1500px) {
     body.board-media-page.lite-version {
-        --lite-board-width: clamp(560px, 42vw, 660px);
+        --lite-board-width: clamp(540px, 42vw, 620px);
+        --lite-media-top: clamp(36px, 6vh, 64px);
         --lite-card-gap: 8px;
+    }
+
+    body.board-media-page.lite-version .board-column,
+    body.board-media-page.lite-version .board-column-split {
+        grid-template-columns: minmax(290px, 1.35fr) minmax(220px, 1fr) !important;
     }
 
     body.board-media-page.lite-version .lite-board-section-header {
