@@ -72,8 +72,7 @@ body.board-media-page .board-ticker__text::after{
     margin-left: 72px;
     color: rgba(255, 255, 255, 0.82);
 }
-body.board-media-page .board-ticker__text--last::after{
-    content: "";
+body.board-media-page .board-ticker__text--segment-end::after{
     margin-left: 0;
 }
 body.board-media-page .media-panel{

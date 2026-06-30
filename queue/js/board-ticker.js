@@ -23,9 +23,9 @@
         return ticker;
     }
 
-    function createTextItem(text, isLast, hidden) {
+    function createTextItem(text, isSegmentEnd, hidden) {
         var item = document.createElement("span");
-        item.className = "board-ticker__text" + (isLast ? " board-ticker__text--last" : "");
+        item.className = "board-ticker__text" + (isSegmentEnd ? " board-ticker__text--segment-end" : "");
         item.textContent = text;
         if (hidden) item.setAttribute("aria-hidden", "true");
         return item;

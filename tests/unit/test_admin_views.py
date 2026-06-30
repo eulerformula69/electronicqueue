@@ -141,9 +141,12 @@ def test_board_ticker_splits_multiline_messages_with_separator():
     assert ".filter(Boolean)" in script
     assert "tickerMessages = parseTickerMessages(value)" in script
     assert "appendMessageSet(track, messages" in script
-    assert "board-ticker__text--last" in script
+    assert "board-ticker__text--segment-end" in script
     assert 'content: "|";' in board_css
-    assert ".board-ticker__text--last::after" in board_css
+    assert ".board-ticker__text--segment-end::after" in board_css
+    assert ".board-ticker__text--segment-end::after{\n    margin-left: 0;" in board_css
+    assert 'content: "";' not in board_css
     assert "margin-left: 72px;" in board_css
     assert 'content: "|";' in media_css
-    assert ".board-ticker__text--last::after" in media_css
+    assert ".board-ticker__text--segment-end::after" in media_css
+    assert 'content: "";' not in media_css
