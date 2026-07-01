@@ -323,7 +323,6 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
             .filter(
                 Ticket.status == "waiting",
                 Ticket.target_window_id == operator.window_id,
-                queue_available_condition(),
             )
             .order_by(queue_order_expr().asc())
             .first()
@@ -575,7 +574,6 @@ def get_my_queue(
             .filter(
                 Ticket.status == "waiting",
                 Ticket.target_window_id == operator.window_id,
-                queue_available_condition(),
             )
             .order_by(queue_order_expr().asc())
         )
@@ -598,7 +596,6 @@ def get_my_queue(
                     Ticket.window_id == operator.window_id,
                     Ticket.status == "waiting",
                     Ticket.target_window_id.is_(None),
-                    queue_available_condition(),
                 )
                 .order_by(queue_order_expr().asc())
             )
@@ -620,7 +617,6 @@ def get_my_queue(
                     WindowService.window_id == operator.window_id,
                     Ticket.status == "waiting",
                     Ticket.target_window_id.is_(None),
-                    queue_available_condition(),
                 )
                 .order_by(
                     WindowService.priority.asc(),

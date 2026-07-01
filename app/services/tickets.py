@@ -144,10 +144,7 @@ def get_waiting_tickets_for_board():
         tickets = (
             db.query(Ticket, Service)
             .join(Service, Ticket.service_id == Service.id)
-            .filter(
-                Ticket.status == "waiting",
-                queue_available_condition(),
-            )
+            .filter(Ticket.status == "waiting")
             .order_by(queue_order_expr().asc())
             .all()
         )

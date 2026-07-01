@@ -14,8 +14,8 @@ from app.models import (
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
-    queue_available_condition, queue_order_expr,
-    reassign_waiting_tickets_from_window, return_ticket_to_queue,
+    queue_order_expr, reassign_waiting_tickets_from_window,
+    return_ticket_to_queue,
 )
 
 
@@ -72,7 +72,6 @@ def get_operator_state(operator_id: int):
             .filter(
                 WindowService.window_id == operator.window_id,
                 Ticket.status == "waiting",
-                queue_available_condition(),
             )
             .order_by(WindowService.priority.desc(), queue_order_expr().asc())
             .all()
