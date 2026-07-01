@@ -16,10 +16,6 @@ def queue_order_expr():
     return func.coalesce(Ticket.queue_entered_at, Ticket.created_at)
 
 
-def queue_available_condition(now: datetime | None = None):
-    return queue_order_expr() <= (now or datetime.now())
-
-
 def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     returned_at = now or datetime.now()
 
@@ -99,7 +95,6 @@ async def assign_unassigned_waiting_tickets(db: Session):
         Ticket.status == "waiting",
         Ticket.window_id.is_(None),
         Ticket.target_window_id.is_(None),
-        queue_available_condition(),
     ).order_by(queue_order_expr().asc()).all()
 
     for ticket in tickets:

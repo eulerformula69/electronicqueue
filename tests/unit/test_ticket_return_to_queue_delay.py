@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 
 from app.models import Ticket
+from app.routers import tickets as tickets_router
+from app.services import tickets as ticket_service
 from app.services.tickets import (
     RETURN_TO_QUEUE_DELAY_MINUTES,
     return_ticket_to_queue,
@@ -31,3 +33,8 @@ def test_return_ticket_to_queue_delays_ticket_by_15_minutes():
     assert ticket.called_at is None
     assert ticket.finished_at is None
     assert ticket.queue_entered_at == now + timedelta(minutes=15)
+
+
+def test_next_ticket_query_does_not_hide_delayed_returned_tickets():
+    assert not hasattr(ticket_service, "queue_available_condition")
+    assert "queue_available_condition" not in tickets_router.call_next_ticket.__code__.co_names

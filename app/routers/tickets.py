@@ -41,8 +41,8 @@ from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
-    broadcast_ticket_called, queue_available_condition, queue_order_expr,
-    render_ticket_template, return_ticket_to_queue,
+    broadcast_ticket_called, queue_order_expr, render_ticket_template,
+    return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -336,7 +336,6 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
                         Ticket.status == "waiting",
                         Ticket.window_id == operator.window_id,
                         Ticket.target_window_id.is_(None),
-                        queue_available_condition(),
                     )
                     .order_by(queue_order_expr().asc())
                     .first()
@@ -349,7 +348,6 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
                         WindowService.window_id == operator.window_id,
                         Ticket.status == "waiting",
                         Ticket.target_window_id.is_(None),
-                        queue_available_condition(),
                     )
                     .order_by(
                         WindowService.priority.asc(),
