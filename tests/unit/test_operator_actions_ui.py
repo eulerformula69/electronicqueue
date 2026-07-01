@@ -8,9 +8,11 @@ def read_text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_operator_rare_actions_are_only_in_more_menu():
+def test_operator_return_to_queue_and_cancel_are_swapped():
     source = read_text("queue/operator.html")
 
+    primary_actions = source.split('<div class="button-group primary-actions">', 1)[1]
+    primary_actions = primary_actions.split('<div class="button-group secondary-actions">', 1)[0]
     secondary_actions = source.split('<div class="button-group secondary-actions">', 1)[1]
     secondary_actions = secondary_actions.split('<div id="redirect-panel"', 1)[0]
     more_menu = secondary_actions.split('<div id="operator-more-menu"', 1)[1]
@@ -18,8 +20,12 @@ def test_operator_rare_actions_are_only_in_more_menu():
 
     assert "ВЫЗВАТЬ ПО НОМЕРУ" not in before_more_menu
     assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" not in before_more_menu
+    assert "ОТМЕНИТЬ ВЫЗОВ" not in primary_actions
+    assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" in primary_actions
     assert "ВЫЗВАТЬ ПО НОМЕРУ" in more_menu
-    assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" in more_menu
+    assert "ОТМЕНИТЬ ВЫЗОВ" in more_menu
+    assert 'onclick="returnCurrentToQueue()"' in primary_actions
+    assert 'onclick="cancelCurrent()"' in more_menu
 
 
 def test_operator_return_to_queue_warns_only_after_first_return():
@@ -31,6 +37,7 @@ def test_operator_return_to_queue_warns_only_after_first_return():
     assert "showOperatorPopup({" in source
     assert 'title: "Вернуть в очередь?"' in source
     assert "Похоже, вы возвращаете в очередь не в первый раз" in source
+    assert "Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов»." in source
     assert 'text: "Вернуть в очередь"' in source
     assert 'text: "Отмена"' in source
 

@@ -88,7 +88,7 @@
         <div class="button-group primary-actions">
             <button id="next-btn" class="btn-primary" onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
             <button class="btn-danger" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
-            <button class="btn-outline" id="cancel-btn" onclick="cancelCurrent()">КЛИЕНТ НЕ ЯВИЛСЯ</button>
+            <button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
         </div>
 
         <div class="button-group secondary-actions">
@@ -99,7 +99,7 @@
                 <button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
                 <div id="operator-more-menu" class="operator-more-menu">
                     <button type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
-                    <button type="button" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
+                    <button type="button" id="cancel-btn" onclick="cancelCurrent()">ОТМЕНИТЬ ВЫЗОВ</button>
                 </div>
             </div>
         </div>
