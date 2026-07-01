@@ -8,20 +8,22 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_operator_admin_table_hides_visible_id_but_keeps_internal_id():
+def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
     source = _read("queue/js/admin/views/operators.view.js")
 
-    assert "<td>${operator.id}</td>" not in source
-    assert '"ID"' not in source
+    assert "<td>${operator.id}</td>" in source
+    assert 'ctx.ui.sortHeader("ID", "id", sortState)' in source
+    assert '["id", "name", "login", "window"].includes(parsed.key)' in source
     assert "id: operator.id" in source
     assert "operators.find(item => item.id === Number(button.dataset.id))" in source
 
 
-def test_window_admin_table_hides_visible_id_but_keeps_internal_id():
+def test_window_admin_table_shows_visible_id_and_keeps_internal_id():
     source = _read("queue/js/admin/views/windows.view.js")
 
-    assert "<td>${windowItem.id}</td>" not in source
-    assert '"ID"' not in source
+    assert "<td>${windowItem.id}</td>" in source
+    assert 'ctx.ui.sortHeader("ID", "id", sortState)' in source
+    assert '["id", "name", "status", "services"].includes(parsed.key)' in source
     assert "id: windowItem.id" in source
     assert "windows.find(item => item.id === Number(button.dataset.id))" in source
 

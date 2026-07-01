@@ -23,6 +23,7 @@ async function load() {
 function render() {
     const rows = sortOperators(operators).map(operator => `
         <tr>
+            <td>${operator.id}</td>
             <td><strong>${ctx.ui.escapeHtml(operator.name)}</strong></td>
             <td>${ctx.ui.escapeHtml(operator.login || "-")}</td>
             <td>${ctx.ui.escapeHtml(windowName(operator.window_id))}</td>
@@ -33,6 +34,7 @@ function render() {
     ctx.view.innerHTML = `
         <div class="admin-toolbar">${ctx.ui.button("Добавить оператора", {variant: "primary", action: "create"})}</div>
         ${ctx.ui.table([
+            ctx.ui.sortHeader("ID", "id", sortState),
             ctx.ui.sortHeader("ФИО", "name", sortState),
             ctx.ui.sortHeader("Логин", "login", sortState),
             ctx.ui.sortHeader("Рабочее место", "window", sortState),
@@ -70,6 +72,7 @@ function sortOperators(items) {
 }
 
 function operatorSortValue(operator, key) {
+    if (key === "id") return operator.id ?? 0;
     if (key === "login") return operator.login || "";
     if (key === "window") return windowName(operator.window_id);
     return operator.name || "";
@@ -82,7 +85,7 @@ function compareValues(a, b) {
 function loadSortState(fallback) {
     try {
         const parsed = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
-        if (parsed && ["name", "login", "window"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
+        if (parsed && ["id", "name", "login", "window"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
             return parsed;
         }
     } catch (error) {

@@ -37,6 +37,7 @@ function render() {
         const linked = windowServices.get(windowItem.id) || [];
         return `
             <tr>
+                <td>${windowItem.id}</td>
                 <td><strong>${ctx.ui.escapeHtml(windowItem.name)}</strong></td>
                 <td>${ctx.ui.badge(windowItem.status, windowItem.status === "online" ? "success" : windowItem.status === "break" ? "warning" : "neutral")}</td>
                 <td>${linked.length} услуг</td>
@@ -48,6 +49,7 @@ function render() {
     ctx.view.innerHTML = `
         <div class="admin-toolbar">${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create"})}</div>
         ${ctx.ui.table([
+            ctx.ui.sortHeader("ID", "id", sortState),
             ctx.ui.sortHeader("Название", "name", sortState),
             ctx.ui.sortHeader("Статус", "status", sortState),
             ctx.ui.sortHeader("Услуги", "services", sortState),
@@ -85,6 +87,7 @@ function sortWindows(items) {
 }
 
 function windowSortValue(windowItem, key) {
+    if (key === "id") return windowItem.id ?? 0;
     if (key === "status") return windowItem.status || "";
     if (key === "services") return windowServices.get(windowItem.id)?.length || 0;
     return windowItem.name || "";
@@ -98,7 +101,7 @@ function compareValues(a, b) {
 function loadSortState(fallback) {
     try {
         const parsed = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
-        if (parsed && ["name", "status", "services"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
+        if (parsed && ["id", "name", "status", "services"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
             return parsed;
         }
     } catch (error) {
