@@ -101,6 +101,7 @@ class TicketRead(BaseModel):
     window_id: int | None = None
     target_window_id: int | None = None
     created_at: datetime | None = None
+    queue_entered_at: datetime | None = None
     called_at: datetime | None = None
     finished_at: datetime | None = None
 

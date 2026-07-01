@@ -41,6 +41,7 @@ from app.services.operators import get_operator_state, update_services_status_fo
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     broadcast_board, get_board_state, reassign_waiting_tickets_from_window,
+    return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -196,8 +197,7 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
                             Ticket.status == "called"
                         ).first()
                         if active_ticket:
-                            active_ticket.status = "waiting"
-                            active_ticket.window_id = None
+                            return_ticket_to_queue(active_ticket)
 
             db.commit()
         except Exception as e:

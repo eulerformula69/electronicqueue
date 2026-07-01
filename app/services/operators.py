@@ -14,7 +14,8 @@ from app.models import (
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
-    reassign_waiting_tickets_from_window,
+    queue_available_condition, queue_order_expr,
+    reassign_waiting_tickets_from_window, return_ticket_to_queue,
 )
 
 
@@ -68,8 +69,12 @@ def get_operator_state(operator_id: int):
         tickets = (
             db.query(Ticket)
             .join(WindowService, Ticket.service_id == WindowService.service_id)
-            .filter(WindowService.window_id == operator.window_id, Ticket.status == "waiting")
-            .order_by(WindowService.priority.desc(), Ticket.created_at.asc())
+            .filter(
+                WindowService.window_id == operator.window_id,
+                Ticket.status == "waiting",
+                queue_available_condition(),
+            )
+            .order_by(WindowService.priority.desc(), queue_order_expr().asc())
             .all()
         )
 
@@ -193,8 +198,7 @@ async def cleanup_sessions():
                                 ).first()
 
                                 if active_ticket:
-                                    active_ticket.status = "waiting"
-                                    active_ticket.window_id = None
+                                    return_ticket_to_queue(active_ticket)
 
                                     if (
                                         settings.get("queue_mode") == "dynamic_operator_distribution"

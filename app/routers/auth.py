@@ -43,6 +43,7 @@ from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, assign_unassigned_waiting_tickets,
     broadcast_board, reassign_waiting_tickets_from_window,
+    return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -228,8 +229,7 @@ async def logout(session_id: str = Header(...)):
                     ).first()
 
                     if active_ticket:
-                        active_ticket.status = "waiting"
-                        active_ticket.window_id = None
+                        return_ticket_to_queue(active_ticket)
 
                         if (
                             settings.get("queue_mode") == "dynamic_operator_distribution"

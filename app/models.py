@@ -61,6 +61,10 @@ class Ticket(Base):
         TIMESTAMP,
         server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
     )
+    queue_entered_at = Column(
+        TIMESTAMP,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
+    )
     called_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 

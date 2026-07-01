@@ -41,7 +41,8 @@ from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
-    broadcast_ticket_called, render_ticket_template,
+    broadcast_ticket_called, queue_available_condition, queue_order_expr,
+    render_ticket_template, return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -204,11 +205,13 @@ async def create_ticket(
             target_window_id = ticket.window_id
 
         # 3. Создаем тикет
+        created_at = datetime.now()
         db_ticket = Ticket(
             service_id=service.id,
             status="waiting",
             target_window_id=target_window_id,
-            created_at=datetime.now()
+            created_at=created_at,
+            queue_entered_at=created_at,
         )
 
         db.add(db_ticket)
@@ -319,9 +322,10 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
             db.query(Ticket)
             .filter(
                 Ticket.status == "waiting",
-                Ticket.target_window_id == operator.window_id
+                Ticket.target_window_id == operator.window_id,
+                queue_available_condition(),
             )
-            .order_by(Ticket.created_at.asc())
+            .order_by(queue_order_expr().asc())
             .first()
         )
 
@@ -332,9 +336,10 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
                     .filter(
                         Ticket.status == "waiting",
                         Ticket.window_id == operator.window_id,
-                        Ticket.target_window_id.is_(None)
+                        Ticket.target_window_id.is_(None),
+                        queue_available_condition(),
                     )
-                    .order_by(Ticket.created_at.asc())
+                    .order_by(queue_order_expr().asc())
                     .first()
                 )
             else:
@@ -344,11 +349,12 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
                     .filter(
                         WindowService.window_id == operator.window_id,
                         Ticket.status == "waiting",
-                        Ticket.target_window_id.is_(None)
+                        Ticket.target_window_id.is_(None),
+                        queue_available_condition(),
                     )
                     .order_by(
                         WindowService.priority.asc(),
-                        Ticket.created_at.asc()
+                        queue_order_expr().asc()
                     )
                     .first()
                 )
@@ -525,13 +531,7 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
 
         settings = get_system_settings_dict(db)
 
-        ticket.status = "waiting"
-        ticket.completion_reason = None
-        ticket.operator_id = None
-        ticket.window_id = None
-        ticket.target_window_id = None
-        ticket.called_at = None
-        ticket.finished_at = None
+        return_ticket_to_queue(ticket)
 
         if settings.get("queue_mode") == "dynamic_operator_distribution":
             assign_ticket_to_least_loaded_window(db, ticket)
@@ -574,9 +574,10 @@ def get_my_queue(
             .join(Service, Service.id == Ticket.service_id)
             .filter(
                 Ticket.status == "waiting",
-                Ticket.target_window_id == operator.window_id
+                Ticket.target_window_id == operator.window_id,
+                queue_available_condition(),
             )
-            .order_by(Ticket.created_at.asc())
+            .order_by(queue_order_expr().asc())
         )
 
         # 2) Обычные билеты ниже — по текущему режиму очереди.
@@ -596,9 +597,10 @@ def get_my_queue(
                 .filter(
                     Ticket.window_id == operator.window_id,
                     Ticket.status == "waiting",
-                    Ticket.target_window_id.is_(None)
+                    Ticket.target_window_id.is_(None),
+                    queue_available_condition(),
                 )
-                .order_by(Ticket.created_at.asc())
+                .order_by(queue_order_expr().asc())
             )
         else:
             ordinary_query = (
@@ -617,11 +619,12 @@ def get_my_queue(
                 .filter(
                     WindowService.window_id == operator.window_id,
                     Ticket.status == "waiting",
-                    Ticket.target_window_id.is_(None)
+                    Ticket.target_window_id.is_(None),
+                    queue_available_condition(),
                 )
                 .order_by(
                     WindowService.priority.asc(),
-                    Ticket.created_at.asc()
+                    queue_order_expr().asc()
                 )
             )
 
@@ -752,6 +755,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
             window_id=None,
             target_window_id=None,
             created_at=redirected_at,
+            queue_entered_at=redirected_at,
             called_at=None,
             finished_at=None,
         )
@@ -834,7 +838,7 @@ def get_current_ticket(operator: Operator = Depends(verify_session)):
                 Ticket.status == "called",
                 Ticket.window_id == operator.window_id
             )
-            .order_by(Ticket.created_at.asc())
+            .order_by(Ticket.called_at.asc())
             .first()
         )
 

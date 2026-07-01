@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import and_, asc, func, literal
 from sqlalchemy.orm import Session
@@ -8,6 +8,29 @@ from app.connections import manager, operatorManager
 from app.database import SessionLocal
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.services.settings import get_system_settings_dict
+
+RETURN_TO_QUEUE_DELAY_MINUTES = 15
+
+
+def queue_order_expr():
+    return func.coalesce(Ticket.queue_entered_at, Ticket.created_at)
+
+
+def queue_available_condition(now: datetime | None = None):
+    return queue_order_expr() <= (now or datetime.now())
+
+
+def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
+    returned_at = now or datetime.now()
+
+    ticket.status = "waiting"
+    ticket.completion_reason = None
+    ticket.operator_id = None
+    ticket.window_id = None
+    ticket.target_window_id = None
+    ticket.called_at = None
+    ticket.finished_at = None
+    ticket.queue_entered_at = returned_at + timedelta(minutes=RETURN_TO_QUEUE_DELAY_MINUTES)
 
 
 def assign_ticket_to_least_loaded_window(db: Session, ticket: Ticket):
@@ -75,8 +98,9 @@ async def assign_unassigned_waiting_tickets(db: Session):
     tickets = db.query(Ticket).filter(
         Ticket.status == "waiting",
         Ticket.window_id.is_(None),
-        Ticket.target_window_id.is_(None)
-    ).order_by(Ticket.created_at.asc()).all()
+        Ticket.target_window_id.is_(None),
+        queue_available_condition(),
+    ).order_by(queue_order_expr().asc()).all()
 
     for ticket in tickets:
         assign_ticket_to_least_loaded_window(db, ticket)
@@ -120,8 +144,11 @@ def get_waiting_tickets_for_board():
         tickets = (
             db.query(Ticket, Service)
             .join(Service, Ticket.service_id == Service.id)
-            .filter(Ticket.status == "waiting")
-            .order_by(Ticket.created_at.asc())
+            .filter(
+                Ticket.status == "waiting",
+                queue_available_condition(),
+            )
+            .order_by(queue_order_expr().asc())
             .all()
         )
 

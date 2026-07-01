@@ -244,6 +244,29 @@ def migrate_ticket_operator_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_queue_entered_at_schema(engine):
+    """Track the time a ticket should be considered available in queue order."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS queue_entered_at timestamp without time zone
+        DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
+
+    UPDATE tickets
+    SET queue_entered_at = created_at
+    WHERE queue_entered_at IS NULL;
+
+    ALTER TABLE tickets
+        ALTER COLUMN queue_entered_at SET DEFAULT
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_status_queue_entered_at
+        ON tickets (status, queue_entered_at);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """
