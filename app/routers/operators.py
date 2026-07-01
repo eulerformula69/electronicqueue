@@ -33,13 +33,68 @@ from app.dependencies import (
     verify_session,
 )
 from app.models import (
-    Admin, Operator, Service, Window, WindowService, record_operator_status,
+    Admin, Operator, OperatorServiceNotification, Service, Window, WindowService,
+    record_operator_status,
 )
-from app.schemas import OperatorCreate, OperatorLoginUpdate, WindowOperatorUpdate
+from app.schemas import (
+    OperatorCreate, OperatorLoginUpdate, OperatorServiceNotificationRead,
+    OperatorServiceNotificationUpdate, WindowOperatorUpdate,
+)
 from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state
 
 router = APIRouter()
+
+
+def build_service_notification_payload(service_id, service_name, priority, enabled):
+    return {
+        "service_id": service_id,
+        "service_name": service_name,
+        "priority": priority,
+        "enabled": bool(enabled),
+    }
+
+
+def get_operator_service_notifications(db: Session, operator: Operator):
+    if not operator.window_id:
+        return []
+
+    services = (
+        db.query(Service.id, Service.name, WindowService.priority)
+        .join(WindowService, Service.id == WindowService.service_id)
+        .filter(
+            WindowService.window_id == operator.window_id,
+            Service.is_archived == 0,
+        )
+        .order_by(WindowService.priority.asc(), Service.name.asc())
+        .all()
+    )
+    service_ids = [service.id for service in services]
+    if not service_ids:
+        return []
+
+    settings = (
+        db.query(OperatorServiceNotification)
+        .filter(
+            OperatorServiceNotification.operator_id == operator.id,
+            OperatorServiceNotification.service_id.in_(service_ids),
+        )
+        .all()
+    )
+    enabled_by_service_id = {
+        setting.service_id: bool(setting.enabled)
+        for setting in settings
+    }
+
+    return [
+        build_service_notification_payload(
+            service.id,
+            service.name,
+            service.priority,
+            enabled_by_service_id.get(service.id, True),
+        )
+        for service in services
+    ]
 
 
 @router.get("/operator/windows", tags=["Operators"])
@@ -322,6 +377,88 @@ def get_dashboard_data(operator: Operator = Depends(verify_session)):
     return get_operator_state(operator.id)
 
 
+@router.get(
+    "/operator/service-notifications",
+    response_model=List[OperatorServiceNotificationRead],
+    tags=["Operators"],
+)
+def list_my_service_notifications(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        return get_operator_service_notifications(db, operator)
+    finally:
+        db.close()
+
+
+@router.patch("/operator/service-notifications/{service_id}", tags=["Operators"])
+@router.put("/operator/service-notifications/{service_id}", tags=["Operators"])
+def update_my_service_notification(
+    service_id: int,
+    data: OperatorServiceNotificationUpdate,
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=404, detail="Operator window not found")
+
+        service = (
+            db.query(Service)
+            .join(WindowService, Service.id == WindowService.service_id)
+            .filter(
+                Service.id == service_id,
+                Service.is_archived == 0,
+                WindowService.window_id == operator.window_id,
+            )
+            .first()
+        )
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found for operator window")
+
+        setting = (
+            db.query(OperatorServiceNotification)
+            .filter(
+                OperatorServiceNotification.operator_id == operator.id,
+                OperatorServiceNotification.service_id == service_id,
+            )
+            .first()
+        )
+        if not setting:
+            setting = OperatorServiceNotification(
+                operator_id=operator.id,
+                service_id=service_id,
+                enabled=1 if data.enabled else 0,
+            )
+            db.add(setting)
+        else:
+            setting.enabled = 1 if data.enabled else 0
+
+        db.commit()
+
+        priority = (
+            db.query(WindowService.priority)
+            .filter(
+                WindowService.window_id == operator.window_id,
+                WindowService.service_id == service_id,
+            )
+            .scalar()
+        )
+        return build_service_notification_payload(
+            service.id,
+            service.name,
+            priority if priority is not None else 1,
+            setting.enabled,
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 @router.get("/operators/details", tags=["Operators"])
 async def get_my_details(operator: Operator = Depends(verify_session)):
     db = SessionLocal()
@@ -332,22 +469,14 @@ async def get_my_details(operator: Operator = Depends(verify_session)):
         
         services_with_priority = []
         if operator.window_id:
-            # Получаем и название услуги, и её приоритет из связующей таблицы
-            results = (
-                db.query(Service.name, WindowService.priority)
-                .join(WindowService, Service.id == WindowService.service_id)
-                .filter(
-                    WindowService.window_id == operator.window_id,
-                    Service.is_archived == 0,
-                )
-                .order_by(WindowService.priority.desc()) # Сортируем по важности
-                .all()
-            )
-            
-            # Формируем список словарей для фронтенда
             services_with_priority = [
-                {"name": name, "priority": priority} 
-                for name, priority in results
+                {
+                    "id": item["service_id"],
+                    "name": item["service_name"],
+                    "priority": item["priority"],
+                    "notifications_enabled": item["enabled"],
+                }
+                for item in get_operator_service_notifications(db, operator)
             ]
 
         return {

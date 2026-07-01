@@ -52,6 +52,7 @@ let newTicketSystemNotificationEnabled =
 // Антидребезг системных уведомлений
 let lastNewTicketNotificationAt = 0;
 const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;	
+let serviceNotificationSettings = new Map();
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -470,6 +471,41 @@ function showNewTicketSystemNotification(newTickets, options = {}) {
     }
 }
 
+function isServiceNotificationEnabled(serviceId) {
+    const normalizedServiceId = Number(serviceId);
+    if (!Number.isFinite(normalizedServiceId)) return true;
+    return serviceNotificationSettings.get(normalizedServiceId) !== false;
+}
+
+async function toggleServiceNotification(serviceId, enabled) {
+    const normalizedServiceId = Number(serviceId);
+    if (!Number.isFinite(normalizedServiceId)) return;
+
+    serviceNotificationSettings.set(normalizedServiceId, Boolean(enabled));
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/operator/service-notifications/${normalizedServiceId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            },
+            body: JSON.stringify({ enabled: Boolean(enabled) })
+        });
+
+        if (!res.ok) throw new Error("Notification setting save failed");
+
+        const data = await res.json();
+        serviceNotificationSettings.set(Number(data.service_id), Boolean(data.enabled));
+    } catch (e) {
+        serviceNotificationSettings.set(normalizedServiceId, !enabled);
+        const checkbox = document.querySelector(`.service-notification-checkbox[data-service-id="${normalizedServiceId}"]`);
+        if (checkbox) checkbox.checked = !enabled;
+        showToast("Не удалось сохранить настройку уведомлений", "danger");
+        console.error(e);
+    }
+}
+
 async function loadOperatorInfo() {
     try {
         const res = await fetch(`${CONFIG.API_URL}/operators/details`, {
@@ -478,6 +514,12 @@ async function loadOperatorInfo() {
 
         if (!res.ok) throw new Error("Ошибка загрузки");
         const data = await res.json();
+        serviceNotificationSettings = new Map(
+            (data.services || []).map(s => [
+                Number(s.id),
+                s.notifications_enabled !== false
+            ])
+        );
 
 const servicesHtml = data.services && data.services.length > 0 
     ? data.services
@@ -486,6 +528,16 @@ const servicesHtml = data.services && data.services.length > 0
             <div class="service-row">
                 <span class="service-priority">${s.priority}</span>
                 <span class="service-name">${s.name}</span>
+                <label class="service-notification-toggle" title="Уведомления по услуге">
+                    <input
+                        type="checkbox"
+                        class="service-notification-checkbox"
+                        data-service-id="${s.id}"
+                        ${s.notifications_enabled !== false ? "checked" : ""}
+                        onchange="toggleServiceNotification(${s.id}, this.checked)"
+                    >
+                    <span>Увед.</span>
+                </label>
             </div>
         `).join("")
     : '<span style="color: var(--text-muted)">Услуги не назначены</span>';
@@ -577,8 +629,9 @@ function checkNewTicketsAndNotify(tickets) {
     const newTickets = tickets.filter(
         t => !knownQueueTicketIds.has(`${t.id}:${t.target_window_id || 0}:${t.is_redirected_to_window ? 1 : 0}`)
     );
+    const ticketsForNotification = newTickets.filter(t => isServiceNotificationEnabled(t.service_id));
 
-    if (queueSoundInitialized && newTickets.length > 0) {
+    if (queueSoundInitialized && ticketsForNotification.length > 0) {
         try {
             playNewTicketSound();
         } catch (e) {
@@ -586,7 +639,7 @@ function checkNewTicketsAndNotify(tickets) {
         }
 
         try {
-            showNewTicketSystemNotification(newTickets);
+            showNewTicketSystemNotification(ticketsForNotification);
         } catch (e) {
             console.debug("New ticket system notification failed:", e);
         }

@@ -512,6 +512,20 @@ body.operator-page .service-priority{
 body.operator-page .service-name{
     font-size: 1.05rem;
     color: var(--text-muted);
+    flex: 1;
+}
+body.operator-page .service-notification-toggle{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+body.operator-page .service-notification-toggle input{
+    width: 16px;
+    height: 16px;
+    margin: 0;
 }
 body.operator-page .current-service{
     font-size: 1.4rem;

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger, CheckConstraint, Column, ForeignKey, Index, Integer, String,
-    TIMESTAMP, func, text,
+    TIMESTAMP, UniqueConstraint, func, text,
 )
 from sqlalchemy.orm import Session, relationship
 
@@ -74,6 +74,18 @@ class Operator(Base):
     login = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     window_id = Column(Integer, ForeignKey("windows.id"), unique=True)
+
+
+class OperatorServiceNotification(Base):
+    __tablename__ = "operator_service_notifications"
+    __table_args__ = (
+        UniqueConstraint("operator_id", "service_id", name="uq_operator_service_notifications"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    operator_id = Column(Integer, ForeignKey("operators.id", ondelete="CASCADE"), nullable=False)
+    service_id = Column(Integer, ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
+    enabled = Column(Integer, nullable=False, default=1, server_default=text("1"))
 
 
 class Window(Base):

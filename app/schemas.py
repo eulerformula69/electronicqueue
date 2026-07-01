@@ -78,6 +78,18 @@ class TicketCreate(BaseModel):
 class ServiceTerminalVisibilityUpdate(BaseModel):
     visible_on_terminal: bool
 
+
+class OperatorServiceNotificationUpdate(BaseModel):
+    enabled: bool
+
+
+class OperatorServiceNotificationRead(BaseModel):
+    service_id: int
+    service_name: str
+    priority: int
+    enabled: bool
+
+
 class TicketRead(BaseModel):
     id: int
     number: int

@@ -8,8 +8,8 @@ from app.config import OPERATOR_SESSION_AUTO_CLEANUP_ENABLED, SESSION_TIMEOUT_SE
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
 from app.models import (
-    AdminSession, Operator, OperatorStatusPeriod, Service, Ticket, UserSession,
-    Window, WindowService, record_operator_status,
+    AdminSession, Operator, OperatorServiceNotification, OperatorStatusPeriod,
+    Service, Ticket, UserSession, Window, WindowService, record_operator_status,
 )
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
@@ -79,17 +79,40 @@ def get_operator_state(operator_id: int):
 
         # Услуги с приоритетами
         services_data = (
-            db.query(Service.name, WindowService.priority)
+            db.query(Service.id, Service.name, WindowService.priority)
             .join(WindowService, Service.id == WindowService.service_id)
-            .filter(WindowService.window_id == operator.window_id)
+            .filter(
+                WindowService.window_id == operator.window_id,
+                Service.is_archived == 0,
+            )
             .order_by(WindowService.priority.desc())
             .all()
         )
+        service_ids = [service.id for service in services_data]
+        notification_settings = {}
+        if service_ids:
+            notification_settings = {
+                setting.service_id: bool(setting.enabled)
+                for setting in db.query(OperatorServiceNotification)
+                .filter(
+                    OperatorServiceNotification.operator_id == operator.id,
+                    OperatorServiceNotification.service_id.in_(service_ids),
+                )
+                .all()
+            }
 
         return {
             "operator": {"id": operator.id, "name": operator.name},
             "window": {"id": window.id, "name": window.name, "status": window.status if window else "offline"},
-            "services": [{"name": s[0], "priority": s[1]} for s in services_data],
+            "services": [
+                {
+                    "id": service.id,
+                    "name": service.name,
+                    "priority": service.priority,
+                    "notifications_enabled": notification_settings.get(service.id, True),
+                }
+                for service in services_data
+            ],
             "queue": [{"id": t.id, "number": t.number} for t in tickets],
             "current_ticket": {"id": current_ticket.id, "number": current_ticket.number} if current_ticket else None
         }

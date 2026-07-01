@@ -429,3 +429,24 @@ def migrate_service_groups_schema(engine):
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_operator_service_notifications_schema(engine):
+    """Create per-operator service notification settings."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS operator_service_notifications (
+        id serial PRIMARY KEY,
+        operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
+        service_id integer NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        enabled integer NOT NULL DEFAULT 1,
+        CONSTRAINT uq_operator_service_notifications UNIQUE (operator_id, service_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS ix_operator_service_notifications_operator_id
+        ON operator_service_notifications (operator_id);
+    CREATE INDEX IF NOT EXISTS ix_operator_service_notifications_service_id
+        ON operator_service_notifications (service_id);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
