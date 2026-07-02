@@ -186,7 +186,7 @@ def test_board_ticker_splits_multiline_messages_with_separator():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")
 
-    assert ".split(/\\r?\\n/)" in script
+    assert ".split(/\\s+\\|\\s+|\\r?\\n/)" in script
     assert ".filter(Boolean)" in script
     assert "tickerMessages = parseTickerMessages(value)" in script
     assert "appendMessageSet(track, messages" in script

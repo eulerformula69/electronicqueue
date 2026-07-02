@@ -33,7 +33,7 @@
 
     function parseTickerMessages(value) {
         return String(value || "")
-            .split(/\r?\n/)
+            .split(/\s+\|\s+|\r?\n/)
             .map(function (line) {
                 return line.trim();
             })
