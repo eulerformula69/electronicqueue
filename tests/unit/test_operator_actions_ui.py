@@ -31,15 +31,16 @@ def test_operator_return_to_queue_and_cancel_are_swapped():
 def test_operator_return_to_queue_warns_only_after_first_return():
     source = read_text("queue/js/operator.js")
 
-    assert "operatorReturnedTicketIds" in source
-    assert "wasTicketReturnedToQueue(currentTicketId)" in source
-    assert "await confirmReturnCurrentToQueue();" in source
+    assert "operatorReturnedTicketIds" not in source
+    assert "rememberReturnedTicket" not in source
+    assert "wasTicketReturnedToQueue" not in source
+    assert "data.was_returned_before" in source
+    assert "showRepeatedReturnWarning()" in source
     assert "showOperatorPopup({" in source
     assert 'title: "Вернуть в очередь?"' in source
     assert "Похоже, вы возвращаете в очередь не в первый раз" in source
     assert "Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов»." in source
-    assert 'text: "Вернуть в очередь"' in source
-    assert 'text: "Отмена"' in source
+    assert 'text: "Понятно"' in source
 
 
 def test_operator_finish_warning_can_route_to_cancel_or_finish():

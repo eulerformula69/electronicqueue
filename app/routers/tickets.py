@@ -528,7 +528,7 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
 
         settings = get_system_settings_dict(db)
 
-        return_ticket_to_queue(ticket)
+        was_returned_before = return_ticket_to_queue(ticket)
 
         if settings.get("queue_mode") == "dynamic_operator_distribution":
             assign_ticket_to_least_loaded_window(db, ticket)
@@ -539,7 +539,12 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
         await manager.broadcast({"type": "queue_updated"})
         await broadcast_board()
 
-        return {"status": "waiting", "ticket_number": ticket.number}
+        return {
+            "status": "waiting",
+            "ticket_number": ticket.number,
+            "was_returned_before": was_returned_before,
+            "returned_to_queue_count": ticket.returned_to_queue_count,
+        }
     finally:
         db.close()
 

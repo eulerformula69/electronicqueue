@@ -65,6 +65,7 @@ class Ticket(Base):
         TIMESTAMP,
         server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
     )
+    returned_to_queue_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
     called_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 

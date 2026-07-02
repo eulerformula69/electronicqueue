@@ -18,6 +18,7 @@ def queue_order_expr():
 
 def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     returned_at = now or datetime.now()
+    was_returned_before = (ticket.returned_to_queue_count or 0) > 0
 
     ticket.status = "waiting"
     ticket.completion_reason = None
@@ -27,6 +28,9 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     ticket.called_at = None
     ticket.finished_at = None
     ticket.queue_entered_at = returned_at + timedelta(minutes=RETURN_TO_QUEUE_DELAY_MINUTES)
+    ticket.returned_to_queue_count = (ticket.returned_to_queue_count or 0) + 1
+
+    return was_returned_before
 
 
 def assign_ticket_to_least_loaded_window(db: Session, ticket: Ticket):

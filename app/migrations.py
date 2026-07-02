@@ -267,6 +267,25 @@ def migrate_ticket_queue_entered_at_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_return_count_schema(engine):
+    """Track how many times a ticket was returned to the queue."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS returned_to_queue_count integer NOT NULL DEFAULT 0;
+
+    UPDATE tickets
+    SET returned_to_queue_count = 0
+    WHERE returned_to_queue_count IS NULL;
+
+    ALTER TABLE tickets
+        ALTER COLUMN returned_to_queue_count SET DEFAULT 0,
+        ALTER COLUMN returned_to_queue_count SET NOT NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

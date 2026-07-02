@@ -14,6 +14,7 @@ from app.migrations import (
     migrate_board_ticker_settings_schema, migrate_ticket_notice_settings_schema,
     migrate_ticket_operator_schema, migrate_ticket_stages_schema,
     migrate_ticket_queue_entered_at_schema,
+    migrate_ticket_return_count_schema,
     migrate_service_groups_schema,
     migrate_service_terminal_visibility_schema,
     migrate_operator_service_notifications_schema,
@@ -51,6 +52,7 @@ async def startup():
     migrate_operator_status_periods_schema(engine)
     migrate_ticket_operator_schema(engine)
     migrate_ticket_queue_entered_at_schema(engine)
+    migrate_ticket_return_count_schema(engine)
     migrate_queue_mode_periods_schema(engine)
     migrate_ticket_notice_settings_schema(engine)
     migrate_board_ticker_settings_schema(engine)

@@ -20,11 +20,13 @@ def test_return_ticket_to_queue_delays_ticket_by_15_minutes():
         called_at=now - timedelta(minutes=3),
         finished_at=now - timedelta(minutes=1),
         queue_entered_at=now - timedelta(minutes=10),
+        returned_to_queue_count=0,
     )
 
-    return_ticket_to_queue(ticket, now=now)
+    was_returned_before = return_ticket_to_queue(ticket, now=now)
 
     assert RETURN_TO_QUEUE_DELAY_MINUTES == 15
+    assert was_returned_before is False
     assert ticket.status == "waiting"
     assert ticket.completion_reason is None
     assert ticket.operator_id is None
@@ -33,6 +35,17 @@ def test_return_ticket_to_queue_delays_ticket_by_15_minutes():
     assert ticket.called_at is None
     assert ticket.finished_at is None
     assert ticket.queue_entered_at == now + timedelta(minutes=15)
+    assert ticket.returned_to_queue_count == 1
+
+
+def test_return_ticket_to_queue_reports_repeated_return_from_shared_ticket_state():
+    now = datetime(2026, 7, 1, 10, 0)
+    ticket = Ticket(status="called", returned_to_queue_count=1)
+
+    was_returned_before = return_ticket_to_queue(ticket, now=now)
+
+    assert was_returned_before is True
+    assert ticket.returned_to_queue_count == 2
 
 
 def test_next_ticket_query_does_not_hide_delayed_returned_tickets():
