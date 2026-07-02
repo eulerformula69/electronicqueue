@@ -178,6 +178,7 @@ setInterval(() => {
 let currentTicketId = null;
 let currentTicketCalledAt = null;
 let currentTicketRecallCount = 0;
+let currentTicketReturnedToQueueCount = null;
 let allServices = [];
 let allWindows = [];
 const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
@@ -192,8 +193,12 @@ function parseTicketCalledAt(ticket) {
 
 function setCurrentTicket(ticket) {
     const isSameTicket = currentTicketId === ticket.id;
+    const returnedToQueueCount = Number(ticket.returned_to_queue_count);
 
     currentTicketId = ticket.id;
+    currentTicketReturnedToQueueCount = Number.isFinite(returnedToQueueCount)
+        ? returnedToQueueCount
+        : null;
     if (!isSameTicket) {
         currentTicketCalledAt = parseTicketCalledAt(ticket) || new Date();
         currentTicketRecallCount = 0;
@@ -204,6 +209,7 @@ function clearCurrentTicket() {
     currentTicketId = null;
     currentTicketCalledAt = null;
     currentTicketRecallCount = 0;
+    currentTicketReturnedToQueueCount = null;
 }
 
 function showOperatorPopup({ title, message, actions }) {
@@ -1315,8 +1321,37 @@ async function returnCurrentToQueue() {
         return;
     }
 
+    const returnedToQueueCount = await getCurrentTicketReturnedToQueueCount();
+
+    if (returnedToQueueCount > 0) {
+        showRepeatedReturnWarning();
+        return;
+    }
+
     await confirmReturnCurrentToQueue();
     return;
+}
+
+async function getCurrentTicketReturnedToQueueCount() {
+    if (currentTicketReturnedToQueueCount !== null) {
+        return currentTicketReturnedToQueueCount;
+    }
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/current`, {
+            headers: { "session-id": sessionId }
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ticket && data.ticket.id === currentTicketId) {
+            setCurrentTicket(data.ticket);
+            return currentTicketReturnedToQueueCount || 0;
+        }
+    } catch (e) {
+        console.error("Ticket return count check error:", e);
+    }
+
+    return 0;
 }
 
 function showRepeatedReturnWarning() {
@@ -1325,8 +1360,13 @@ function showRepeatedReturnWarning() {
         message: "Похоже, вы возвращаете в очередь не в первый раз. Возврат нужен только если талон действительно нужно снова поставить в ожидание. Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов». Если обслуживание завершено, используйте «Завершить».",
         actions: [
             {
-                text: "Понятно",
-                className: "btn-primary"
+                text: "Вернуть в очередь",
+                className: "btn-primary",
+                onClick: confirmReturnCurrentToQueue
+            },
+            {
+                text: "Отмена",
+                className: "btn-outline"
             }
         ]
     });
@@ -1354,9 +1394,6 @@ async function confirmReturnCurrentToQueue() {
             data.ticket_number ? `Билет ${data.ticket_number} возвращён в очередь` : "Билет возвращён в очередь",
             "success"
         );
-        if (data.was_returned_before) {
-            showRepeatedReturnWarning();
-        }
         await loadQueue();
     } catch (e) {
         console.error("Ошибка возврата билета в очередь:", e);
