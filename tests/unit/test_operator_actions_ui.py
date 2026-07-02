@@ -41,7 +41,7 @@ def test_operator_return_to_queue_warns_only_after_first_return():
     assert "showRepeatedReturnWarning()" in source
     assert "showOperatorPopup({" in source
     assert 'title: "Вернуть в очередь?"' in source
-    assert "Похоже, вы возвращаете в очередь не в первый раз" in source
+    assert "Похоже, этого клиента возвращают в очередь не в первый раз" in source
     assert "Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов»." in source
     assert 'text: "Вернуть в очередь"' in source
     assert "onClick: confirmReturnCurrentToQueue" in source
