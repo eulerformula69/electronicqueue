@@ -156,26 +156,6 @@ body.terminal-page #ticket-notice span{
     box-sizing: border-box;
     white-space: pre-line;
 }
-body.terminal-page #ticket-message h1,
-body.terminal-page #ticket-message h2,
-body.terminal-page #ticket-message h3,
-body.terminal-page #ticket-message h4{
-    margin: 0 0 18px;
-    color: inherit;
-    line-height: 1.1;
-}
-body.terminal-page #ticket-message h1{
-    font-size: 1.25em;
-}
-body.terminal-page #ticket-message h2{
-    font-size: 1.15em;
-}
-body.terminal-page #ticket-message h3{
-    font-size: 1.05em;
-}
-body.terminal-page #ticket-message h4{
-    font-size: 1em;
-}
 body.terminal-page #ticket-notice .timer{
     font-size: 42px;    
     color: var(--accent);

@@ -561,38 +561,6 @@ function renderTicketNoticeText(template, ticketNumber) {
     return String(template || "<number>").replaceAll("<number>", String(ticketNumber));
 }
 
-function escapeNoticeHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function renderNoticeInlineMarkdown(value) {
-    return escapeNoticeHtml(value)
-        .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
-        .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
-        .replace(/~~([^~\n]+)~~/g, "<del>$1</del>")
-        .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
-        .replace(/_([^_\n]+)_/g, "<em>$1</em>");
-}
-
-function renderNoticeMarkdown(value) {
-    return String(value || "")
-        .split(/\r?\n/)
-        .map(line => {
-            const heading = line.match(/^(#{1,4})\s+(.+)$/);
-            if (heading) {
-                const level = heading[1].length;
-                return `<h${level}>${renderNoticeInlineMarkdown(heading[2].trim())}</h${level}>`;
-            }
-            return renderNoticeInlineMarkdown(line);
-        })
-        .join("<br>");
-}
-
 function showNotice(message, duration) {
     const notice = document.getElementById("ticket-notice");
     const timerEl = document.getElementById("ticket-timer");
@@ -600,7 +568,7 @@ function showNotice(message, duration) {
     // Останавливаем предыдущие таймеры, если они были
     if (window.noticeInterval) clearInterval(window.noticeInterval);
 
-    messageEl.innerHTML = renderNoticeMarkdown(message);
+    messageEl.textContent = message;
     let secondsLeft = duration;
     
     timerEl.textContent = secondsLeft;

@@ -196,17 +196,3 @@ def test_board_ticker_splits_multiline_messages_with_separator():
     assert "margin-left: 72px;" in board_css
     assert 'content: "|";' in media_css
     assert 'content: "";' not in media_css
-
-
-def test_terminal_notice_markdown_is_sanitized_before_rendering():
-    script = _read("queue/js/terminal.js")
-    css = _read("queue/css/terminal.css")
-
-    assert "function renderNoticeMarkdown" in script
-    assert "function escapeNoticeHtml" in script
-    assert "messageEl.innerHTML = renderNoticeMarkdown(message)" in script
-    assert ".replaceAll(\"<\", \"&lt;\")" in script
-    assert ".replace(/\\*\\*([^*\\n]+)\\*\\*/g, \"<strong>$1</strong>\")" in script
-    assert ".replace(/~~([^~\\n]+)~~/g, \"<del>$1</del>\")" in script
-    assert "line.match(/^(#{1,4})\\s+(.+)$/)" in script
-    assert "body.terminal-page #ticket-message h1" in css
