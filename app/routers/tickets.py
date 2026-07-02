@@ -41,8 +41,8 @@ from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
-    broadcast_ticket_called, queue_order_expr, render_ticket_template,
-    return_ticket_to_queue,
+    broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
+    render_ticket_template, return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -669,23 +669,21 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
 
-        ticket.status = "waiting"
-        ticket.completion_reason = "redirected"
-        ticket.operator_id = None
-        ticket.window_id = None
-        ticket.target_window_id = target_window.id
-        ticket.created_at = datetime.now()
-        ticket.called_at = None
-        ticket.finished_at = None
+        redirected_ticket = create_window_redirect_ticket(
+            ticket,
+            target_window_id=target_window.id,
+            operator_id=operator.id,
+        )
+        db.add(redirected_ticket)
 
         db.commit()
-        db.refresh(ticket)
+        db.refresh(redirected_ticket)
 
         await manager.broadcast({"type": "queue_updated"})
         await broadcast_board()
 
         message = f"Билет перенаправлен на рабочее место: {target_window.name}"
-        response = {"message": message, "ticket": ticket}
+        response = {"message": message, "ticket": redirected_ticket}
         if target_window.status != "online":
             response["warning"] = f"Рабочее место {target_window.name} сейчас не online"
         return response

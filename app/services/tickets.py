@@ -33,6 +33,40 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     return was_returned_before
 
 
+def create_window_redirect_ticket(
+    ticket: Ticket,
+    *,
+    target_window_id: int,
+    operator_id: int,
+    now: datetime | None = None,
+) -> Ticket:
+    redirected_at = now or datetime.now()
+    root_ticket_id = ticket.root_ticket_id or ticket.id
+
+    ticket.root_ticket_id = root_ticket_id
+    ticket.status = "finished"
+    ticket.completion_reason = "redirected"
+    if ticket.operator_id is None:
+        ticket.operator_id = operator_id
+    ticket.target_window_id = target_window_id
+    ticket.finished_at = redirected_at
+
+    return Ticket(
+        number=ticket.number,
+        service_id=ticket.service_id,
+        status="waiting",
+        completion_reason="redirected",
+        root_ticket_id=root_ticket_id,
+        operator_id=None,
+        window_id=None,
+        target_window_id=target_window_id,
+        created_at=redirected_at,
+        queue_entered_at=redirected_at,
+        called_at=None,
+        finished_at=None,
+    )
+
+
 def assign_ticket_to_least_loaded_window(db: Session, ticket: Ticket):
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
