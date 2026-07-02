@@ -44,7 +44,12 @@ function render() {
                 <h2>Табло и озвучка</h2>
                 ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
                 ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
-                ${ctx.ui.field("Текст бегущей строки", ctx.ui.textarea("board_ticker_text", settings.board_ticker_text || "", "id=\"setting-board-ticker-text\" maxlength=\"500\""))}
+                <input type="hidden" id="setting-board-ticker-text" name="board_ticker_text" value="${escapeHtml(settings.board_ticker_text || "")}">
+                <div class="admin-field">
+                    <span>Тексты бегущей строки</span>
+                    <div id="board-ticker-messages">${renderBoardTickerMessages()}</div>
+                    ${ctx.ui.button("Добавить сообщение", {action: "add-ticker-message"})}
+                </div>
                 ${ctx.ui.button("Сохранить изменения", {variant: "primary", action: "save-settings"})}
             </section>
         </form>
@@ -52,14 +57,55 @@ function render() {
     ctx.view.onclick = handleClick;
 }
 
+function getBoardTickerMessages() {
+    const messages = Array.isArray(settings.board_ticker_messages)
+        ? settings.board_ticker_messages
+        : [];
+    if (messages.length) return messages;
+    return settings.board_ticker_text
+        ? [{text: settings.board_ticker_text, enabled: true}]
+        : [{text: "", enabled: true}];
+}
+
+function renderBoardTickerMessages() {
+    return getBoardTickerMessages().map((message, index) => `
+        <div class="admin-field" data-ticker-message-row>
+            <label class="admin-switch">
+                <input type="checkbox" name="board_ticker_message_enabled" ${message.enabled !== false ? "checked" : ""}>
+                <span></span>
+            </label>
+            <textarea class="admin-input admin-textarea" name="board_ticker_message_text" maxlength="500">${escapeHtml(message.text || "")}</textarea>
+            ${ctx.ui.button("Удалить", {action: "delete-ticker-message", id: index})}
+        </div>
+    `).join("");
+}
+
 async function handleClick(event) {
     const button = event.target.closest("[data-action='save-settings']");
-    if (!button) return;
-    await save();
+    if (button) {
+        await save();
+        return;
+    }
+
+    const addButton = event.target.closest("[data-action='add-ticker-message']");
+    if (addButton) {
+        settings.board_ticker_messages = collectBoardTickerMessages();
+        settings.board_ticker_messages.push({text: "", enabled: true});
+        render();
+        return;
+    }
+
+    const deleteButton = event.target.closest("[data-action='delete-ticker-message']");
+    if (deleteButton) {
+        settings.board_ticker_messages = collectBoardTickerMessages()
+            .filter((_, index) => index !== Number(deleteButton.dataset.id));
+        render();
+    }
 }
 
 async function save() {
     const form = document.getElementById("settings-form");
+    syncLegacyBoardTickerText();
     const data = Object.fromEntries(new FormData(form).entries());
     const payload = {
         print_ticket: Boolean(data.print_ticket),
@@ -75,7 +121,8 @@ async function save() {
         queue_mode: data.queue_mode,
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
-        board_ticker_text: data.board_ticker_text.trim()
+        board_ticker_text: data.board_ticker_text.trim(),
+        board_ticker_messages: collectBoardTickerMessages()
     };
 
     if (!validDuration(payload.ticket_notice_duration_printed_seconds) || !validDuration(payload.ticket_notice_duration_unprinted_seconds)) {
@@ -105,4 +152,29 @@ function validDuration(value) {
 
 function validTicketPrintScale(value) {
     return Number.isInteger(value) && value >= 50 && value <= 150;
+}
+
+function collectBoardTickerMessages() {
+    return Array.from(document.querySelectorAll("[data-ticker-message-row]"))
+        .map(row => ({
+            text: row.querySelector("[name='board_ticker_message_text']").value.trim(),
+            enabled: row.querySelector("[name='board_ticker_message_enabled']").checked
+        }))
+        .filter(message => message.text);
+}
+
+function syncLegacyBoardTickerText() {
+    document.getElementById("setting-board-ticker-text").value = collectBoardTickerMessages()
+        .filter(message => message.enabled)
+        .map(message => message.text)
+        .join(" | ");
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }

@@ -43,7 +43,9 @@ from app.services.media import (
 )
 from app.services.operators import update_services_status_for_window
 from app.services.settings import (
-    _bool_to_str, get_or_create_system_settings, get_system_settings_dict,
+    _bool_to_str, build_board_ticker_text, get_or_create_system_settings,
+    get_system_settings_dict, normalize_board_ticker_messages,
+    serialize_board_ticker_messages,
 )
 from app.services.tickets import broadcast_board
 
@@ -362,7 +364,15 @@ async def update_admin_settings(
         settings.queue_mode = data.queue_mode
         settings.call_message_template = data.call_message_template
         settings.board_ticket_template = data.board_ticket_template
-        settings.board_ticker_text = data.board_ticker_text.strip()
+        board_ticker_messages = normalize_board_ticker_messages(
+            [
+                item.model_dump() if hasattr(item, "model_dump") else item.dict()
+                for item in data.board_ticker_messages
+            ],
+            data.board_ticker_text,
+        )
+        settings.board_ticker_messages = serialize_board_ticker_messages(board_ticker_messages)
+        settings.board_ticker_text = build_board_ticker_text(board_ticker_messages)
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]

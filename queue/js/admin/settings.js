@@ -17,6 +17,7 @@ export async function loadExtraSettings() {
 
     const settings = await fetchJSON(`${API}/admin/settings`);
     if (!settings) return;
+    const tickerMessages = getBoardTickerMessages(settings);
 
     setForm(`
         <div class="form settings-form">
@@ -167,14 +168,14 @@ export async function loadExtraSettings() {
                 Например: <b>&lt;number&gt; → &lt;window&gt;</b> или <b>Билет &lt;number&gt; / окно &lt;window&gt;</b>
             </small>
 
-            <label class="settings-field-row">
-                <span class="settings-label">Текст бегущей строки на табло:</span>
-                <textarea
-                    id="setting-board-ticker-text"
-                    class="settings-input settings-textarea"
-                    maxlength="500"
-                >${escapeHtml(settings.board_ticker_text || "")}</textarea>
-            </label>
+            <input type="hidden" id="setting-board-ticker-text" value="${escapeHtml(settings.board_ticker_text || "")}">
+            <div class="settings-field-row">
+                <span class="settings-label">Тексты бегущей строки на табло:</span>
+                <div id="setting-board-ticker-messages">
+                    ${renderBoardTickerMessages(tickerMessages)}
+                </div>
+                <button type="button" onclick="addBoardTickerMessage()">Добавить сообщение</button>
+            </div>
         </section>
 
             <div class="settings-actions">
@@ -185,6 +186,7 @@ export async function loadExtraSettings() {
 }
 
 export async function saveExtraSettings() {
+    syncLegacyBoardTickerText();
 	const payload = {
 		print_ticket: document.getElementById("setting-print-ticket").checked,
 		show_print_badge: document.getElementById("setting-show-print-badge").checked,
@@ -200,7 +202,8 @@ export async function saveExtraSettings() {
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
-		board_ticker_text: document.getElementById("setting-board-ticker-text").value.trim()
+		board_ticker_text: document.getElementById("setting-board-ticker-text").value.trim(),
+		board_ticker_messages: collectBoardTickerMessages()
 	};
 
     if (
@@ -267,3 +270,55 @@ function escapeHtml(value) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
 }
+
+function getBoardTickerMessages(settings) {
+    if (Array.isArray(settings.board_ticker_messages) && settings.board_ticker_messages.length) {
+        return settings.board_ticker_messages;
+    }
+    return settings.board_ticker_text
+        ? [{text: settings.board_ticker_text, enabled: true}]
+        : [{text: "", enabled: true}];
+}
+
+function renderBoardTickerMessages(messages) {
+    return messages.map((message, index) => `
+        <div class="settings-field-row" data-ticker-message-row>
+            <label class="settings-checkbox-row">
+                <input type="checkbox" class="setting-board-ticker-enabled" ${message.enabled !== false ? "checked" : ""}>
+                enabled
+            </label>
+            <textarea class="settings-input settings-textarea setting-board-ticker-message" maxlength="500">${escapeHtml(message.text || "")}</textarea>
+            <button type="button" onclick="deleteBoardTickerMessage(${index})">Удалить</button>
+        </div>
+    `).join("");
+}
+
+function collectBoardTickerMessages() {
+    return Array.from(document.querySelectorAll("[data-ticker-message-row]"))
+        .map(row => ({
+            text: row.querySelector(".setting-board-ticker-message").value.trim(),
+            enabled: row.querySelector(".setting-board-ticker-enabled").checked
+        }))
+        .filter(message => message.text);
+}
+
+function syncLegacyBoardTickerText() {
+    document.getElementById("setting-board-ticker-text").value = collectBoardTickerMessages()
+        .filter(message => message.enabled)
+        .map(message => message.text)
+        .join(" | ");
+}
+
+window.addBoardTickerMessage = function () {
+    const host = document.getElementById("setting-board-ticker-messages");
+    const messages = collectBoardTickerMessages();
+    messages.push({text: "", enabled: true});
+    host.innerHTML = renderBoardTickerMessages(messages);
+};
+
+window.deleteBoardTickerMessage = function (indexToDelete) {
+    const host = document.getElementById("setting-board-ticker-messages");
+    const messages = collectBoardTickerMessages()
+        .filter((_, index) => index !== Number(indexToDelete));
+    host.innerHTML = renderBoardTickerMessages(messages.length ? messages : [{text: "", enabled: true}]);
+};

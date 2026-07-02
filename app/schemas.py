@@ -202,6 +202,11 @@ class OfficeMap(BaseModel):
     objects: List[MapObject] = Field(default_factory=list)
 
 
+class BoardTickerMessage(BaseModel):
+    text: str = Field(default="", max_length=500)
+    enabled: bool = True
+
+
 class SystemSettingsUpdate(BaseModel):
     print_ticket: bool
     show_print_badge: bool
@@ -217,6 +222,7 @@ class SystemSettingsUpdate(BaseModel):
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
+    board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
 
 
 class SystemSettingsResponse(BaseModel):
@@ -234,6 +240,7 @@ class SystemSettingsResponse(BaseModel):
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str
+    board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
 
 
 class PublicSettingsResponse(BaseModel):

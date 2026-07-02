@@ -90,6 +90,10 @@ def test_settings_view_renders_and_saves_board_ticker_text():
 
     assert "setting-board-ticker-text" in source
     assert "board_ticker_text" in source
+    assert "board_ticker_messages" in source
+    assert "collectBoardTickerMessages" in source
+    assert "add-ticker-message" in source
+    assert "delete-ticker-message" in source
     assert "data.board_ticker_text.trim()" in source
 
 
@@ -192,3 +196,17 @@ def test_board_ticker_splits_multiline_messages_with_separator():
     assert "margin-left: 72px;" in board_css
     assert 'content: "|";' in media_css
     assert 'content: "";' not in media_css
+
+
+def test_terminal_notice_markdown_is_sanitized_before_rendering():
+    script = _read("queue/js/terminal.js")
+    css = _read("queue/css/terminal.css")
+
+    assert "function renderNoticeMarkdown" in script
+    assert "function escapeNoticeHtml" in script
+    assert "messageEl.innerHTML = renderNoticeMarkdown(message)" in script
+    assert ".replaceAll(\"<\", \"&lt;\")" in script
+    assert ".replace(/\\*\\*([^*\\n]+)\\*\\*/g, \"<strong>$1</strong>\")" in script
+    assert ".replace(/~~([^~\\n]+)~~/g, \"<del>$1</del>\")" in script
+    assert "line.match(/^(#{1,4})\\s+(.+)$/)" in script
+    assert "body.terminal-page #ticket-message h1" in css

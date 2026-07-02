@@ -131,7 +131,7 @@ body.board-media-page.lite-version .board-column-split {
     max-height: 100% !important;
     margin: 0 !important;
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr);
     gap: var(--lite-section-gap) !important;
     align-items: stretch !important;

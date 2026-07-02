@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.orm import Session
 
 from app.models import SystemSettings
@@ -8,6 +10,7 @@ MAX_TICKET_PRINT_SCALE_PERCENT = 150
 
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
+BOARD_TICKER_SEPARATOR = " | "
 
 
 def _str_to_bool(value: str, default: bool = False) -> bool:
@@ -29,6 +32,52 @@ def _normalize_ticket_print_scale_percent(value: int | None) -> int:
     )
 
 
+def normalize_board_ticker_messages(messages, legacy_text: str | None = "") -> list[dict]:
+    normalized = []
+    if isinstance(messages, str) and messages.strip():
+        try:
+            messages = json.loads(messages)
+        except json.JSONDecodeError:
+            messages = []
+    if not isinstance(messages, list):
+        messages = []
+
+    for item in messages:
+        if isinstance(item, str):
+            text = item.strip()
+            enabled = True
+        elif isinstance(item, dict):
+            text = str(item.get("text") or "").strip()
+            enabled = item.get("enabled") is not False
+        else:
+            continue
+        if text:
+            normalized.append({"text": text[:500], "enabled": enabled})
+
+    if not normalized and legacy_text:
+        for line in str(legacy_text).splitlines():
+            text = line.strip()
+            if text:
+                normalized.append({"text": text[:500], "enabled": True})
+
+    return normalized
+
+
+def serialize_board_ticker_messages(messages) -> str:
+    return json.dumps(
+        normalize_board_ticker_messages(messages),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+
+def build_board_ticker_text(messages) -> str:
+    return BOARD_TICKER_SEPARATOR.join(
+        item["text"] for item in normalize_board_ticker_messages(messages)
+        if item["enabled"]
+    )[:500]
+
+
 def get_or_create_system_settings(db: Session) -> SystemSettings:
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
     if settings:
@@ -43,6 +92,10 @@ def get_or_create_system_settings(db: Session) -> SystemSettings:
 
 def get_system_settings_dict(db: Session) -> dict:
     settings = get_or_create_system_settings(db)
+    board_ticker_messages = normalize_board_ticker_messages(
+        settings.board_ticker_messages,
+        settings.board_ticker_text,
+    )
     return {
         "print_ticket": _str_to_bool(settings.print_ticket, default=True),
         "show_print_badge": _str_to_bool(settings.show_print_badge, default=True),
@@ -61,5 +114,6 @@ def get_system_settings_dict(db: Session) -> dict:
         "queue_mode": settings.queue_mode or "priority_fifo",
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
-        "board_ticker_text": settings.board_ticker_text or "",
+        "board_ticker_text": build_board_ticker_text(board_ticker_messages),
+        "board_ticker_messages": board_ticker_messages,
     }

@@ -384,14 +384,26 @@ def migrate_ticket_notice_settings_schema(engine):
 
 
 def migrate_board_ticker_settings_schema(engine):
-    """Add configurable ticker text for queue boards."""
+    """Add configurable ticker text and presets for queue boards."""
     ddl = """
     ALTER TABLE system_settings
-        ADD COLUMN IF NOT EXISTS board_ticker_text varchar(500) DEFAULT '';
+        ADD COLUMN IF NOT EXISTS board_ticker_text varchar(500) DEFAULT '',
+        ADD COLUMN IF NOT EXISTS board_ticker_messages varchar(4000) DEFAULT '';
 
     UPDATE system_settings
     SET board_ticker_text = ''
     WHERE board_ticker_text IS NULL;
+
+    UPDATE system_settings
+    SET board_ticker_messages = json_build_array(
+        json_build_object('text', board_ticker_text, 'enabled', true)
+    )::text
+    WHERE (board_ticker_messages IS NULL OR board_ticker_messages = '')
+      AND board_ticker_text <> '';
+
+    UPDATE system_settings
+    SET board_ticker_messages = ''
+    WHERE board_ticker_messages IS NULL;
     """
 
     with engine.begin() as conn:
