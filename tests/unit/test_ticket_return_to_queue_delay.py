@@ -1,10 +1,15 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from app.models import Ticket
 from app.routers import tickets as tickets_router
 from app.services import tickets as ticket_service
 from app.services.tickets import (
+    AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES,
     RETURN_TO_QUEUE_DELAY_MINUTES,
+    cancel_expired_returned_tickets,
+    cancel_expired_returned_tickets_once,
     create_window_redirect_ticket,
     return_ticket_to_queue,
 )
@@ -101,3 +106,116 @@ def test_create_window_redirect_ticket_preserves_finished_source_stage():
 def test_next_ticket_query_does_not_hide_delayed_returned_tickets():
     assert not hasattr(ticket_service, "queue_available_condition")
     assert "queue_available_condition" not in tickets_router.call_next_ticket.__code__.co_names
+
+
+class FakeQuery:
+    def __init__(self, tickets):
+        self.tickets = tickets
+        self.conditions = []
+
+    def filter(self, *conditions):
+        self.conditions.extend(conditions)
+        return self
+
+    def all(self):
+        return [
+            ticket for ticket in self.tickets
+            if ticket.status == "waiting"
+            and ticket.returned_to_queue_count == 1
+            and ticket.queue_entered_at <= self._cutoff
+        ]
+
+    @property
+    def _cutoff(self):
+        cutoff_condition = self.conditions[-1]
+        return cutoff_condition.right.value
+
+
+class FakeDb:
+    def __init__(self, tickets):
+        self.tickets = tickets
+        self.committed = False
+        self.rolled_back = False
+        self.closed = False
+
+    def query(self, model):
+        assert model is Ticket
+        return FakeQuery(self.tickets)
+
+    def commit(self):
+        self.committed = True
+
+    def rollback(self):
+        self.rolled_back = True
+
+    def close(self):
+        self.closed = True
+
+
+def test_cancel_expired_returned_tickets_finishes_only_waiting_returned_ticket():
+    now = datetime(2026, 7, 6, 10, 0)
+    expired_returned = Ticket(
+        status="waiting",
+        returned_to_queue_count=1,
+        queue_entered_at=now - timedelta(minutes=31),
+    )
+    fresh_returned = Ticket(
+        status="waiting",
+        returned_to_queue_count=1,
+        queue_entered_at=now - timedelta(minutes=29),
+    )
+    ordinary_waiting = Ticket(
+        status="waiting",
+        returned_to_queue_count=0,
+        queue_entered_at=now - timedelta(minutes=40),
+    )
+
+    cancelled_count = cancel_expired_returned_tickets(
+        FakeDb([expired_returned, fresh_returned, ordinary_waiting]),
+        now=now,
+    )
+
+    assert AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES == 30
+    assert cancelled_count == 1
+    assert expired_returned.status == "finished"
+    assert expired_returned.completion_reason == "cancelled"
+    assert expired_returned.finished_at == now
+
+    assert fresh_returned.status == "waiting"
+    assert fresh_returned.completion_reason is None
+    assert fresh_returned.finished_at is None
+
+    assert ordinary_waiting.status == "waiting"
+    assert ordinary_waiting.completion_reason is None
+    assert ordinary_waiting.finished_at is None
+
+
+@pytest.mark.asyncio
+async def test_cancel_expired_returned_tickets_once_broadcasts_after_cancellation(monkeypatch):
+    now = datetime(2026, 7, 6, 10, 0)
+    ticket = Ticket(
+        status="waiting",
+        returned_to_queue_count=1,
+        queue_entered_at=now - timedelta(minutes=31),
+    )
+    db = FakeDb([ticket])
+    broadcasts = []
+    board_updates = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def fake_broadcast_board():
+        board_updates.append(True)
+
+    monkeypatch.setattr(ticket_service, "SessionLocal", lambda: db)
+    monkeypatch.setattr(ticket_service.manager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(ticket_service, "broadcast_board", fake_broadcast_board)
+
+    cancelled_count = await cancel_expired_returned_tickets_once(now=now)
+
+    assert cancelled_count == 1
+    assert db.committed is True
+    assert db.closed is True
+    assert broadcasts == [{"type": "queue_updated"}]
+    assert board_updates == [True]
