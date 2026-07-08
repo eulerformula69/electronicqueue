@@ -763,13 +763,18 @@ body.operator-page .redirect-summary strong {
 }
 
 body.operator-page .redirect-actions {
-    display: grid;
-    grid-template-columns: auto minmax(260px, 1fr);
+    display: flex;
     gap: 10px;
     margin-top: 18px;
 }
 
+body.operator-page .redirect-actions .btn-outline {
+    flex: 0 0 auto;
+}
+
 body.operator-page .redirect-confirm-button {
+    flex: 1 1 auto;
+    min-width: 0;
     width: 100%;
 }
 
