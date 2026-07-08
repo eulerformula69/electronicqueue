@@ -13,6 +13,8 @@ def test_operator_page_loads_operator_changelog_only():
     operator_html = read_text("queue/operator.html")
 
     assert '<script src="/queue/js/operator-changelog.js"></script>' in operator_html
+    assert 'onclick="openOperatorChangelogHistory()"' in operator_html
+    assert "ОБНОВЛЕНИЯ" in operator_html
 
     other_pages = [
         "queue/board.html",
@@ -36,6 +38,9 @@ def test_operator_changelog_is_independent_from_system_version():
     assert "localStorage.getItem(STORAGE_KEY) === version" in source
     assert "formatOperatorChangelogTitle(data, version)" in source
     assert "Обновление от ${data.date.trim()}, версия ${version}" in source
+    assert "window.openOperatorChangelogHistory" in source
+    assert "includePrevious: true" in source
+    assert "saveVersion: false" in source
 
 
 def test_operator_changelog_fails_silent_on_bad_or_missing_file():
@@ -56,6 +61,16 @@ def test_operator_changelog_popup_is_centered_over_dimmed_operator_page():
     assert "justify-content: center;" in source
 
 
+def test_operator_changelog_popup_can_show_previous_entries():
+    source = read_text("queue/js/operator-changelog.js")
+    css = read_text("queue/css/operator.css")
+
+    assert "getPreviousEntries(data).forEach(entry => appendChangelogEntry(content, entry))" in source
+    assert "operator-changelog-content" in source
+    assert "operator-changelog-entry" in source
+    assert "max-height: min(58vh, 520px);" in css
+
+
 def test_operator_changelog_json_has_operator_facing_russian_text():
     data = json.loads(read_text("queue/changelog/operator.json"))
 
@@ -66,6 +81,8 @@ def test_operator_changelog_json_has_operator_facing_russian_text():
     assert data["changes"]
     assert all(isinstance(item, str) and item.strip() for item in data["changes"])
     assert any("оператор" in item.lower() for item in data["changes"])
+    assert data["previous"]
+    assert all("version" in item and "date" in item and "changes" in item for item in data["previous"])
 
 
 def test_operator_changelog_policy_exists():

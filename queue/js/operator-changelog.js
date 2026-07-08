@@ -12,16 +12,44 @@
             && data.changes.every(item => typeof item === "string" && item.trim());
     }
 
+    function getPreviousEntries(data) {
+        if (!Array.isArray(data.previous)) return [];
+
+        return data.previous.filter(isValidChangelog);
+    }
+
     function formatOperatorChangelogTitle(data, version) {
         return `Обновление от ${data.date.trim()}, версия ${version}`;
     }
 
-    function closeOperatorChangelog(overlay, version) {
+    function closeOperatorChangelog(overlay, version, saveVersion) {
         overlay.remove();
-        localStorage.setItem(STORAGE_KEY, version);
+        if (saveVersion) {
+            localStorage.setItem(STORAGE_KEY, version);
+        }
     }
 
-    function showOperatorChangelog(data) {
+    function appendChangelogEntry(container, entry) {
+        const version = entry.version.trim();
+        const section = document.createElement("section");
+        section.className = "operator-changelog-entry";
+
+        const heading = document.createElement("h3");
+        heading.textContent = formatOperatorChangelogTitle(entry, version);
+
+        const list = document.createElement("ul");
+        entry.changes.forEach(change => {
+            const item = document.createElement("li");
+            item.textContent = change;
+            list.appendChild(item);
+        });
+
+        section.appendChild(heading);
+        section.appendChild(list);
+        container.appendChild(section);
+    }
+
+    function showOperatorChangelog(data, options = {}) {
         const version = data.version.trim();
         const existing = document.querySelector(".operator-changelog-overlay");
         if (existing) existing.remove();
@@ -37,14 +65,17 @@
 
         const title = document.createElement("h2");
         title.id = "operator-changelog-title";
-        title.textContent = formatOperatorChangelogTitle(data, version);
+        title.textContent = options.includePrevious
+            ? "Обновления"
+            : formatOperatorChangelogTitle(data, version);
 
-        const list = document.createElement("ul");
-        data.changes.forEach(change => {
-            const item = document.createElement("li");
-            item.textContent = change;
-            list.appendChild(item);
-        });
+        const content = document.createElement("div");
+        content.className = "operator-changelog-content";
+        appendChangelogEntry(content, data);
+
+        if (options.includePrevious) {
+            getPreviousEntries(data).forEach(entry => appendChangelogEntry(content, entry));
+        }
 
         const actions = document.createElement("div");
         actions.className = "operator-changelog-actions";
@@ -53,17 +84,20 @@
         closeButton.type = "button";
         closeButton.className = "btn-primary";
         closeButton.textContent = "Понятно";
-        closeButton.addEventListener("click", () => closeOperatorChangelog(overlay, version));
+        closeButton.addEventListener(
+            "click",
+            () => closeOperatorChangelog(overlay, version, options.saveVersion !== false)
+        );
 
         actions.appendChild(closeButton);
         modal.appendChild(title);
-        modal.appendChild(list);
+        modal.appendChild(content);
         modal.appendChild(actions);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
     }
 
-    async function loadOperatorChangelog() {
+    async function loadOperatorChangelog(options = {}) {
         try {
             const response = await fetch(`${CHANGELOG_URL}?t=${Date.now()}`, {
                 cache: "no-store"
@@ -74,13 +108,21 @@
             if (!isValidChangelog(data)) return;
 
             const version = data.version.trim();
-            if (localStorage.getItem(STORAGE_KEY) === version) return;
+            if (!options.force && localStorage.getItem(STORAGE_KEY) === version) return;
 
-            showOperatorChangelog(data);
+            showOperatorChangelog(data, options);
         } catch (error) {
             console.debug("Operator changelog load error:", error);
         }
     }
+
+    window.openOperatorChangelogHistory = function () {
+        loadOperatorChangelog({
+            force: true,
+            includePrevious: true,
+            saveVersion: false
+        });
+    };
 
     loadOperatorChangelog();
 })();

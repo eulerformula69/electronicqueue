@@ -318,6 +318,25 @@ body.operator-page .operator-changelog-modal h2{
     color: var(--text-main);
     font-size: 1.3rem;
 }
+body.operator-page .operator-changelog-content{
+    max-height: min(58vh, 520px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+body.operator-page .operator-changelog-entry + .operator-changelog-entry{
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+body.operator-page .operator-changelog-entry h3{
+    margin: 0 0 10px;
+    padding: 0;
+    color: var(--primary);
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+}
 body.operator-page .operator-changelog-modal ul{
     margin: 0;
     padding-left: 22px;
