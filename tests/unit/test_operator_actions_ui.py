@@ -75,6 +75,7 @@ def test_operator_actions_keep_existing_ticket_endpoints():
 def test_operator_redirect_uses_single_modal_button():
     html = read_text("queue/operator.html")
     js = read_text("queue/js/operator.js")
+    css = read_text("queue/css/operator.css")
 
     assert 'id="redirect-btn"' in html
     assert 'onclick="showRedirectModal()"' in html
@@ -88,6 +89,15 @@ def test_operator_redirect_uses_single_modal_button():
     assert "Поиск услуги" in js
     assert "Поиск оператора, окна или услуги" in js
     assert "new_service_id: Number(redirectState.serviceId)" in js
+    assert 'redirectState.mode === "service"' in js
+    assert "modal.appendChild(createRedirectWindowSection());" in js
+    assert "Также выберите услугу оператора" in js
+    assert "getRedirectWindowServices(getRedirectWindow(redirectState.windowId))" in js
+    assert "redirectState.serviceId = null;" in js
+    assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
+    assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
+    assert "width: min(950px, 100%)" in css
+    assert ".redirect-confirm-button" in css
 
 
 def test_operator_defer_requires_reason_options():

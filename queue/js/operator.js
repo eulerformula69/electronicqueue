@@ -873,7 +873,12 @@ function normalizeRedirectText(value) {
 }
 
 function getRedirectService(serviceId) {
-    return allServices.find(service => Number(service.id) === Number(serviceId)) || null;
+    const serviceFromAll = allServices.find(service => Number(service.id) === Number(serviceId));
+    if (serviceFromAll) return serviceFromAll;
+
+    const selectedWindow = getRedirectWindow(redirectState.windowId);
+    if (!selectedWindow || !Array.isArray(selectedWindow.services)) return null;
+    return selectedWindow.services.find(service => Number(service.id) === Number(serviceId)) || null;
 }
 
 function getRedirectWindow(windowId) {
@@ -893,11 +898,20 @@ function getRedirectWindowTitle(windowItem) {
 
 function getFilteredRedirectServices() {
     const query = normalizeRedirectText(redirectState.serviceQuery);
-    return allServices.filter(service => {
+    const services = redirectState.mode === "window"
+        ? getRedirectWindowServices(getRedirectWindow(redirectState.windowId))
+        : allServices;
+
+    return services.filter(service => {
         if (Number(service.is_archived) === 1) return false;
         if (!query) return true;
         return normalizeRedirectText(service.name).includes(query);
     });
+}
+
+function getRedirectWindowServices(windowItem) {
+    if (!windowItem || !Array.isArray(windowItem.services)) return [];
+    return windowItem.services;
 }
 
 function getFilteredRedirectWindows() {
@@ -980,9 +994,15 @@ function renderRedirectModal() {
 
     modal.appendChild(title);
     modal.appendChild(modeGroup);
-    modal.appendChild(createRedirectServiceSection());
-    if (redirectState.mode === "window") {
+    if (redirectState.mode === "service") {
+        modal.appendChild(createRedirectServiceSection());
+    } else {
         modal.appendChild(createRedirectWindowSection());
+        if (redirectState.windowId) {
+            modal.appendChild(createRedirectServiceSection({
+                intro: "Также выберите услугу оператора"
+            }));
+        }
     }
     modal.appendChild(createRedirectSummary());
     modal.appendChild(createRedirectActions());
@@ -991,9 +1011,16 @@ function renderRedirectModal() {
     document.body.appendChild(overlay);
 }
 
-function createRedirectServiceSection() {
+function createRedirectServiceSection(options = {}) {
     const section = document.createElement("div");
     section.className = "redirect-section";
+
+    if (options.intro) {
+        const intro = document.createElement("p");
+        intro.className = "redirect-section-intro";
+        intro.textContent = options.intro;
+        section.appendChild(intro);
+    }
 
     const label = document.createElement("label");
     label.textContent = "Услуга";
@@ -1085,18 +1112,15 @@ function createRedirectWindowList() {
     }
 
     windows.forEach(windowItem => {
-        const supportsService = redirectWindowSupportsService(windowItem, redirectState.serviceId);
         const serviceNames = Array.isArray(windowItem.service_names) && windowItem.service_names.length
             ? windowItem.service_names.join(", ")
             : "услуги не назначены";
-        const isDisabled = !redirectState.serviceId || !supportsService;
 
         const button = document.createElement("button");
         button.type = "button";
         button.className = Number(redirectState.windowId) === Number(windowItem.id)
             ? "redirect-option selected"
             : "redirect-option";
-        button.disabled = isDisabled;
         const title = document.createElement("strong");
         title.textContent = getRedirectWindowTitle(windowItem);
 
@@ -1111,6 +1135,8 @@ function createRedirectWindowList() {
         button.appendChild(status);
         button.addEventListener("click", () => {
             redirectState.windowId = Number(windowItem.id);
+            redirectState.serviceId = null;
+            redirectState.serviceQuery = "";
             renderRedirectModal();
         });
         list.appendChild(button);
@@ -1158,8 +1184,8 @@ function createRedirectActions() {
 
     const confirmButton = document.createElement("button");
     confirmButton.type = "button";
-    confirmButton.className = "btn-primary";
-    confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Подтвердить";
+    confirmButton.className = "btn-primary redirect-confirm-button";
+    confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";
     confirmButton.disabled = !canConfirmRedirect() || redirectState.isSubmitting;
     confirmButton.addEventListener("click", confirmRedirectFromModal);
 
