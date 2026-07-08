@@ -96,8 +96,12 @@ def test_operator_redirect_uses_single_modal_button():
     assert "redirectState.serviceId = null;" in js
     assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
     assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
+    assert "serviceList.replaceWith(nextServiceList)" in js
+    assert "windowList.replaceWith(nextWindowList)" in js
     assert "width: min(950px, 100%)" in css
     assert ".redirect-confirm-button" in css
+    assert "grid-template-columns: auto minmax(260px, 1fr)" in css
+    assert "width: 100%" in css
 
 
 def test_operator_defer_requires_reason_options():

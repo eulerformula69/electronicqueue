@@ -1029,14 +1029,17 @@ function createRedirectServiceSection(options = {}) {
     input.type = "search";
     input.placeholder = "Поиск услуги";
     input.value = redirectState.serviceQuery;
+    let serviceList = createRedirectServiceList();
     input.addEventListener("input", event => {
         redirectState.serviceQuery = event.target.value;
-        renderRedirectModal();
+        const nextServiceList = createRedirectServiceList();
+        serviceList.replaceWith(nextServiceList);
+        serviceList = nextServiceList;
     });
 
     section.appendChild(label);
     section.appendChild(input);
-    section.appendChild(createRedirectServiceList());
+    section.appendChild(serviceList);
     return section;
 }
 
@@ -1087,14 +1090,17 @@ function createRedirectWindowSection() {
     input.type = "search";
     input.placeholder = "Поиск оператора, окна или услуги";
     input.value = redirectState.windowQuery;
+    let windowList = createRedirectWindowList();
     input.addEventListener("input", event => {
         redirectState.windowQuery = event.target.value;
-        renderRedirectModal();
+        const nextWindowList = createRedirectWindowList();
+        windowList.replaceWith(nextWindowList);
+        windowList = nextWindowList;
     });
 
     section.appendChild(label);
     section.appendChild(input);
-    section.appendChild(createRedirectWindowList());
+    section.appendChild(windowList);
     return section;
 }
 
