@@ -898,6 +898,8 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         target_window = db.query(Window).filter(Window.id == data.window_id).first()
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
+        if target_window.status != "online":
+            raise HTTPException(status_code=400, detail="Выбранное рабочее место сейчас не online")
 
         service = (
             db.query(Service)
@@ -906,6 +908,8 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         )
         if not service:
             raise HTTPException(status_code=404, detail="Услуга для перенаправления не найдена")
+        if service.status != "active":
+            raise HTTPException(status_code=400, detail="Выбранная услуга сейчас недоступна")
 
         window_service = (
             db.query(WindowService)
@@ -933,10 +937,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         await broadcast_board()
 
         message = f"Билет перенаправлен на рабочее место: {target_window.name}"
-        response = {"message": message, "ticket": redirected_ticket}
-        if target_window.status != "online":
-            response["warning"] = f"Рабочее место {target_window.name} сейчас не online"
-        return response
+        return {"message": message, "ticket": redirected_ticket}
     finally:
         db.close()
 
@@ -967,6 +968,8 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
         )
         if not service:
             return {"detail": "Новая услуга не найдена"}
+        if service.status != "active":
+            return {"detail": "Выбранная услуга сейчас недоступна"}
 
         windows = (
             db.query(Window)

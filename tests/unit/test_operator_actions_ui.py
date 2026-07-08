@@ -98,6 +98,8 @@ def test_operator_redirect_uses_single_modal_button():
     assert "modal.appendChild(createRedirectRecipientSection());" in js
     assert 'if (redirectState.mode === "window")' in js
     assert "modal.appendChild(createRedirectWindowSection());" in js
+    assert 'service.status !== "active"' in js
+    assert 'windowItem.status !== "online"' in js
     assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
     assert "? \"/tickets/redirect\"" in js
     assert ": \"/tickets/redirect-to-window\"" in js

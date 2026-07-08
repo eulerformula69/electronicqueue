@@ -887,7 +887,9 @@ function getRedirectWindow(windowId) {
 
 function redirectWindowSupportsService(windowItem, serviceId) {
     if (!windowItem || !serviceId || !Array.isArray(windowItem.services)) return false;
-    return windowItem.services.some(service => Number(service.id) === Number(serviceId));
+    return windowItem.status === "online" && windowItem.services.some(service => (
+        Number(service.id) === Number(serviceId) && service.status === "active"
+    ));
 }
 
 function getRedirectWindowTitle(windowItem) {
@@ -902,6 +904,7 @@ function getFilteredRedirectServices() {
 
     return services.filter(service => {
         if (Number(service.is_archived) === 1) return false;
+        if (service.status !== "active") return false;
         if (!query) return true;
         return normalizeRedirectText(service.name).includes(query);
     });
@@ -911,6 +914,7 @@ function getFilteredRedirectWindows() {
     const query = normalizeRedirectText(redirectState.windowQuery);
     return allWindows.filter(windowItem => {
         if (!redirectState.serviceId) return false;
+        if (windowItem.status !== "online") return false;
         if (!redirectWindowSupportsService(windowItem, redirectState.serviceId)) return false;
         if (!query) return true;
         const serviceNames = Array.isArray(windowItem.service_names)

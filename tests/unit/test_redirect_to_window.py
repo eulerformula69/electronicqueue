@@ -66,7 +66,7 @@ class FakeDb:
 def test_redirect_to_window_creates_ticket_for_selected_service(monkeypatch):
     source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
     target_window = Window(id=7, name="Window 7", status="online")
-    selected_service = Service(id=3, name="Selected", is_archived=0)
+    selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
     db = FakeDb(
         tickets=[source_ticket],
@@ -107,13 +107,69 @@ def test_redirect_to_window_creates_ticket_for_selected_service(monkeypatch):
 def test_redirect_to_window_rejects_service_not_supported_by_window(monkeypatch):
     source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
     target_window = Window(id=7, name="Window 7", status="online")
-    selected_service = Service(id=3, name="Selected", is_archived=0)
+    selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
     db = FakeDb(
         tickets=[source_ticket],
         windows=[target_window],
         services=[selected_service],
         window_services=[WindowService(window_id=7, service_id=99)],
+    )
+
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            tickets_router.redirect_ticket_to_window(
+                RedirectToWindowRequest(ticket_id=10, window_id=7, new_service_id=3),
+                operator=operator,
+            )
+        )
+
+    assert exc.value.status_code == 400
+    assert db.added == []
+    assert db.committed is False
+    assert db.closed is True
+
+
+def test_redirect_to_window_rejects_offline_window(monkeypatch):
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    target_window = Window(id=7, name="Window 7", status="break")
+    selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
+    operator = Operator(id=2, window_id=5)
+    db = FakeDb(
+        tickets=[source_ticket],
+        windows=[target_window],
+        services=[selected_service],
+        window_services=[WindowService(window_id=7, service_id=3)],
+    )
+
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            tickets_router.redirect_ticket_to_window(
+                RedirectToWindowRequest(ticket_id=10, window_id=7, new_service_id=3),
+                operator=operator,
+            )
+        )
+
+    assert exc.value.status_code == 400
+    assert db.added == []
+    assert db.committed is False
+    assert db.closed is True
+
+
+def test_redirect_to_window_rejects_inactive_service(monkeypatch):
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    target_window = Window(id=7, name="Window 7", status="online")
+    selected_service = Service(id=3, name="Selected", is_archived=0, status="inactive")
+    operator = Operator(id=2, window_id=5)
+    db = FakeDb(
+        tickets=[source_ticket],
+        windows=[target_window],
+        services=[selected_service],
+        window_services=[WindowService(window_id=7, service_id=3)],
     )
 
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
