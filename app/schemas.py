@@ -36,6 +36,16 @@ class CallSpecificRequest(BaseModel):
     number: int
 
 
+class DeferTicketRequest(BaseModel):
+    reason: Literal[
+        "fills_documents",
+        "pays",
+        "went_for_documents",
+        "missing_document",
+        "other",
+    ]
+
+
 class PingRequest(BaseModel):
     session_id: str
 
@@ -102,6 +112,8 @@ class TicketRead(BaseModel):
     target_window_id: int | None = None
     created_at: datetime | None = None
     queue_entered_at: datetime | None = None
+    defer_reason: str | None = None
+    deferred_at: datetime | None = None
     called_at: datetime | None = None
     finished_at: datetime | None = None
 

@@ -8,7 +8,7 @@ def read_text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_operator_return_to_queue_and_cancel_are_swapped():
+def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     source = read_text("queue/operator.html")
 
     primary_actions = source.split('<div class="button-group primary-actions">', 1)[1]
@@ -21,31 +21,33 @@ def test_operator_return_to_queue_and_cancel_are_swapped():
     assert "ВЫЗВАТЬ ПО НОМЕРУ" not in before_more_menu
     assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" not in before_more_menu
     assert "ОТМЕНИТЬ ВЫЗОВ" not in primary_actions
-    assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" in primary_actions
+    assert "return-to-queue-btn" not in primary_actions
+    assert "defer-ticket-btn" in primary_actions
+    assert "showDeferReasonPopup()" in primary_actions
     assert "ВЫЗВАТЬ ПО НОМЕРУ" in more_menu
     assert "ОТМЕНИТЬ ВЫЗОВ" in more_menu
-    assert 'onclick="returnCurrentToQueue()"' in primary_actions
     assert 'onclick="cancelCurrent()"' in more_menu
 
 
-def test_operator_return_to_queue_warns_only_after_first_return():
+def test_operator_has_four_clickable_queue_columns():
+    source = read_text("queue/operator.html")
+
+    assert 'data-section="waiting"' in source
+    assert 'data-section="deferred"' in source
+    assert 'data-section="cancelled"' in source
+    assert 'data-section="served"' in source
+    assert "selectQueueSection('waiting')" in source
+    assert "selectQueueSection('deferred')" in source
+    assert "selectQueueSection('cancelled')" in source
+    assert "selectQueueSection('served')" in source
+
+
+def test_operator_return_to_queue_is_not_primary_but_legacy_function_stays():
     source = read_text("queue/js/operator.js")
 
-    assert "operatorReturnedTicketIds" not in source
-    assert "rememberReturnedTicket" not in source
-    assert "wasTicketReturnedToQueue" not in source
-    assert "data.was_returned_before" not in source
-    assert "currentTicketReturnedToQueueCount" in source
-    assert "const returnedToQueueCount = await getCurrentTicketReturnedToQueueCount();" in source
-    assert "if (returnedToQueueCount > 0)" in source
+    assert "returnCurrentToQueue" in source
     assert "showRepeatedReturnWarning()" in source
-    assert "showOperatorPopup({" in source
-    assert 'title: "Вернуть в очередь?"' in source
-    assert "Похоже, этого клиента возвращают в очередь не в первый раз" in source
-    assert "Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов»." in source
-    assert 'text: "Вернуть в очередь"' in source
-    assert "onClick: confirmReturnCurrentToQueue" in source
-    assert 'text: "Отмена"' in source
+    assert "confirmReturnCurrentToQueue" in source
 
 
 def test_operator_finish_warning_can_route_to_cancel_or_finish():
@@ -65,7 +67,22 @@ def test_operator_actions_keep_existing_ticket_endpoints():
 
     assert "/tickets/finish" in source
     assert "/tickets/cancel" in source
+    assert "/tickets/defer" in source
+    assert "/tickets/deferred/${ticketId}/resume" in source
     assert "/tickets/return-to-queue" in source
     assert "/tickets/recall" in source
     assert "/tickets/redirect" in source
     assert "/tickets/redirect-to-window" in source
+
+
+def test_operator_defer_requires_reason_options():
+    source = read_text("queue/js/operator.js")
+    queue_sections_source = read_text("queue/js/operator-queue-sections.js")
+
+    assert "OperatorQueueSections.deferReasons" in source
+    assert 'value: "fills_documents"' in queue_sections_source
+    assert 'value: "pays"' in queue_sections_source
+    assert 'value: "went_for_documents"' in queue_sections_source
+    assert 'value: "missing_document"' in queue_sections_source
+    assert 'value: "other"' in queue_sections_source
+    assert "Выберите причину отложения" in source

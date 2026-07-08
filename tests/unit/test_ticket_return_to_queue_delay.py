@@ -11,6 +11,8 @@ from app.services.tickets import (
     cancel_expired_returned_tickets,
     cancel_expired_returned_tickets_once,
     create_window_redirect_ticket,
+    defer_ticket,
+    resume_deferred_ticket,
     return_ticket_to_queue,
 )
 
@@ -52,6 +54,70 @@ def test_return_ticket_to_queue_reports_repeated_return_from_shared_ticket_state
 
     assert was_returned_before is True
     assert ticket.returned_to_queue_count == 2
+
+
+def test_defer_ticket_keeps_ticket_owned_by_current_operator_and_window():
+    now = datetime(2026, 7, 8, 10, 0)
+    ticket = Ticket(
+        status="called",
+        completion_reason=None,
+        operator_id=1,
+        window_id=2,
+        target_window_id=9,
+        called_at=now - timedelta(minutes=4),
+        finished_at=None,
+    )
+
+    defer_ticket(
+        ticket,
+        operator_id=7,
+        window_id=3,
+        reason="missing_document",
+        now=now,
+    )
+
+    assert ticket.status == "deferred"
+    assert ticket.completion_reason is None
+    assert ticket.operator_id == 7
+    assert ticket.window_id == 3
+    assert ticket.target_window_id is None
+    assert ticket.defer_reason == "missing_document"
+    assert ticket.deferred_at == now
+    assert ticket.called_at == now - timedelta(minutes=4)
+    assert ticket.finished_at is None
+
+
+def test_resume_deferred_ticket_returns_ticket_to_service_without_general_queue():
+    now = datetime(2026, 7, 8, 10, 30)
+    deferred_at = now - timedelta(minutes=10)
+    ticket = Ticket(
+        status="deferred",
+        completion_reason=None,
+        operator_id=7,
+        window_id=3,
+        target_window_id=None,
+        defer_reason="pays",
+        deferred_at=deferred_at,
+        called_at=now - timedelta(minutes=20),
+        finished_at=None,
+    )
+
+    resume_deferred_ticket(
+        ticket,
+        operator_id=7,
+        window_id=3,
+        now=now,
+    )
+
+    assert ticket.status == "called"
+    assert ticket.completion_reason is None
+    assert ticket.operator_id == 7
+    assert ticket.window_id == 3
+    assert ticket.target_window_id is None
+    assert ticket.called_at == now
+    assert ticket.defer_reason is None
+    assert ticket.deferred_at is None
+    assert ticket.finished_at is None
 
 
 def test_create_window_redirect_ticket_preserves_finished_source_stage():

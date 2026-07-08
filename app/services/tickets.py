@@ -29,10 +29,52 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     ticket.target_window_id = None
     ticket.called_at = None
     ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
     ticket.queue_entered_at = returned_at + timedelta(minutes=RETURN_TO_QUEUE_DELAY_MINUTES)
     ticket.returned_to_queue_count = (ticket.returned_to_queue_count or 0) + 1
 
     return was_returned_before
+
+
+def defer_ticket(
+    ticket: Ticket,
+    *,
+    operator_id: int,
+    window_id: int,
+    reason: str,
+    now: datetime | None = None,
+) -> None:
+    deferred_at = now or datetime.now()
+
+    ticket.status = "deferred"
+    ticket.completion_reason = None
+    ticket.operator_id = operator_id
+    ticket.window_id = window_id
+    ticket.target_window_id = None
+    ticket.defer_reason = reason
+    ticket.deferred_at = deferred_at
+    ticket.finished_at = None
+
+
+def resume_deferred_ticket(
+    ticket: Ticket,
+    *,
+    operator_id: int,
+    window_id: int,
+    now: datetime | None = None,
+) -> None:
+    called_at = now or datetime.now()
+
+    ticket.status = "called"
+    ticket.completion_reason = None
+    ticket.operator_id = operator_id
+    ticket.window_id = window_id
+    ticket.target_window_id = None
+    ticket.called_at = called_at
+    ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
 
 
 def cancel_expired_returned_tickets(db: Session, *, now: datetime | None = None) -> int:

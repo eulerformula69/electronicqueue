@@ -69,8 +69,26 @@
 </header>
 
 <main class="main-layout">
-	<section class="glass-card" style="display:flex; flex-direction:column; overflow:hidden;">
+	<section class="glass-card operator-queue-panel" style="display:flex; flex-direction:column; overflow:hidden;">
 		<h3 style="margin-top:0">Ожидающие:</h3>
+		<div class="queue-columns" id="queue-columns">
+			<button class="queue-column active" type="button" data-section="waiting" onclick="selectQueueSection('waiting')">
+				<span>Ожидающие</span>
+				<strong id="queue-count-waiting">0</strong>
+			</button>
+			<button class="queue-column" type="button" data-section="deferred" onclick="selectQueueSection('deferred')">
+				<span>Отложенные</span>
+				<strong id="queue-count-deferred">0</strong>
+			</button>
+			<button class="queue-column" type="button" data-section="cancelled" onclick="selectQueueSection('cancelled')">
+				<span>Отменённые</span>
+				<strong id="queue-count-cancelled">0</strong>
+			</button>
+			<button class="queue-column" type="button" data-section="served" onclick="selectQueueSection('served')">
+				<span>Обслуженные</span>
+				<strong id="queue-count-served">0</strong>
+			</button>
+		</div>
 		<div id="queue-list" class="queue-list" style="flex:1; overflow-y:auto; min-height:0;">Загрузка...</div>
 		<div style="flex-shrink:0; padding-top:16px; border-top:1px solid #e2e8f0;">
 			<span style="font-size:0.95rem; text-transform:uppercase; font-weight:800; color:var(--text-main); letter-spacing:0.5px;">Обслужено сегодня:</span>
@@ -89,7 +107,7 @@
         <div class="button-group primary-actions">
             <button id="next-btn" class="btn-primary" onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
             <button class="btn-danger" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
-            <button class="btn-outline" id="return-to-queue-btn" onclick="returnCurrentToQueue()">ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ</button>
+            <button class="btn-outline" id="defer-ticket-btn" onclick="showDeferReasonPopup()">ОТЛОЖИТЬ</button>
         </div>
 
         <div class="button-group secondary-actions">
@@ -142,6 +160,7 @@
 </main>
 
 <script src="/queue/js/config.js"></script>
+<script src="/queue/js/operator-queue-sections.js"></script>
 <script src="/queue/js/operator.js"></script>
 <script src="/queue/js/operator-changelog.js"></script>
 

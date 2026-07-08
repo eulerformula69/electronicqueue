@@ -286,6 +286,23 @@ def migrate_ticket_return_count_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_defer_schema(engine):
+    """Add fields used by operator-owned deferred tickets."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS defer_reason varchar(64),
+        ADD COLUMN IF NOT EXISTS deferred_at timestamp without time zone;
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_operator_deferred_at
+        ON tickets (operator_id, deferred_at);
+    CREATE INDEX IF NOT EXISTS ix_tickets_window_status_deferred_at
+        ON tickets (window_id, status, deferred_at);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

@@ -34,15 +34,16 @@ from app.dependencies import (
 )
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.schemas import (
-    CallSpecificRequest, RedirectRequest, RedirectToWindowRequest, TicketCreate,
-    TicketReprintResponse,
+    CallSpecificRequest, DeferTicketRequest, RedirectRequest,
+    RedirectToWindowRequest, TicketCreate, TicketReprintResponse,
 )
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
-    render_ticket_template, return_ticket_to_queue,
+    defer_ticket, render_ticket_template, resume_deferred_ticket,
+    return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -72,6 +73,29 @@ def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) 
             ticket,
             operator_window_id,
         ),
+    }
+
+
+def _format_ticket_time(value) -> str:
+    return value.strftime("%H:%M") if value else "—"
+
+
+def build_operator_ticket_detail_payload(ticket: Ticket) -> dict:
+    service_name = ticket.service.name if ticket.service else "Услуга не указана"
+    reason = ticket.defer_reason or ticket.completion_reason
+    return {
+        "id": ticket.id,
+        "number": ticket.number,
+        "service_id": ticket.service_id,
+        "service_name": service_name,
+        "created_at": _format_ticket_time(ticket.created_at),
+        "called_at": _format_ticket_time(ticket.called_at),
+        "finished_at": _format_ticket_time(ticket.finished_at),
+        "deferred_at": _format_ticket_time(ticket.deferred_at),
+        "status": ticket.status,
+        "completion_reason": ticket.completion_reason,
+        "defer_reason": ticket.defer_reason,
+        "reason": reason,
     }
 
 
@@ -294,6 +318,7 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     db.commit()
     db.refresh(ticket)
 
+    await manager.broadcast({"type": "queue_updated"})
     await broadcast_board()
 
     db.close()
@@ -366,6 +391,8 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
         ticket.finished_at = None
+        ticket.defer_reason = None
+        ticket.deferred_at = None
 
         db.commit()
         db.refresh(ticket)
@@ -455,6 +482,8 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
         ticket.finished_at = None
+        ticket.defer_reason = None
+        ticket.deferred_at = None
 
         db.commit()
         db.refresh(ticket)
@@ -556,6 +585,101 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
         db.close()
 
 
+@router.post("/tickets/defer", tags=["Tickets"])
+async def defer_current_ticket(
+    data: DeferTicketRequest,
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ticket = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called",
+        ).first()
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Нет активного билета для отложения")
+
+        defer_ticket(
+            ticket,
+            operator_id=operator.id,
+            window_id=operator.window_id,
+            reason=data.reason,
+        )
+
+        db.commit()
+        db.refresh(ticket)
+
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        return {
+            "status": "deferred",
+            "ticket_number": ticket.number,
+            "defer_reason": ticket.defer_reason,
+        }
+    finally:
+        db.close()
+
+
+@router.post("/tickets/deferred/{ticket_id}/resume", tags=["Tickets"])
+async def resume_operator_deferred_ticket(
+    ticket_id: int,
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        current = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called",
+        ).first()
+
+        if current:
+            return {"detail": f"Сначала завершите клиента: {current.number}"}
+
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id,
+            Ticket.status == "deferred",
+            Ticket.operator_id == operator.id,
+            Ticket.window_id == operator.window_id,
+        ).first()
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Отложенный билет не найден")
+
+        resume_deferred_ticket(
+            ticket,
+            operator_id=operator.id,
+            window_id=operator.window_id,
+        )
+
+        db.commit()
+        db.refresh(ticket)
+
+        window = db.query(Window).filter(Window.id == ticket.window_id).first()
+
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        if window:
+            await broadcast_ticket_called(ticket, window)
+
+        return {
+            "id": ticket.id,
+            "number": ticket.number,
+            "status": ticket.status,
+            "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
+        }
+    finally:
+        db.close()
+
+
 @router.get("/tickets/my-queue", tags=["Tickets"])
 def get_my_queue(
     skip: int = Query(0, ge=0),
@@ -637,6 +761,7 @@ def get_my_queue(
         tickets = (redirected_query.all() + ordinary_query.all())[skip:skip + limit]
 
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
         tickets_served_today = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
             Ticket.status == "finished",
@@ -647,9 +772,92 @@ def get_my_queue(
         for t in tickets:
             result.append(build_operator_queue_ticket_payload(t, operator.window_id))
 
+        waiting_details = []
+        if result:
+            waiting_ids = [ticket["id"] for ticket in result]
+            waiting_detail_tickets = (
+                db.query(Ticket)
+                .filter(Ticket.id.in_(waiting_ids))
+                .all()
+            )
+            waiting_details_by_id = {
+                ticket.id: build_operator_ticket_detail_payload(ticket)
+                for ticket in waiting_detail_tickets
+            }
+            waiting_details = [
+                waiting_details_by_id[ticket_id]
+                for ticket_id in waiting_ids
+                if ticket_id in waiting_details_by_id
+            ]
+
+        deferred_tickets = (
+            db.query(Ticket)
+            .filter(
+                Ticket.status == "deferred",
+                Ticket.operator_id == operator.id,
+                Ticket.window_id == operator.window_id,
+                Ticket.created_at >= today_start,
+                Ticket.created_at < tomorrow_start,
+            )
+            .order_by(Ticket.deferred_at.desc(), Ticket.created_at.desc())
+            .all()
+        )
+
+        cancelled_tickets = (
+            db.query(Ticket)
+            .filter(
+                Ticket.window_id == operator.window_id,
+                Ticket.created_at >= today_start,
+                Ticket.created_at < tomorrow_start,
+                (
+                    (Ticket.status == "cancelled")
+                    | (
+                        (Ticket.status == "finished")
+                        & (Ticket.completion_reason == "cancelled")
+                    )
+                ),
+            )
+            .order_by(Ticket.finished_at.desc(), Ticket.created_at.desc())
+            .all()
+        )
+
+        served_tickets = (
+            db.query(Ticket)
+            .filter(
+                Ticket.window_id == operator.window_id,
+                Ticket.status == "finished",
+                Ticket.completion_reason == "completed",
+                Ticket.finished_at >= today_start,
+                Ticket.finished_at < tomorrow_start,
+            )
+            .order_by(Ticket.finished_at.desc())
+            .all()
+        )
+
+        sections = {
+            "waiting": waiting_details,
+            "deferred": [
+                build_operator_ticket_detail_payload(ticket)
+                for ticket in deferred_tickets
+            ],
+            "cancelled": [
+                build_operator_ticket_detail_payload(ticket)
+                for ticket in cancelled_tickets
+            ],
+            "served": [
+                build_operator_ticket_detail_payload(ticket)
+                for ticket in served_tickets
+            ],
+        }
+
         return {
             "tickets": result,
-            "tickets_served_today": tickets_served_today
+            "tickets_served_today": tickets_served_today,
+            "sections": sections,
+            "section_counts": {
+                key: len(value)
+                for key, value in sections.items()
+            },
         }
     finally:
         db.close()

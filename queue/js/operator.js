@@ -183,7 +183,6 @@ let allServices = [];
 let allWindows = [];
 const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
 const RECALL_FINISH_WARNING_COUNT = 2;
-
 function parseTicketCalledAt(ticket) {
     if (!ticket || !ticket.called_at) return null;
 
@@ -639,26 +638,12 @@ async function loadQueue(options = {}) {
 		if (options.checkNewTickets !== false) {
 			checkNewTicketsAndNotify(tickets);
 		}		
-        const panel = document.getElementById("queue-list");
-
-        if (!tickets.length) {
-            panel.innerHTML = "<div style='color:var(--text-muted); padding:20px;'>Нет ожидающих</div>";
-        } else {
-            panel.innerHTML = tickets.map(t => {
-                const redirected = Boolean(t.is_redirected_to_window);
-                return `
-                <div class="queue-item ${redirected ? 'queue-item-redirected' : ''}">
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; width:100%;">
-                        <span>№ ${t.number}</span>
-                        <span style="font-size:0.8rem; font-weight:500; color:var(--text-muted); margin-left:8px;">${t.created_at}</span>
-                    </div>
-                    <div class="queue-service-name">${t.service_name || 'Услуга не указана'}</div>
-                    ${redirected ? '<div class="redirect-badge">Перенаправлено</div>' : ''}
-                </div>
-            `;
-            }).join("");
-        }
-
+        OperatorQueueSections.setSections(data.sections || {
+            waiting: tickets,
+            deferred: [],
+            cancelled: [],
+            served: []
+        }, data.section_counts);
         if (data.tickets_served_today !== undefined) {
             const counter = document.getElementById("served-today-count");
             if (counter) counter.textContent = data.tickets_served_today;
@@ -1310,6 +1295,98 @@ async function cancelCurrent(options = {}) {
     } catch (e) {
         console.error("Критическая ошибка в cancelCurrent:", e);
         alert("Произошла ошибка при выполнении запроса.");
+    }
+}
+
+function showDeferReasonPopup() {
+    if (!currentTicketId) {
+        alert("Нет активного клиента для отложения.");
+        return;
+    }
+
+    showOperatorPopup({
+        title: "Отложить клиента",
+        message: "Выберите причину отложения. Клиент останется закреплён за вашим рабочим местом.",
+        actions: [
+            ...OperatorQueueSections.deferReasons.map(reason => ({
+                text: reason.label,
+                className: "btn-outline",
+                onClick: () => deferCurrentTicket(reason.value)
+            })),
+            {
+                text: "Отмена",
+                className: "btn-outline"
+            }
+        ]
+    });
+}
+
+async function deferCurrentTicket(reason) {
+    if (!reason) {
+        alert("Выберите причину отложения.");
+        return;
+    }
+
+    const button = document.getElementById("defer-ticket-btn");
+    if (button) button.disabled = true;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/defer`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            },
+            body: JSON.stringify({ reason })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(data.detail || "Не удалось отложить клиента");
+        }
+
+        clearCurrentTicket();
+        document.getElementById("current").textContent = "Рабочее место свободно";
+        document.getElementById("current-service").textContent = "";
+        OperatorQueueSections.selectDeferred();
+        showToast(
+            data.ticket_number ? `Билет ${data.ticket_number} отложен` : "Клиент отложен",
+            "success"
+        );
+        await loadQueue();
+    } catch (e) {
+        console.error("Ошибка отложения билета:", e);
+        alert(e.message || "Не удалось отложить клиента");
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function resumeDeferredTicket(ticketId) {
+    if (currentTicketId !== null && currentTicketId !== undefined) {
+        showToast("Закончите с текущим клиентом!", "danger");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/resume`, {
+            method: "POST",
+            headers: { "session-id": sessionId }
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.id) {
+            throw new Error(data.detail || "Не удалось вернуть клиента в обслуживание");
+        }
+
+        setCurrentTicket(data);
+        document.getElementById("current").textContent = data.number;
+        document.getElementById("current-service").textContent = data.service_name || "Услуга не указана";
+        showToast(`Билет ${data.number} возвращён в обслуживание`, "success");
+        await loadQueue();
+    } catch (e) {
+        console.error("Ошибка возврата отложенного билета:", e);
+        alert(e.message || "Не удалось вернуть клиента в обслуживание");
     }
 }
 
