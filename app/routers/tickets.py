@@ -414,6 +414,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
             Ticket.created_at >= today_start,
             Ticket.created_at < tomorrow_start
         ).order_by(Ticket.created_at.desc()).first()
+        is_emergency_completed_call = False
 
         if not ticket:
             completed_ticket = find_completed_today_ticket_by_number(
@@ -422,16 +423,22 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
                 now=today_start,
             )
             if completed_ticket:
-                return {"detail": COMPLETED_TODAY_TICKET_DETAIL}
+                ticket = completed_ticket
+                is_emergency_completed_call = True
 
+        if not ticket:
             return {"detail": "Билет с таким номером за сегодня не найден или недоступен для вызова"}
 
         # Если билет был перенаправлен на конкретное окно, вызвать его может только это окно.
-        if ticket.target_window_id is not None and ticket.target_window_id != operator.window_id:
+        if (
+            not is_emergency_completed_call
+            and ticket.target_window_id is not None
+            and ticket.target_window_id != operator.window_id
+        ):
             return {"detail": "Этот талон перенаправлен на другое рабочее место"}
 
         # Обычные билеты по-прежнему можно вызвать только на окне, которое обслуживает их услугу.
-        if ticket.target_window_id is None:
+        if not is_emergency_completed_call and ticket.target_window_id is None:
             window_service = db.query(WindowService).filter(
                 WindowService.window_id == operator.window_id,
                 WindowService.service_id == ticket.service_id
