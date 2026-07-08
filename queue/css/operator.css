@@ -211,23 +211,34 @@ body.operator-page .btn-success{ background: var(--success); color: white; }
 body.operator-page .btn-danger{ background: var(--danger); color: white; }
 body.operator-page .primary-actions{
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     width: 100%;
     margin-top: 0;
 }
+
 body.operator-page .primary-actions button{
-    min-height: 62px;
+    min-height: 72px;
     width: 100%;
-    padding: 18px 16px;
-    font-size: 1rem;
+    padding: 20px 16px;
+    font-size: 1.05rem;
     line-height: 1.15;
     overflow-wrap: anywhere;
 }
+
 body.operator-page .secondary-actions{
-    justify-content: center;
-    margin-top: 15px;
+    display: grid;
+    gap: 12px;
     width: 100%;
+    margin-top: 15px;
+}
+
+body.operator-page .secondary-critical-actions{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.operator-page .tertiary-actions{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 body.operator-page .operator-more-actions{
     position: relative;

@@ -97,6 +97,19 @@ def test_settings_view_renders_and_saves_board_ticker_text():
     assert "data.board_ticker_text.trim()" in source
 
 
+def test_settings_view_renders_and_saves_ticket_reason_options():
+    modern_source = _read("queue/js/admin/views/settings.view.js")
+    legacy_source = _read("queue/js/admin/settings.js")
+
+    for source in (modern_source, legacy_source):
+        assert "Причины отмены" in source
+        assert "Причины отложения" in source
+        assert "cancel_reason_options" in source
+        assert "defer_reason_options" in source
+        assert "collectReasonOptions" in source
+        assert "deleteReasonOption" in source or "delete-reason-option" in source
+
+
 def test_settings_view_renders_and_saves_ticket_print_scale_percent():
     source = _read("queue/js/admin/views/settings.view.js")
     terminal = _read("queue/js/terminal.js")
@@ -141,13 +154,26 @@ def test_board_status_moves_with_ticker_offset():
 def test_lite_media_board_reserves_ticker_height():
     lite_css = _read("queue/css/board-media/lite.css")
 
-    assert "--lite-work-height: calc(100vh - var(--lite-top-offset) - var(--lite-ticker-height));" in lite_css
-    assert "height: var(--lite-work-height) !important;" in lite_css
-    assert "max-height: var(--lite-work-height) !important;" in lite_css
-    assert "max-height: calc(100% - var(--lite-media-top)) !important;" in lite_css
+    assert 'grid-template-areas:\n        "header"\n        "main"\n        "ticker";' in lite_css
+    assert "grid-template-rows: var(--lite-header-height) minmax(0, 1fr) var(--lite-ticker-height);" in lite_css
+    assert "position: fixed !important;" in lite_css
+    assert "bottom: 0 !important;" in lite_css
     assert "grid-template-columns: minmax(0, 1fr) minmax(0, var(--lite-board-width)) !important;" in lite_css
-    assert "max-height: 100% !important;" in lite_css
+    assert "grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;" in lite_css
     assert "overflow: hidden;" in lite_css
+
+
+def test_lite_media_pages_have_explicit_layout_zones_and_ticker():
+    lite_source = _read("queue/board-media-lite.html")
+    lite2_source = _read("queue/board-media-lite2.html")
+
+    for source in (lite_source, lite2_source):
+        assert '<header class="lite-header">' in source
+        assert '<main class="board-wrapper">' in source
+        assert '<div id="board-ticker" class="board-ticker" hidden>' in source
+        assert '<video id="media-video" autoplay playsinline></video>' in source
+        assert '<div class="waiting-board" id="waiting-board"></div>' in source
+        assert '<div class="board" id="board"></div>' in source
 
 
 def test_lite2_board_uses_smaller_page_sizes():
