@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from sqlalchemy import and_, asc, func, literal
+from sqlalchemy import and_, asc, case, func, literal
 from sqlalchemy.orm import Session
 
 from app.connections import manager, operatorManager
@@ -275,11 +275,16 @@ def get_called_tickets():
 def get_waiting_tickets_for_board():
     db = SessionLocal()
     try:
+        status_order = case(
+            (Ticket.status == "waiting", 0),
+            (Ticket.status == "deferred", 1),
+            else_=2,
+        )
         tickets = (
             db.query(Ticket, Service)
             .join(Service, Ticket.service_id == Service.id)
-            .filter(Ticket.status == "waiting")
-            .order_by(queue_order_expr().asc())
+            .filter(Ticket.status.in_(("waiting", "deferred")))
+            .order_by(status_order.asc(), queue_order_expr().asc())
             .all()
         )
 
@@ -292,6 +297,7 @@ def get_waiting_tickets_for_board():
                 "service_name": service.name,
                 "window_id": ticket.window_id,
                 "target_window_id": ticket.target_window_id,
+                "status": ticket.status,
                 "created_at": ticket.created_at.isoformat() if ticket.created_at else None
             })
 

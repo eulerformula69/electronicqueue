@@ -100,6 +100,27 @@ def build_operator_ticket_detail_payload(ticket: Ticket) -> dict:
     }
 
 
+def get_served_operator_tickets(
+    db: Session,
+    *,
+    window_id: int,
+    today_start: datetime,
+    tomorrow_start: datetime,
+):
+    return (
+        db.query(Ticket)
+        .filter(
+            Ticket.window_id == window_id,
+            Ticket.status == "finished",
+            Ticket.completion_reason.in_(("completed", "redirected")),
+            Ticket.finished_at >= today_start,
+            Ticket.finished_at < tomorrow_start,
+        )
+        .order_by(Ticket.finished_at.desc())
+        .all()
+    )
+
+
 def _today_bounds(now: datetime | None = None):
     current = now or datetime.now()
     today_start = current.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -836,17 +857,11 @@ def get_my_queue(
             .all()
         )
 
-        served_tickets = (
-            db.query(Ticket)
-            .filter(
-                Ticket.window_id == operator.window_id,
-                Ticket.status == "finished",
-                Ticket.completion_reason == "completed",
-                Ticket.finished_at >= today_start,
-                Ticket.finished_at < tomorrow_start,
-            )
-            .order_by(Ticket.finished_at.desc())
-            .all()
+        served_tickets = get_served_operator_tickets(
+            db,
+            window_id=operator.window_id,
+            today_start=today_start,
+            tomorrow_start=tomorrow_start,
         )
 
         sections = {
