@@ -12,21 +12,18 @@ def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     source = read_text("queue/operator.html")
 
     primary_actions = source.split('<div class="button-group primary-actions">', 1)[1]
-    primary_actions = primary_actions.split('<div class="button-group secondary-actions">', 1)[0]
-    secondary_actions = source.split('<div class="button-group secondary-actions">', 1)[1]
-    secondary_actions = secondary_actions.split('<div id="redirect-panel"', 1)[0]
-    more_menu = secondary_actions.split('<div id="operator-more-menu"', 1)[1]
-    before_more_menu = secondary_actions.split('<div id="operator-more-menu"', 1)[0]
+    primary_actions = primary_actions.split('<div class="button-group secondary-actions', 1)[0]
+    actions_area = source.split('<div class="button-group secondary-actions', 1)[1]
+    actions_area = actions_area.split('<div class="bottom-controls">', 1)[0]
+    before_more_menu = actions_area.split('<div id="operator-more-menu"', 1)[0]
 
-    assert "ВЫЗВАТЬ ПО НОМЕРУ" not in before_more_menu
     assert "ВЕРНУТЬ ОБРАТНО В ОЧЕРЕДЬ" not in before_more_menu
     assert "ОТМЕНИТЬ ВЫЗОВ" not in primary_actions
     assert "return-to-queue-btn" not in primary_actions
-    assert "defer-ticket-btn" in primary_actions
-    assert "showDeferReasonPopup()" in primary_actions
-    assert "ВЫЗВАТЬ ПО НОМЕРУ" in more_menu
-    assert "ОТМЕНИТЬ ВЫЗОВ" in more_menu
-    assert 'onclick="cancelCurrent()"' in more_menu
+    assert "defer-ticket-btn" in actions_area
+    assert "showDeferReasonPopup()" in actions_area
+    assert "ВЫЗВАТЬ ПО НОМЕРУ" in actions_area
+    assert 'onclick="cancelCurrent()"' in actions_area
 
 
 def test_operator_has_four_clickable_queue_columns():
@@ -73,6 +70,24 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/recall" in source
     assert "/tickets/redirect" in source
     assert "/tickets/redirect-to-window" in source
+
+
+def test_operator_redirect_uses_single_modal_button():
+    html = read_text("queue/operator.html")
+    js = read_text("queue/js/operator.js")
+
+    assert 'id="redirect-btn"' in html
+    assert 'onclick="showRedirectModal()"' in html
+    assert "ПЕРЕНАПРАВИТЬ НА УСЛУГУ" not in html
+    assert "ПЕРЕНАПРАВИТЬ НА РАБОЧЕЕ МЕСТО" not in html
+    assert 'id="redirect-panel"' not in html
+    assert 'id="redirect-to-window-panel"' not in html
+
+    assert "function showRedirectModal" in js
+    assert "redirect-modal-overlay" in js
+    assert "Поиск услуги" in js
+    assert "Поиск оператора, окна или услуги" in js
+    assert "new_service_id: Number(redirectState.serviceId)" in js
 
 
 def test_operator_defer_requires_reason_options():

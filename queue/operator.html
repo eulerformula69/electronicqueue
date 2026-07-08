@@ -116,8 +116,7 @@
 	<div class="button-group secondary-actions tertiary-actions">
 		<button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
 						<button type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
-		<button class="btn-outline" onclick="showRedirectToService()">ПЕРЕНАПРАВИТЬ НА УСЛУГУ</button>
-		<button class="btn-outline" onclick="showRedirectToWindow()">ПЕРЕНАПРАВИТЬ НА РАБОЧЕЕ МЕСТО</button>
+		<button class="btn-outline" id="redirect-btn" onclick="showRedirectModal()">ПЕРЕНАПРАВИТЬ</button>
 		<!---<div class="operator-more-actions">
 			<button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
 			<div id="operator-more-menu" class="operator-more-menu">
@@ -126,18 +125,6 @@
 		</div> --->
 	</div>
 
-		<div id="redirect-panel" style="display:none; margin-top:20px; background: #f8f9fc; padding: 15px; border-radius: 12px;">
-			<select id="redirect-service" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;"></select>
-			<button class="btn-primary" onclick="confirmRedirect()">ОК</button>
-			<button class="btn-outline" onclick="cancelRedirect()">ОТМЕНА</button>
-		</div>
-
-		<div id="redirect-to-window-panel" class="redirect-to-window-panel" style="display:none; margin-top:20px;">
-			<select id="redirect-window"></select>
-			<button class="btn-primary" onclick="confirmRedirectToWindow()">Подтвердить</button>
-			<button class="btn-outline" onclick="cancelRedirectToWindow()">ОТМЕНА</button>
-		</div>
-		
 		<div class="bottom-controls">
 			<div class="auto-call-group">
 				<div class="auto-call-container">

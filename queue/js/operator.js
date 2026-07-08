@@ -853,177 +853,365 @@ async function loadAllWindows() {
 }
 
 /* =========================
-   Показ панели перенаправления
+   Перенаправление
 ========================= */
-function showRedirect() { return showRedirectToService(); }
+const redirectState = {
+    mode: "service",
+    serviceId: null,
+    windowId: null,
+    serviceQuery: "",
+    windowQuery: "",
+    isSubmitting: false
+};
 
-function showRedirectToService() {
+function showRedirect() { return showRedirectModal(); }
+function showRedirectToService() { return showRedirectModal("service"); }
+function showRedirectToWindow() { return showRedirectModal("window"); }
 
-    if (!currentTicketId) {
-        alert("Нет текущего клиента");
-        return;
-    }
-
-    const select = document.getElementById("redirect-service");
-    select.innerHTML = "";
-
-    allServices.forEach(service => {
-        const option = document.createElement("option");
-        option.value = service.id;
-        option.textContent = service.name;
-        select.appendChild(option);
-    });
-
-    document.getElementById("redirect-panel").style.display = "block";
+function normalizeRedirectText(value) {
+    return String(value || "").toLowerCase().trim();
 }
 
-/* =========================
-   Подтверждение перенаправления
-========================= */
-async function confirmRedirect() {
-    const newServiceId = document.getElementById("redirect-service").value;
-
-    if (!newServiceId) {
-        alert("Выберите услугу");
-        return;
-    }
-
-    if (!confirm("Вы уверены, что хотите перенаправить клиента?")) {
-        return;
-    }
-
-	const res = await fetch(`${CONFIG.API_URL}/tickets/redirect`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"session-id": sessionId
-		},
-		body: JSON.stringify({
-			ticket_id: currentTicketId,
-			new_service_id: parseInt(newServiceId)
-		})
-	});
-
-    const result = await res.json();
-
-    if (result.detail) {
-        alert(result.detail);
-    } else {
-        alert(result.warning || result.message || "Билет перенаправлен");
-        document.getElementById("current").textContent = "Рабочее место свободно";
-        document.getElementById("current-service").textContent = "";
-        clearCurrentTicket();
-        document.getElementById("redirect-panel").style.display = "none";
-        loadQueue();
-        loadCurrentTicket();
-    }
+function getRedirectService(serviceId) {
+    return allServices.find(service => Number(service.id) === Number(serviceId)) || null;
 }
 
-function cancelRedirect() {
-    document.getElementById("redirect-panel").style.display = "none";
+function getRedirectWindow(windowId) {
+    return allWindows.find(windowItem => Number(windowItem.id) === Number(windowId)) || null;
 }
 
-function cancelRedirectToWindow() {
-    document.getElementById("redirect-to-window-panel").style.display = "none";
+function redirectWindowSupportsService(windowItem, serviceId) {
+    if (!windowItem || !serviceId || !Array.isArray(windowItem.services)) return false;
+    return windowItem.services.some(service => Number(service.id) === Number(serviceId));
 }
 
-function compactText(value, maxLength = 62) {
-    const text = String(value || "").trim();
-    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
-}
-
-function formatRedirectWindowOption(windowItem) {
+function getRedirectWindowTitle(windowItem) {
     const operatorName = windowItem.operator_name || "оператор не назначен";
     const windowName = windowItem.name || `Окно ${windowItem.id}`;
-    const serviceNames = Array.isArray(windowItem.service_names) ? windowItem.service_names : [];
-
-    let serviceText = "услуги не назначены";
-    if (serviceNames.length === 1) {
-        serviceText = serviceNames[0];
-    } else if (serviceNames.length > 1) {
-        serviceText = `${serviceNames[0]} +${serviceNames.length - 1}`;
-    }
-
-    const fullServiceText = serviceNames.length ? serviceNames.join(", ") : serviceText;
-
-    return {
-        shortText: `${operatorName} | ${windowName} | ${compactText(serviceText)}`,
-        fullText: `${operatorName} | ${windowName} | ${fullServiceText}`
-    };
+    return `${operatorName} / ${windowName}`;
 }
 
-async function showRedirectToWindow() {
+function getFilteredRedirectServices() {
+    const query = normalizeRedirectText(redirectState.serviceQuery);
+    return allServices.filter(service => {
+        if (Number(service.is_archived) === 1) return false;
+        if (!query) return true;
+        return normalizeRedirectText(service.name).includes(query);
+    });
+}
+
+function getFilteredRedirectWindows() {
+    const query = normalizeRedirectText(redirectState.windowQuery);
+    return allWindows.filter(windowItem => {
+        if (!query) return true;
+        const serviceNames = Array.isArray(windowItem.service_names)
+            ? windowItem.service_names.join(" ")
+            : "";
+        return normalizeRedirectText([
+            windowItem.name,
+            windowItem.operator_name,
+            serviceNames
+        ].join(" ")).includes(query);
+    });
+}
+
+function closeRedirectModal() {
+    const modal = document.querySelector(".redirect-modal-overlay");
+    if (modal) modal.remove();
+}
+
+async function showRedirectModal(mode = "service") {
     if (!currentTicketId) {
         alert("Нет текущего клиента");
         return;
     }
 
+    if (!allServices.length) {
+        await loadAllServices();
+    }
     if (!allWindows.length) {
         await loadAllWindows();
     }
 
-    const select = document.getElementById("redirect-window");
-    select.innerHTML = "";
+    redirectState.mode = mode;
+    redirectState.serviceId = null;
+    redirectState.windowId = null;
+    redirectState.serviceQuery = "";
+    redirectState.windowQuery = "";
+    redirectState.isSubmitting = false;
 
-    let firstOnlineWindowId = null;
-
-    allWindows.forEach(windowItem => {
-        const option = document.createElement("option");
-        option.value = windowItem.id;
-
-        const isOnline = windowItem.status === "online";
-        const formatted = formatRedirectWindowOption(windowItem);
-
-        option.textContent = formatted.shortText;
-        option.title = formatted.fullText;
-
-        if (!isOnline) {
-            option.disabled = true;
-            option.classList.add("window-option-disabled");
-        } else if (firstOnlineWindowId === null) {
-            firstOnlineWindowId = String(windowItem.id);
-        }
-
-        select.appendChild(option);
-    });
-
-    if (firstOnlineWindowId !== null) {
-        select.value = firstOnlineWindowId;
-    }
-
-    document.getElementById("redirect-panel").style.display = "none";
-    document.getElementById("redirect-to-window-panel").style.display = "block";
+    renderRedirectModal();
 }
 
-async function confirmRedirectToWindow() {
-    const windowId = document.getElementById("redirect-window").value;
+function renderRedirectModal() {
+    closeRedirectModal();
 
-    if (!windowId) {
-        alert("Выберите рабочее место");
+    const overlay = document.createElement("div");
+    overlay.className = "redirect-modal-overlay";
+    overlay.addEventListener("click", event => {
+        if (event.target === overlay) closeRedirectModal();
+    });
+
+    const modal = document.createElement("div");
+    modal.className = "redirect-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+
+    const title = document.createElement("h2");
+    title.textContent = "Перенаправить";
+
+    const modeGroup = document.createElement("div");
+    modeGroup.className = "redirect-mode-group";
+    [
+        { value: "service", label: "На услугу" },
+        { value: "window", label: "К оператору/окну" }
+    ].forEach(option => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = option.value === redirectState.mode ? "active" : "";
+        button.textContent = option.label;
+        button.addEventListener("click", () => {
+            redirectState.mode = option.value;
+            redirectState.windowId = null;
+            renderRedirectModal();
+        });
+        modeGroup.appendChild(button);
+    });
+
+    modal.appendChild(title);
+    modal.appendChild(modeGroup);
+    modal.appendChild(createRedirectServiceSection());
+    if (redirectState.mode === "window") {
+        modal.appendChild(createRedirectWindowSection());
+    }
+    modal.appendChild(createRedirectSummary());
+    modal.appendChild(createRedirectActions());
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+}
+
+function createRedirectServiceSection() {
+    const section = document.createElement("div");
+    section.className = "redirect-section";
+
+    const label = document.createElement("label");
+    label.textContent = "Услуга";
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = "Поиск услуги";
+    input.value = redirectState.serviceQuery;
+    input.addEventListener("input", event => {
+        redirectState.serviceQuery = event.target.value;
+        renderRedirectModal();
+    });
+
+    section.appendChild(label);
+    section.appendChild(input);
+    section.appendChild(createRedirectServiceList());
+    return section;
+}
+
+function createRedirectServiceList() {
+    const list = document.createElement("div");
+    list.className = "redirect-options";
+
+    const services = getFilteredRedirectServices();
+    if (!services.length) {
+        const empty = document.createElement("div");
+        empty.className = "redirect-empty";
+        empty.textContent = "Услуги не найдены";
+        list.appendChild(empty);
+        return list;
+    }
+
+    services.forEach(service => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = Number(redirectState.serviceId) === Number(service.id)
+            ? "redirect-option selected"
+            : "redirect-option";
+        button.textContent = service.name;
+        button.addEventListener("click", () => {
+            redirectState.serviceId = Number(service.id);
+            if (
+                redirectState.windowId &&
+                !redirectWindowSupportsService(getRedirectWindow(redirectState.windowId), redirectState.serviceId)
+            ) {
+                redirectState.windowId = null;
+            }
+            renderRedirectModal();
+        });
+        list.appendChild(button);
+    });
+
+    return list;
+}
+
+function createRedirectWindowSection() {
+    const section = document.createElement("div");
+    section.className = "redirect-section";
+
+    const label = document.createElement("label");
+    label.textContent = "Оператор/окно";
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = "Поиск оператора, окна или услуги";
+    input.value = redirectState.windowQuery;
+    input.addEventListener("input", event => {
+        redirectState.windowQuery = event.target.value;
+        renderRedirectModal();
+    });
+
+    section.appendChild(label);
+    section.appendChild(input);
+    section.appendChild(createRedirectWindowList());
+    return section;
+}
+
+function createRedirectWindowList() {
+    const list = document.createElement("div");
+    list.className = "redirect-options";
+
+    const windows = getFilteredRedirectWindows();
+    if (!windows.length) {
+        const empty = document.createElement("div");
+        empty.className = "redirect-empty";
+        empty.textContent = "Окна не найдены";
+        list.appendChild(empty);
+        return list;
+    }
+
+    windows.forEach(windowItem => {
+        const supportsService = redirectWindowSupportsService(windowItem, redirectState.serviceId);
+        const serviceNames = Array.isArray(windowItem.service_names) && windowItem.service_names.length
+            ? windowItem.service_names.join(", ")
+            : "услуги не назначены";
+        const isDisabled = !redirectState.serviceId || !supportsService;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = Number(redirectState.windowId) === Number(windowItem.id)
+            ? "redirect-option selected"
+            : "redirect-option";
+        button.disabled = isDisabled;
+        const title = document.createElement("strong");
+        title.textContent = getRedirectWindowTitle(windowItem);
+
+        const services = document.createElement("span");
+        services.textContent = serviceNames;
+
+        const status = document.createElement("em");
+        status.textContent = windowItem.status === "online" ? "online" : "не online";
+
+        button.appendChild(title);
+        button.appendChild(services);
+        button.appendChild(status);
+        button.addEventListener("click", () => {
+            redirectState.windowId = Number(windowItem.id);
+            renderRedirectModal();
+        });
+        list.appendChild(button);
+    });
+
+    return list;
+}
+
+function createRedirectSummary() {
+    const summary = document.createElement("div");
+    summary.className = "redirect-summary";
+
+    const service = getRedirectService(redirectState.serviceId);
+    const windowItem = getRedirectWindow(redirectState.windowId);
+
+    const lines = [];
+    lines.push(`Тип: ${redirectState.mode === "service" ? "на услугу" : "к оператору/окну"}`);
+    lines.push(`Услуга: ${service ? service.name : "не выбрана"}`);
+    if (redirectState.mode === "window") {
+        lines.push(`Куда: ${windowItem ? getRedirectWindowTitle(windowItem) : "не выбрано"}`);
+    }
+
+    const title = document.createElement("strong");
+    title.textContent = "Резюме";
+    summary.appendChild(title);
+
+    lines.forEach(line => {
+        const item = document.createElement("div");
+        item.textContent = line;
+        summary.appendChild(item);
+    });
+
+    return summary;
+}
+
+function createRedirectActions() {
+    const actions = document.createElement("div");
+    actions.className = "redirect-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "btn-outline";
+    cancelButton.textContent = "Отмена";
+    cancelButton.addEventListener("click", closeRedirectModal);
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "btn-primary";
+    confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Подтвердить";
+    confirmButton.disabled = !canConfirmRedirect() || redirectState.isSubmitting;
+    confirmButton.addEventListener("click", confirmRedirectFromModal);
+
+    actions.appendChild(cancelButton);
+    actions.appendChild(confirmButton);
+    return actions;
+}
+
+function canConfirmRedirect() {
+    if (!redirectState.serviceId) return false;
+    if (redirectState.mode === "service") return true;
+
+    const windowItem = getRedirectWindow(redirectState.windowId);
+    return Boolean(windowItem && redirectWindowSupportsService(windowItem, redirectState.serviceId));
+}
+
+async function confirmRedirectFromModal() {
+    if (!canConfirmRedirect()) {
+        alert("Выберите услугу и подходящее окно");
         return;
     }
 
-    if (!confirm("Вы уверены, что хотите перенаправить клиента на выбранное рабочее место?")) {
-        return;
-    }
+    redirectState.isSubmitting = true;
+    renderRedirectModal();
 
     try {
-        const res = await fetch(`${CONFIG.API_URL}/tickets/redirect-to-window`, {
+        const endpoint = redirectState.mode === "service"
+            ? "/tickets/redirect"
+            : "/tickets/redirect-to-window";
+        const payload = {
+            ticket_id: currentTicketId,
+            new_service_id: Number(redirectState.serviceId)
+        };
+        if (redirectState.mode === "window") {
+            payload.window_id = Number(redirectState.windowId);
+        }
+
+        const res = await fetch(`${CONFIG.API_URL}${endpoint}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "session-id": sessionId
             },
-            body: JSON.stringify({
-                ticket_id: currentTicketId,
-                window_id: Number(windowId)
-            })
+            body: JSON.stringify(payload)
         });
 
         const result = await res.json().catch(() => ({}));
 
         if (!res.ok || result.detail) {
             alert(result.detail || result.message || "Ошибка перенаправления");
+            redirectState.isSubmitting = false;
+            renderRedirectModal();
             return;
         }
 
@@ -1033,14 +1221,29 @@ async function confirmRedirectToWindow() {
         currentServiceName = null;
         document.getElementById("current").textContent = "Рабочее место свободно";
         document.getElementById("current-service").textContent = "";
-        document.getElementById("redirect-to-window-panel").style.display = "none";
+        closeRedirectModal();
         await loadQueue();
         await loadCurrentTicket();
     } catch (e) {
-        console.error("Ошибка перенаправления на рабочее место:", e);
+        console.error("Ошибка перенаправления:", e);
         alert("Ошибка соединения с сервером");
+        redirectState.isSubmitting = false;
+        renderRedirectModal();
     }
 }
+
+async function confirmRedirect() {
+    redirectState.mode = "service";
+    return confirmRedirectFromModal();
+}
+
+async function confirmRedirectToWindow() {
+    redirectState.mode = "window";
+    return confirmRedirectFromModal();
+}
+
+function cancelRedirect() { closeRedirectModal(); }
+function cancelRedirectToWindow() { closeRedirectModal(); }
 
 async function changeWindowStatus(newStatus) {
     try {

@@ -899,10 +899,30 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
 
+        service = (
+            db.query(Service)
+            .filter(Service.id == data.new_service_id, Service.is_archived == 0)
+            .first()
+        )
+        if not service:
+            raise HTTPException(status_code=404, detail="Услуга для перенаправления не найдена")
+
+        window_service = (
+            db.query(WindowService)
+            .filter(
+                WindowService.window_id == target_window.id,
+                WindowService.service_id == service.id,
+            )
+            .first()
+        )
+        if not window_service:
+            raise HTTPException(status_code=400, detail="Выбранное окно не оказывает эту услугу")
+
         redirected_ticket = create_window_redirect_ticket(
             ticket,
             target_window_id=target_window.id,
             operator_id=operator.id,
+            service_id=service.id,
         )
         db.add(redirected_ticket)
 

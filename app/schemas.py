@@ -151,6 +151,7 @@ class RedirectRequest(BaseModel):
 class RedirectToWindowRequest(BaseModel):
     ticket_id: int
     window_id: int
+    new_service_id: int
 
 
 class WindowServiceCreate(BaseModel):

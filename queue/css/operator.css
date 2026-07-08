@@ -635,35 +635,133 @@ body.operator-page .redirect-badge {
     border-radius: 999px;
 }
 
-body.operator-page .redirect-to-window-panel {
-    background: #f8f9fc;
-    padding: 15px;
-    border-radius: 12px;
+body.operator-page .redirect-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2050;
     display: flex;
-    gap: 10px;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.42);
 }
 
-body.operator-page .redirect-to-window-panel select {
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    width: min(720px, 100%);
-    max-width: 720px;
-    min-width: 260px;
+body.operator-page .redirect-modal {
+    width: min(760px, 100%);
+    max-height: min(760px, calc(100vh - 40px));
+    overflow: auto;
+    padding: 22px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 22px 56px rgba(15, 23, 42, 0.24);
+}
+
+body.operator-page .redirect-modal h2 {
+    margin: 0 0 16px;
+    color: var(--text-main);
+    font-size: 1.35rem;
+}
+
+body.operator-page .redirect-mode-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+body.operator-page .redirect-mode-group button,
+body.operator-page .redirect-option {
+    border: 1px solid #dbe3ef;
+    background: #ffffff;
+    color: var(--text-main);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+body.operator-page .redirect-mode-group button {
+    padding: 10px 12px;
+    font-weight: 800;
+}
+
+body.operator-page .redirect-mode-group button.active,
+body.operator-page .redirect-option.selected {
+    border-color: var(--primary);
+    background: #edf6ff;
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+body.operator-page .redirect-section {
+    margin-top: 14px;
+}
+
+body.operator-page .redirect-section label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+body.operator-page .redirect-section input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
     box-sizing: border-box;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
+body.operator-page .redirect-options {
+    display: grid;
+    gap: 8px;
+    max-height: 210px;
+    margin-top: 8px;
+    overflow: auto;
+}
 
-body.operator-page .redirect-to-window-panel option:disabled,
-body.operator-page .redirect-to-window-panel .window-option-disabled {
+body.operator-page .redirect-option {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+body.operator-page .redirect-option span,
+body.operator-page .redirect-option em {
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    font-style: normal;
+}
+
+body.operator-page .redirect-option:disabled {
     color: #9ca3af;
-    background: #f3f4f6;
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+body.operator-page .redirect-empty,
+body.operator-page .redirect-summary {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: var(--text-muted);
+}
+
+body.operator-page .redirect-summary {
+    margin-top: 16px;
+    line-height: 1.45;
+}
+
+body.operator-page .redirect-summary strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+
+body.operator-page .redirect-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
 }
 
 body.operator-page .queue-columns{

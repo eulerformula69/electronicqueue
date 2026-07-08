@@ -138,6 +138,7 @@ def create_window_redirect_ticket(
     *,
     target_window_id: int,
     operator_id: int,
+    service_id: int | None = None,
     now: datetime | None = None,
 ) -> Ticket:
     redirected_at = now or datetime.now()
@@ -153,7 +154,7 @@ def create_window_redirect_ticket(
 
     return Ticket(
         number=ticket.number,
-        service_id=ticket.service_id,
+        service_id=service_id or ticket.service_id,
         status="waiting",
         completion_reason="redirected",
         root_ticket_id=root_ticket_id,
