@@ -13,6 +13,8 @@ def test_operator_page_loads_operator_changelog_only():
     operator_html = read_text("queue/operator.html")
 
     assert '<script src="/queue/js/operator-changelog.js"></script>' in operator_html
+    assert '<script src="/queue/js/app-version.js"></script>' not in operator_html
+    assert 'id="app-update-notification"' in operator_html
     assert 'onclick="openOperatorChangelogHistory()"' in operator_html
     assert "ОБНОВЛЕНИЯ" in operator_html
 
@@ -31,6 +33,7 @@ def test_operator_changelog_is_independent_from_system_version():
 
     assert 'CHANGELOG_URL = "/queue/changelog/operator.json"' in source
     assert 'STORAGE_KEY = "operatorChangelogVersion"' in source
+    assert "CHECK_INTERVAL_MS = 60000" in source
     assert "/system/version" not in source
     assert "operatorAppVersion" not in source
     assert 'cache: "no-store"' in source
@@ -41,6 +44,36 @@ def test_operator_changelog_is_independent_from_system_version():
     assert "window.openOperatorChangelogHistory" in source
     assert "includePrevious: true" in source
     assert "saveVersion: false" in source
+
+
+def test_operator_changelog_polling_shows_update_banner_without_modal():
+    source = read_text("queue/js/operator-changelog.js")
+
+    assert "pageChangelogVersion = version" in source
+    assert "setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS)" in source
+    assert 'document.getElementById("app-update-notification")' in source
+    assert "Доступно обновление, пожалуйста перезапустите страницу" in source
+
+    update_branch = source.index("if (options.checkForUpdate)")
+    banner_call = source.index("showUpdateNotification();", update_branch)
+    update_return = source.index("return;", banner_call)
+    modal_call = source.index("showOperatorChangelog(data, options);", update_return)
+
+    assert update_branch < banner_call < update_return < modal_call
+
+
+def test_operator_changelog_reload_shows_unread_popup_once():
+    source = read_text("queue/js/operator-changelog.js")
+
+    initial_load = source.index("loadOperatorChangelog();")
+    interval_load = source.index("setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS)")
+    read_check = source.index("localStorage.getItem(STORAGE_KEY) === version")
+    modal_call = source.index("showOperatorChangelog(data, options);")
+    save_read = source.index("localStorage.setItem(STORAGE_KEY, version)")
+
+    assert initial_load < interval_load
+    assert read_check < modal_call
+    assert save_read < read_check
 
 
 def test_operator_changelog_fails_silent_on_bad_or_missing_file():

@@ -1,6 +1,10 @@
 (function () {
     const CHANGELOG_URL = "/queue/changelog/operator.json";
     const STORAGE_KEY = "operatorChangelogVersion";
+    const CHECK_INTERVAL_MS = 60000;
+    const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу";
+    let pageChangelogVersion = null;
+    let checkInProgress = false;
 
     function isValidChangelog(data) {
         return data
@@ -27,6 +31,19 @@
         if (saveVersion) {
             localStorage.setItem(STORAGE_KEY, version);
         }
+    }
+
+    function showUpdateNotification() {
+        let notification = document.getElementById("app-update-notification");
+        if (!notification) {
+            notification = document.createElement("div");
+            notification.id = "app-update-notification";
+            notification.className = "app-update-notification";
+            notification.textContent = UPDATE_NOTIFICATION_TEXT;
+            document.body.appendChild(notification);
+        }
+
+        notification.style.display = "block";
     }
 
     function appendChangelogEntry(container, entry) {
@@ -98,6 +115,9 @@
     }
 
     async function loadOperatorChangelog(options = {}) {
+        if (checkInProgress) return;
+        checkInProgress = true;
+
         try {
             const response = await fetch(`${CHANGELOG_URL}?t=${Date.now()}`, {
                 cache: "no-store"
@@ -108,11 +128,24 @@
             if (!isValidChangelog(data)) return;
 
             const version = data.version.trim();
+            if (!pageChangelogVersion) {
+                pageChangelogVersion = version;
+            }
+
+            if (options.checkForUpdate) {
+                if (pageChangelogVersion !== version) {
+                    showUpdateNotification();
+                }
+                return;
+            }
+
             if (!options.force && localStorage.getItem(STORAGE_KEY) === version) return;
 
             showOperatorChangelog(data, options);
         } catch (error) {
             console.debug("Operator changelog load error:", error);
+        } finally {
+            checkInProgress = false;
         }
     }
 
@@ -125,4 +158,5 @@
     };
 
     loadOperatorChangelog();
+    setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS);
 })();
