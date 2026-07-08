@@ -87,20 +87,29 @@ def test_operator_redirect_uses_single_modal_button():
     assert "function showRedirectModal" in js
     assert "redirect-modal-overlay" in js
     assert "Поиск услуги" in js
-    assert "Поиск оператора, окна или услуги" in js
+    assert "Кому" in js
+    assert "Любому доступному оператору" in js
+    assert "Конкретному оператору" in js
+    assert "Поиск оператора или окна" in js
+    assert "На услугу" not in js
+    assert "К оператору/окну" not in js
     assert "new_service_id: Number(redirectState.serviceId)" in js
     assert 'redirectState.mode === "service"' in js
+    assert "modal.appendChild(createRedirectRecipientSection());" in js
+    assert 'if (redirectState.mode === "window")' in js
     assert "modal.appendChild(createRedirectWindowSection());" in js
-    assert "Также выберите услугу оператора" in js
-    assert "getRedirectWindowServices(getRedirectWindow(redirectState.windowId))" in js
-    assert "redirectState.serviceId = null;" in js
+    assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
+    assert "? \"/tickets/redirect\"" in js
+    assert ": \"/tickets/redirect-to-window\"" in js
+    assert "payload.window_id = Number(redirectState.windowId);" in js
     assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
     assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
     assert "serviceList.replaceWith(nextServiceList)" in js
     assert "windowList.replaceWith(nextWindowList)" in js
     assert "width: min(950px, 100%)" in css
     assert ".redirect-confirm-button" in css
-    assert "grid-template-columns: auto minmax(260px, 1fr)" in css
+    assert ".redirect-mode-group" in css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
     assert "width: 100%" in css
 
 

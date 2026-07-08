@@ -898,9 +898,7 @@ function getRedirectWindowTitle(windowItem) {
 
 function getFilteredRedirectServices() {
     const query = normalizeRedirectText(redirectState.serviceQuery);
-    const services = redirectState.mode === "window"
-        ? getRedirectWindowServices(getRedirectWindow(redirectState.windowId))
-        : allServices;
+    const services = allServices;
 
     return services.filter(service => {
         if (Number(service.is_archived) === 1) return false;
@@ -909,14 +907,11 @@ function getFilteredRedirectServices() {
     });
 }
 
-function getRedirectWindowServices(windowItem) {
-    if (!windowItem || !Array.isArray(windowItem.services)) return [];
-    return windowItem.services;
-}
-
 function getFilteredRedirectWindows() {
     const query = normalizeRedirectText(redirectState.windowQuery);
     return allWindows.filter(windowItem => {
+        if (!redirectState.serviceId) return false;
+        if (!redirectWindowSupportsService(windowItem, redirectState.serviceId)) return false;
         if (!query) return true;
         const serviceNames = Array.isArray(windowItem.service_names)
             ? windowItem.service_names.join(" ")
@@ -974,35 +969,11 @@ function renderRedirectModal() {
     const title = document.createElement("h2");
     title.textContent = "Перенаправить";
 
-    const modeGroup = document.createElement("div");
-    modeGroup.className = "redirect-mode-group";
-    [
-        { value: "service", label: "На услугу" },
-        { value: "window", label: "К оператору/окну" }
-    ].forEach(option => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = option.value === redirectState.mode ? "active" : "";
-        button.textContent = option.label;
-        button.addEventListener("click", () => {
-            redirectState.mode = option.value;
-            redirectState.windowId = null;
-            renderRedirectModal();
-        });
-        modeGroup.appendChild(button);
-    });
-
     modal.appendChild(title);
-    modal.appendChild(modeGroup);
-    if (redirectState.mode === "service") {
-        modal.appendChild(createRedirectServiceSection());
-    } else {
+    modal.appendChild(createRedirectServiceSection());
+    modal.appendChild(createRedirectRecipientSection());
+    if (redirectState.mode === "window") {
         modal.appendChild(createRedirectWindowSection());
-        if (redirectState.windowId) {
-            modal.appendChild(createRedirectServiceSection({
-                intro: "Также выберите услугу оператора"
-            }));
-        }
     }
     modal.appendChild(createRedirectSummary());
     modal.appendChild(createRedirectActions());
@@ -1079,6 +1050,36 @@ function createRedirectServiceList() {
     return list;
 }
 
+function createRedirectRecipientSection() {
+    const section = document.createElement("div");
+    section.className = "redirect-section";
+
+    const label = document.createElement("label");
+    label.textContent = "Кому";
+    section.appendChild(label);
+
+    const options = document.createElement("div");
+    options.className = "redirect-mode-group";
+    [
+        { value: "service", label: "Любому доступному оператору" },
+        { value: "window", label: "Конкретному оператору" }
+    ].forEach(option => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = option.value === redirectState.mode ? "active" : "";
+        button.textContent = option.label;
+        button.addEventListener("click", () => {
+            redirectState.mode = option.value;
+            redirectState.windowId = null;
+            renderRedirectModal();
+        });
+        options.appendChild(button);
+    });
+
+    section.appendChild(options);
+    return section;
+}
+
 function createRedirectWindowSection() {
     const section = document.createElement("div");
     section.className = "redirect-section";
@@ -1088,7 +1089,7 @@ function createRedirectWindowSection() {
 
     const input = document.createElement("input");
     input.type = "search";
-    input.placeholder = "Поиск оператора, окна или услуги";
+    input.placeholder = "Поиск оператора или окна";
     input.value = redirectState.windowQuery;
     let windowList = createRedirectWindowList();
     input.addEventListener("input", event => {
@@ -1112,7 +1113,9 @@ function createRedirectWindowList() {
     if (!windows.length) {
         const empty = document.createElement("div");
         empty.className = "redirect-empty";
-        empty.textContent = "Окна не найдены";
+        empty.textContent = redirectState.serviceId
+            ? "Окна не найдены"
+            : "Сначала выберите услугу";
         list.appendChild(empty);
         return list;
     }
@@ -1141,8 +1144,6 @@ function createRedirectWindowList() {
         button.appendChild(status);
         button.addEventListener("click", () => {
             redirectState.windowId = Number(windowItem.id);
-            redirectState.serviceId = null;
-            redirectState.serviceQuery = "";
             renderRedirectModal();
         });
         list.appendChild(button);
@@ -1159,11 +1160,10 @@ function createRedirectSummary() {
     const windowItem = getRedirectWindow(redirectState.windowId);
 
     const lines = [];
-    lines.push(`Тип: ${redirectState.mode === "service" ? "на услугу" : "к оператору/окну"}`);
     lines.push(`Услуга: ${service ? service.name : "не выбрана"}`);
-    if (redirectState.mode === "window") {
-        lines.push(`Куда: ${windowItem ? getRedirectWindowTitle(windowItem) : "не выбрано"}`);
-    }
+    lines.push(`Кому: ${redirectState.mode === "service"
+        ? "любой доступный оператор"
+        : (windowItem ? getRedirectWindowTitle(windowItem) : "не выбрано")}`);
 
     const title = document.createElement("strong");
     title.textContent = "Резюме";
@@ -1210,7 +1210,7 @@ function canConfirmRedirect() {
 
 async function confirmRedirectFromModal() {
     if (!canConfirmRedirect()) {
-        alert("Выберите услугу и подходящее окно");
+        alert("Выберите услугу и подходящего получателя");
         return;
     }
 
