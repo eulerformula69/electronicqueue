@@ -34,6 +34,8 @@ def test_operator_changelog_is_independent_from_system_version():
     assert 'cache: "no-store"' in source
     assert "localStorage.setItem(STORAGE_KEY, version)" in source
     assert "localStorage.getItem(STORAGE_KEY) === version" in source
+    assert "formatOperatorChangelogTitle(data, version)" in source
+    assert "Обновление от ${data.date.trim()}, версия ${version}" in source
 
 
 def test_operator_changelog_fails_silent_on_bad_or_missing_file():
@@ -50,7 +52,7 @@ def test_operator_changelog_popup_is_centered_over_dimmed_operator_page():
     assert "body.operator-page .operator-changelog-overlay" in source
     assert "background: rgba(0, 0, 0, 0.62);" in source
     assert "body.operator-page .operator-changelog-modal" in source
-    assert "text-align: center;" in source
+    assert "text-align: left;" in source
     assert "justify-content: center;" in source
 
 
@@ -59,7 +61,8 @@ def test_operator_changelog_json_has_operator_facing_russian_text():
 
     assert isinstance(data["version"], str)
     assert data["version"].strip()
-    assert data["title"] == "Что изменилось для оператора"
+    assert data["date"] == "08.07.2026"
+    assert "title" not in data
     assert data["changes"]
     assert all(isinstance(item, str) and item.strip() for item in data["changes"])
     assert any("оператор" in item.lower() for item in data["changes"])

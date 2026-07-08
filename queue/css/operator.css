@@ -311,7 +311,7 @@ body.operator-page .operator-changelog-modal{
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
-    text-align: center;
+    text-align: left;
 }
 body.operator-page .operator-changelog-modal h2{
     margin: 0 0 14px;
@@ -320,8 +320,7 @@ body.operator-page .operator-changelog-modal h2{
 }
 body.operator-page .operator-changelog-modal ul{
     margin: 0;
-    padding-left: 0;
-    list-style-position: inside;
+    padding-left: 22px;
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1.45;

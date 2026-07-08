@@ -6,8 +6,14 @@
         return data
             && typeof data.version === "string"
             && data.version.trim()
+            && typeof data.date === "string"
+            && data.date.trim()
             && Array.isArray(data.changes)
             && data.changes.every(item => typeof item === "string" && item.trim());
+    }
+
+    function formatOperatorChangelogTitle(data, version) {
+        return `Обновление от ${data.date.trim()}, версия ${version}`;
     }
 
     function closeOperatorChangelog(overlay, version) {
@@ -31,7 +37,7 @@
 
         const title = document.createElement("h2");
         title.id = "operator-changelog-title";
-        title.textContent = data.title || "Что изменилось для оператора";
+        title.textContent = formatOperatorChangelogTitle(data, version);
 
         const list = document.createElement("ul");
         data.changes.forEach(change => {
