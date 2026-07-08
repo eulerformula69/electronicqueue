@@ -308,6 +308,11 @@ body.operator-page .operator-more-menu button:hover{
 body.operator-page .header-actions{
     align-items: center;
 }
+body.operator-page .header-actions > .btn-outline,
+body.operator-page .operator-settings-toggle{
+    width: 166px;
+    justify-content: center;
+}
 body.operator-page .operator-settings{
     position: relative;
 }
