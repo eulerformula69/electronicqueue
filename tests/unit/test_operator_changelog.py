@@ -44,6 +44,16 @@ def test_operator_changelog_fails_silent_on_bad_or_missing_file():
     assert "console.debug(\"Operator changelog load error:\", error)" in source
 
 
+def test_operator_changelog_popup_is_centered_over_dimmed_operator_page():
+    source = read_text("queue/css/operator.css")
+
+    assert "body.operator-page .operator-changelog-overlay" in source
+    assert "background: rgba(0, 0, 0, 0.62);" in source
+    assert "body.operator-page .operator-changelog-modal" in source
+    assert "text-align: center;" in source
+    assert "justify-content: center;" in source
+
+
 def test_operator_changelog_json_has_operator_facing_russian_text():
     data = json.loads(read_text("queue/changelog/operator.json"))
 
