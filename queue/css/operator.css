@@ -239,17 +239,38 @@ body.operator-page .secondary-actions button{
 }
 
 body.operator-page .secondary-critical-actions{
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body.operator-page .secondary-critical-actions #defer-ticket-btn{
+    grid-column: 1 / 3;
+}
+
+body.operator-page .secondary-critical-actions #cancel-btn{
+    grid-column: 3 / 5;
 }
 
 body.operator-page .button-group.tertiary-actions{
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     width: 100%;
 }
 
+body.operator-page .tertiary-actions #recall-btn{
+    grid-column: 1 / 2;
+}
+
+body.operator-page .tertiary-actions{
+    grid-column: 2 / 3;
+}
+
+body.operator-page .tertiary-actions #redirect-btn{
+    grid-column: 3 / 5;
+}
+
 body.operator-page .tertiary-actions button{
+	
     width: 100%;
 }
 
