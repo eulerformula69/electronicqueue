@@ -45,7 +45,7 @@ from app.services.operators import update_services_status_for_window
 from app.services.settings import (
     _bool_to_str, build_board_ticker_text, get_or_create_system_settings,
     get_system_settings_dict, normalize_board_ticker_messages,
-    serialize_board_ticker_messages,
+    serialize_board_ticker_messages, serialize_ticket_reason_options,
 )
 from app.services.tickets import broadcast_board
 
@@ -373,6 +373,18 @@ async def update_admin_settings(
         )
         settings.board_ticker_messages = serialize_board_ticker_messages(board_ticker_messages)
         settings.board_ticker_text = build_board_ticker_text(board_ticker_messages)
+        settings.cancel_reason_options = serialize_ticket_reason_options(
+            [
+                item.model_dump() if hasattr(item, "model_dump") else item.dict()
+                for item in data.cancel_reason_options
+            ]
+        )
+        settings.defer_reason_options = serialize_ticket_reason_options(
+            [
+                item.model_dump() if hasattr(item, "model_dump") else item.dict()
+                for item in data.defer_reason_options
+            ]
+        )
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]
@@ -402,6 +414,14 @@ async def get_public_settings():
             "ticket_notice_unprinted_text": settings["ticket_notice_unprinted_text"],
             "board_ticket_template": settings["board_ticket_template"],
             "board_ticker_text": settings["board_ticker_text"],
+            "cancel_reason_options": [
+                item for item in settings["cancel_reason_options"]
+                if item["enabled"]
+            ],
+            "defer_reason_options": [
+                item for item in settings["defer_reason_options"]
+                if item["enabled"]
+            ],
         }
     finally:
         db.close()

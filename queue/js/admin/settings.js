@@ -18,6 +18,8 @@ export async function loadExtraSettings() {
     const settings = await fetchJSON(`${API}/admin/settings`);
     if (!settings) return;
     const tickerMessages = getBoardTickerMessages(settings);
+    const cancelReasonOptions = getReasonOptions(settings, "cancel");
+    const deferReasonOptions = getReasonOptions(settings, "defer");
 
     setForm(`
         <div class="form settings-form">
@@ -135,6 +137,20 @@ export async function loadExtraSettings() {
 					</option>
 				</select>
 			</label>
+            <div class="settings-field-row">
+                <span class="settings-label">Причины отмены:</span>
+                <div id="setting-cancel-reason-options">
+                    ${renderReasonOptions(cancelReasonOptions, "cancel")}
+                </div>
+                <button type="button" onclick="addReasonOption('cancel')">Добавить причину отмены</button>
+            </div>
+            <div class="settings-field-row">
+                <span class="settings-label">Причины отложения:</span>
+                <div id="setting-defer-reason-options">
+                    ${renderReasonOptions(deferReasonOptions, "defer")}
+                </div>
+                <button type="button" onclick="addReasonOption('defer')">Добавить причину отложения</button>
+            </div>
 		</section>
 
 
@@ -203,7 +219,9 @@ export async function saveExtraSettings() {
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
 		board_ticker_text: document.getElementById("setting-board-ticker-text").value.trim(),
-		board_ticker_messages: collectBoardTickerMessages()
+		board_ticker_messages: collectBoardTickerMessages(),
+        cancel_reason_options: collectReasonOptions("cancel"),
+        defer_reason_options: collectReasonOptions("defer")
 	};
 
     if (
@@ -293,6 +311,25 @@ function renderBoardTickerMessages(messages) {
     `).join("");
 }
 
+function getReasonOptions(settings, type) {
+    const key = `${type}_reason_options`;
+    const options = Array.isArray(settings[key]) ? settings[key] : [];
+    return options.length ? options : [{text: "", enabled: true}];
+}
+
+function renderReasonOptions(options, type) {
+    return options.map((reason, index) => `
+        <div class="settings-field-row" data-reason-option-row="${type}">
+            <label class="settings-checkbox-row">
+                <input type="checkbox" class="setting-${type}-reason-enabled" ${reason.enabled !== false ? "checked" : ""}>
+                enabled
+            </label>
+            <input class="settings-input setting-${type}-reason-text" maxlength="120" value="${escapeHtml(reason.text || "")}">
+            <button type="button" onclick="deleteReasonOption('${type}', ${index})">Удалить</button>
+        </div>
+    `).join("");
+}
+
 function collectBoardTickerMessages() {
     return Array.from(document.querySelectorAll("[data-ticker-message-row]"))
         .map(row => ({
@@ -300,6 +337,15 @@ function collectBoardTickerMessages() {
             enabled: row.querySelector(".setting-board-ticker-enabled").checked
         }))
         .filter(message => message.text);
+}
+
+function collectReasonOptions(type) {
+    return Array.from(document.querySelectorAll(`[data-reason-option-row="${type}"]`))
+        .map(row => ({
+            text: row.querySelector(`.setting-${type}-reason-text`).value.trim(),
+            enabled: row.querySelector(`.setting-${type}-reason-enabled`).checked
+        }))
+        .filter(reason => reason.text);
 }
 
 function syncLegacyBoardTickerText() {
@@ -314,6 +360,20 @@ window.addBoardTickerMessage = function () {
     const messages = collectBoardTickerMessages();
     messages.push({text: "", enabled: true});
     host.innerHTML = renderBoardTickerMessages(messages);
+};
+
+window.addReasonOption = function (type) {
+    const host = document.getElementById(`setting-${type}-reason-options`);
+    const options = collectReasonOptions(type);
+    options.push({text: "", enabled: true});
+    host.innerHTML = renderReasonOptions(options, type);
+};
+
+window.deleteReasonOption = function (type, indexToDelete) {
+    const host = document.getElementById(`setting-${type}-reason-options`);
+    const options = collectReasonOptions(type)
+        .filter((_, index) => index !== Number(indexToDelete));
+    host.innerHTML = renderReasonOptions(options.length ? options : [{text: "", enabled: true}], type);
 };
 
 window.deleteBoardTickerMessage = function (indexToDelete) {

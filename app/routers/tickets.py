@@ -38,7 +38,7 @@ from app.schemas import (
     RedirectToWindowRequest, TicketCreate, TicketReprintResponse,
 )
 from app.security import get_password_hash, verify_password
-from app.services.settings import get_system_settings_dict
+from app.services.settings import get_system_settings_dict, normalize_ticket_reason
 from app.services.tickets import (
     assign_ticket_to_least_loaded_window, broadcast_board,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
@@ -533,7 +533,11 @@ async def cancel_current_ticket(
     # Устанавливаем статус отмены и время завершения
     ticket.status = "cancelled"
     ticket.completion_reason = "cancelled"
-    ticket.cancel_reason = data.reason if data else "no_show"
+    cancel_reason = normalize_ticket_reason(data.reason if data else "Клиент не явился")
+    if not cancel_reason:
+        raise HTTPException(status_code=400, detail="Укажите причину отмены")
+
+    ticket.cancel_reason = cancel_reason
     if ticket.operator_id is None:
         ticket.operator_id = operator.id
     ticket.finished_at = datetime.now()
@@ -618,7 +622,7 @@ async def defer_current_ticket(
             ticket,
             operator_id=operator.id,
             window_id=operator.window_id,
-            reason=data.reason,
+            reason=normalize_ticket_reason(data.reason),
         )
 
         db.commit()

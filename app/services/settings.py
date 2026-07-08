@@ -11,6 +11,20 @@ MAX_TICKET_PRINT_SCALE_PERCENT = 150
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
 BOARD_TICKER_SEPARATOR = " | "
+DEFAULT_CANCEL_REASON_OPTIONS = [
+    {"text": "Клиент не явился", "enabled": True},
+    {"text": "Отказался от услуги", "enabled": True},
+    {"text": "Ошибочный талон", "enabled": True},
+    {"text": "Нет нужного документа", "enabled": True},
+    {"text": "Другое", "enabled": True},
+]
+DEFAULT_DEFER_REASON_OPTIONS = [
+    {"text": "Заполняет документы", "enabled": True},
+    {"text": "Оплачивает", "enabled": True},
+    {"text": "Пошёл за документами", "enabled": True},
+    {"text": "Нет нужного документа", "enabled": True},
+    {"text": "Другое", "enabled": True},
+]
 
 
 def _str_to_bool(value: str, default: bool = False) -> bool:
@@ -78,6 +92,70 @@ def build_board_ticker_text(messages) -> str:
     )[:500]
 
 
+def normalize_ticket_reason_options(options, defaults: list[dict] | None = None) -> list[dict]:
+    normalized = []
+    provided = False
+    if isinstance(options, str) and options.strip():
+        provided = True
+        try:
+            options = json.loads(options)
+        except json.JSONDecodeError:
+            options = []
+    elif isinstance(options, list):
+        provided = True
+    else:
+        options = []
+
+    for item in options:
+        if isinstance(item, str):
+            text = item.strip()
+            enabled = True
+        elif isinstance(item, dict):
+            text = str(item.get("text") or "").strip()
+            enabled = item.get("enabled") is not False
+        else:
+            continue
+        if text:
+            normalized.append({"text": text[:120], "enabled": enabled})
+
+    if normalized or provided:
+        return normalized
+    return list(defaults or [])
+
+
+def serialize_ticket_reason_options(options, defaults: list[dict] | None = None) -> str:
+    return json.dumps(
+        normalize_ticket_reason_options(options, defaults),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+
+def enabled_ticket_reason_options(options) -> list[dict]:
+    enabled = [
+        item for item in normalize_ticket_reason_options(options)
+        if item["enabled"]
+    ]
+    if not any(item["text"] == "Другое" for item in enabled):
+        enabled.append({"text": "Другое", "enabled": True})
+    return enabled
+
+
+def normalize_ticket_reason(value: str | None) -> str:
+    reason = str(value or "").strip()
+    if not reason:
+        return ""
+    if reason == "other":
+        return "Другое"
+    if reason.startswith("other:"):
+        comment = reason.split(":", 1)[1].strip()
+        return f"Другое: {comment}" if comment else "Другое"
+    if reason.startswith("Другое:"):
+        comment = reason.split(":", 1)[1].strip()
+        return f"Другое: {comment}" if comment else "Другое"
+    return reason[:255]
+
+
 def get_or_create_system_settings(db: Session) -> SystemSettings:
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
     if settings:
@@ -95,6 +173,14 @@ def get_system_settings_dict(db: Session) -> dict:
     board_ticker_messages = normalize_board_ticker_messages(
         settings.board_ticker_messages,
         settings.board_ticker_text,
+    )
+    cancel_reason_options = normalize_ticket_reason_options(
+        settings.cancel_reason_options,
+        DEFAULT_CANCEL_REASON_OPTIONS,
+    )
+    defer_reason_options = normalize_ticket_reason_options(
+        settings.defer_reason_options,
+        DEFAULT_DEFER_REASON_OPTIONS,
     )
     return {
         "print_ticket": _str_to_bool(settings.print_ticket, default=True),
@@ -116,4 +202,6 @@ def get_system_settings_dict(db: Session) -> dict:
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
         "board_ticker_text": build_board_ticker_text(board_ticker_messages),
         "board_ticker_messages": board_ticker_messages,
+        "cancel_reason_options": cancel_reason_options,
+        "defer_reason_options": defer_reason_options,
     }

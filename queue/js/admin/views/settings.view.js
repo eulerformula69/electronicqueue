@@ -39,6 +39,16 @@ function render() {
                     {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
                     {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
                 ], settings.queue_mode))}
+                <div class="admin-field">
+                    <span>Причины отмены</span>
+                    <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>
+                    ${ctx.ui.button("Добавить причину отмены", {action: "add-reason-option", id: "cancel"})}
+                </div>
+                <div class="admin-field">
+                    <span>Причины отложения</span>
+                    <div id="defer-reason-options">${renderReasonOptions("defer")}</div>
+                    ${ctx.ui.button("Добавить причину отложения", {action: "add-reason-option", id: "defer"})}
+                </div>
             </section>
             <section class="admin-card admin-form admin-settings-wide">
                 <h2>Табло и озвучка</h2>
@@ -80,6 +90,25 @@ function renderBoardTickerMessages() {
     `).join("");
 }
 
+function getReasonOptions(type) {
+    const key = `${type}_reason_options`;
+    const options = Array.isArray(settings[key]) ? settings[key] : [];
+    return options.length ? options : [{text: "", enabled: true}];
+}
+
+function renderReasonOptions(type) {
+    return getReasonOptions(type).map((reason, index) => `
+        <div class="admin-field" data-reason-option-row="${type}">
+            <label class="admin-switch">
+                <input type="checkbox" name="${type}_reason_enabled" ${reason.enabled !== false ? "checked" : ""}>
+                <span></span>
+            </label>
+            <input class="admin-input" name="${type}_reason_text" maxlength="120" value="${escapeHtml(reason.text || "")}">
+            ${ctx.ui.button("Удалить", {action: "delete-reason-option", id: `${type}:${index}`})}
+        </div>
+    `).join("");
+}
+
 async function handleClick(event) {
     const button = event.target.closest("[data-action='save-settings']");
     if (button) {
@@ -99,6 +128,24 @@ async function handleClick(event) {
     if (deleteButton) {
         settings.board_ticker_messages = collectBoardTickerMessages()
             .filter((_, index) => index !== Number(deleteButton.dataset.id));
+        render();
+        return;
+    }
+
+    const addReasonButton = event.target.closest("[data-action='add-reason-option']");
+    if (addReasonButton) {
+        const type = addReasonButton.dataset.id;
+        settings[`${type}_reason_options`] = collectReasonOptions(type);
+        settings[`${type}_reason_options`].push({text: "", enabled: true});
+        render();
+        return;
+    }
+
+    const deleteReasonButton = event.target.closest("[data-action='delete-reason-option']");
+    if (deleteReasonButton) {
+        const [type, index] = deleteReasonButton.dataset.id.split(":");
+        settings[`${type}_reason_options`] = collectReasonOptions(type)
+            .filter((_, itemIndex) => itemIndex !== Number(index));
         render();
     }
 }
@@ -122,7 +169,9 @@ async function save() {
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
         board_ticker_text: data.board_ticker_text.trim(),
-        board_ticker_messages: collectBoardTickerMessages()
+        board_ticker_messages: collectBoardTickerMessages(),
+        cancel_reason_options: collectReasonOptions("cancel"),
+        defer_reason_options: collectReasonOptions("defer")
     };
 
     if (!validDuration(payload.ticket_notice_duration_printed_seconds) || !validDuration(payload.ticket_notice_duration_unprinted_seconds)) {
@@ -161,6 +210,15 @@ function collectBoardTickerMessages() {
             enabled: row.querySelector("[name='board_ticker_message_enabled']").checked
         }))
         .filter(message => message.text);
+}
+
+function collectReasonOptions(type) {
+    return Array.from(document.querySelectorAll(`[data-reason-option-row="${type}"]`))
+        .map(row => ({
+            text: row.querySelector(`[name='${type}_reason_text']`).value.trim(),
+            enabled: row.querySelector(`[name='${type}_reason_enabled']`).checked
+        }))
+        .filter(reason => reason.text);
 }
 
 function syncLegacyBoardTickerText() {

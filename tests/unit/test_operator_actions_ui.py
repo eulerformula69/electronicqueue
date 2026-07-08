@@ -80,11 +80,14 @@ def test_operator_defer_requires_reason_options():
     queue_sections_source = read_text("queue/js/operator-queue-sections.js")
 
     assert "OperatorQueueSections.deferReasons" in source
-    assert 'value: "fills_documents"' in queue_sections_source
-    assert 'value: "pays"' in queue_sections_source
-    assert 'value: "went_for_documents"' in queue_sections_source
-    assert 'value: "missing_document"' in queue_sections_source
-    assert 'value: "other"' in queue_sections_source
+    assert "loadOperatorReasonSettings" in source
+    assert "setReasonOptions" in queue_sections_source
+    assert 'value: "Заполняет документы"' in queue_sections_source
+    assert 'value: "Оплачивает"' in queue_sections_source
+    assert 'value: "Пошёл за документами"' in queue_sections_source
+    assert 'value: "Нет нужного документа"' in queue_sections_source
+    assert 'value: "Другое"' in queue_sections_source
+    assert "withOtherComment(reason.value)" in source
     assert "Выберите причину отложения" in source
 
 
@@ -95,8 +98,9 @@ def test_operator_cancel_requires_reason_options():
     assert "showCancelReasonPopup()" in source
     assert "OperatorQueueSections.cancelReasons" in source
     assert 'body: JSON.stringify({ reason: options.reason })' in source
-    assert 'value: "no_show"' in queue_sections_source
-    assert 'value: "refused_service"' in queue_sections_source
-    assert 'value: "wrong_ticket"' in queue_sections_source
-    assert 'value: "missing_document"' in queue_sections_source
-    assert 'value: "other"' in queue_sections_source
+    assert 'value: "Клиент не явился"' in queue_sections_source
+    assert 'value: "Отказался от услуги"' in queue_sections_source
+    assert 'value: "Ошибочный талон"' in queue_sections_source
+    assert 'value: "Нет нужного документа"' in queue_sections_source
+    assert 'value: "Другое"' in queue_sections_source
+    assert "withOtherComment(reason.value)" in source

@@ -1,17 +1,27 @@
 const OperatorQueueSections = (() => {
+    const legacyReasonLabels = {
+        fills_documents: "Заполняет документы",
+        pays: "Оплачивает",
+        went_for_documents: "Пошёл за документами",
+        missing_document: "Нет нужного документа",
+        no_show: "Клиент не явился",
+        refused_service: "Отказался от услуги",
+        wrong_ticket: "Ошибочный талон",
+        other: "Другое"
+    };
     const deferReasons = [
-        { value: "fills_documents", label: "Заполняет документы" },
-        { value: "pays", label: "Оплачивает" },
-        { value: "went_for_documents", label: "Пошёл за документами" },
-        { value: "missing_document", label: "Нет нужного документа" },
-        { value: "other", label: "Другое" }
+        { value: "Заполняет документы", label: "Заполняет документы" },
+        { value: "Оплачивает", label: "Оплачивает" },
+        { value: "Пошёл за документами", label: "Пошёл за документами" },
+        { value: "Нет нужного документа", label: "Нет нужного документа" },
+        { value: "Другое", label: "Другое" }
     ];
     const cancelReasons = [
-        { value: "no_show", label: "Клиент не явился" },
-        { value: "refused_service", label: "Отказался от услуги" },
-        { value: "wrong_ticket", label: "Ошибочный талон" },
-        { value: "missing_document", label: "Нет нужного документа" },
-        { value: "other", label: "Другое" }
+        { value: "Клиент не явился", label: "Клиент не явился" },
+        { value: "Отказался от услуги", label: "Отказался от услуги" },
+        { value: "Ошибочный талон", label: "Ошибочный талон" },
+        { value: "Нет нужного документа", label: "Нет нужного документа" },
+        { value: "Другое", label: "Другое" }
     ];
     const sectionLabels = {
         waiting: "Ожидающие",
@@ -52,9 +62,30 @@ const OperatorQueueSections = (() => {
     function deferReasonLabel(reason) {
         return deferReasons.find(item => item.value === reason)?.label
             || cancelReasons.find(item => item.value === reason)?.label
+            || legacyReasonLabels[reason]
             || completionReasonLabels[reason]
             || reason
             || "";
+    }
+
+    function applyReasonOptions(target, options) {
+        const nextOptions = Array.isArray(options)
+            ? options
+                .map(item => String(item?.text || "").trim())
+                .filter(Boolean)
+                .map(text => ({ value: text, label: text }))
+            : [];
+        if (!nextOptions.some(item => item.value === "Другое")) {
+            nextOptions.push({ value: "Другое", label: "Другое" });
+        }
+        if (nextOptions.length) {
+            target.splice(0, target.length, ...nextOptions);
+        }
+    }
+
+    function setReasonOptions(options = {}) {
+        applyReasonOptions(cancelReasons, options.cancel_reason_options);
+        applyReasonOptions(deferReasons, options.defer_reason_options);
     }
 
     function ticketStatusLabel(ticket) {
@@ -145,6 +176,7 @@ const OperatorQueueSections = (() => {
     return {
         deferReasons,
         cancelReasons,
+        setReasonOptions,
         select,
         selectDeferred,
         setSections

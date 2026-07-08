@@ -294,6 +294,10 @@ def migrate_ticket_defer_schema(engine):
         ADD COLUMN IF NOT EXISTS deferred_at timestamp without time zone,
         ADD COLUMN IF NOT EXISTS cancel_reason varchar(64);
 
+    ALTER TABLE tickets
+        ALTER COLUMN defer_reason TYPE varchar(255),
+        ALTER COLUMN cancel_reason TYPE varchar(255);
+
     CREATE INDEX IF NOT EXISTS ix_tickets_operator_deferred_at
         ON tickets (operator_id, deferred_at);
     CREATE INDEX IF NOT EXISTS ix_tickets_window_status_deferred_at
@@ -441,6 +445,26 @@ def migrate_board_ticker_settings_schema(engine):
     UPDATE system_settings
     SET board_ticker_messages = ''
     WHERE board_ticker_messages IS NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_ticket_reason_settings_schema(engine):
+    """Add configurable cancel/defer reasons to system settings."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS cancel_reason_options varchar(4000) DEFAULT '',
+        ADD COLUMN IF NOT EXISTS defer_reason_options varchar(4000) DEFAULT '';
+
+    UPDATE system_settings
+    SET cancel_reason_options = ''
+    WHERE cancel_reason_options IS NULL;
+
+    UPDATE system_settings
+    SET defer_reason_options = ''
+    WHERE defer_reason_options IS NULL;
     """
 
     with engine.begin() as conn:

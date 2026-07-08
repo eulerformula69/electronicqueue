@@ -4,6 +4,7 @@ import pytest
 
 from app.models import Ticket
 from app.routers import tickets as tickets_router
+from app.schemas import CancelTicketRequest, DeferTicketRequest
 from app.services import tickets as ticket_service
 from app.services.tickets import (
     AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES,
@@ -216,6 +217,117 @@ class FakeDb:
 
     def close(self):
         self.closed = True
+
+
+class ActiveTicketQuery:
+    def __init__(self, ticket):
+        self.ticket = ticket
+
+    def filter(self, *conditions):
+        return self
+
+    def first(self):
+        return self.ticket
+
+
+class ActiveTicketDb:
+    def __init__(self, ticket):
+        self.ticket = ticket
+        self.committed = False
+        self.refreshed = None
+        self.closed = False
+
+    def query(self, model):
+        assert model is Ticket
+        return ActiveTicketQuery(self.ticket)
+
+    def commit(self):
+        self.committed = True
+
+    def refresh(self, ticket):
+        self.refreshed = ticket
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.mark.asyncio
+async def test_cancel_ticket_accepts_other_comment_reason(monkeypatch):
+    now = datetime(2026, 7, 8, 10, 0)
+    ticket = Ticket(
+        number=55,
+        status="called",
+        operator_id=7,
+        window_id=3,
+        called_at=now,
+    )
+    db = ActiveTicketDb(ticket)
+    broadcasts = []
+    board_updates = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def fake_broadcast_board():
+        board_updates.append(True)
+
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+    monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+
+    result = await tickets_router.cancel_current_ticket(
+        CancelTicketRequest(reason="Другое: клиент ушёл"),
+        operator=type("Operator", (), {"id": 7, "window_id": 3})(),
+    )
+
+    assert result["cancel_reason"] == "Другое: клиент ушёл"
+    assert ticket.cancel_reason == "Другое: клиент ушёл"
+    assert ticket.status == "cancelled"
+    assert ticket.completion_reason == "cancelled"
+    assert db.committed is True
+    assert db.refreshed is ticket
+    assert db.closed is True
+    assert broadcasts == [{"type": "queue_updated"}]
+    assert board_updates == [True]
+
+
+@pytest.mark.asyncio
+async def test_defer_ticket_accepts_other_comment_reason(monkeypatch):
+    now = datetime(2026, 7, 8, 10, 0)
+    ticket = Ticket(
+        number=56,
+        status="called",
+        operator_id=7,
+        window_id=3,
+        called_at=now,
+    )
+    db = ActiveTicketDb(ticket)
+    broadcasts = []
+    board_updates = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def fake_broadcast_board():
+        board_updates.append(True)
+
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+    monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+
+    result = await tickets_router.defer_current_ticket(
+        DeferTicketRequest(reason="Другое: клиент вернётся позже"),
+        operator=type("Operator", (), {"id": 7, "window_id": 3})(),
+    )
+
+    assert result["defer_reason"] == "Другое: клиент вернётся позже"
+    assert ticket.defer_reason == "Другое: клиент вернётся позже"
+    assert ticket.status == "deferred"
+    assert db.committed is True
+    assert db.refreshed is ticket
+    assert db.closed is True
+    assert broadcasts == [{"type": "queue_updated"}]
+    assert board_updates == [True]
 
 
 def test_cancel_expired_returned_tickets_finishes_only_waiting_returned_ticket():

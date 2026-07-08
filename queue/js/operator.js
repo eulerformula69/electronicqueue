@@ -86,6 +86,7 @@ async function init() {
 	
 	loadCurrentTicket();
 	loadCurrentTicket();
+	loadOperatorReasonSettings();
 	updateNewTicketSoundButton();
 	updateNewTicketSystemNotificationButton();	
 }
@@ -114,6 +115,10 @@ function initWebSocket() {
 
         if (data.type === "services_updated" && data.target === "operator") {
             loadOperatorInfo();
+        }
+
+        if (data.type === "settings_updated") {
+            loadOperatorReasonSettings();
         }
 
         if (data.type === "queue_updated") {
@@ -183,6 +188,29 @@ let allServices = [];
 let allWindows = [];
 const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
 const RECALL_FINISH_WARNING_COUNT = 2;
+
+async function loadOperatorReasonSettings() {
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/settings/public`);
+        if (!res.ok) throw new Error("Settings load failed");
+        const settings = await res.json();
+        if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
+            OperatorQueueSections.setReasonOptions(settings);
+        }
+    } catch (e) {
+        console.debug("Operator reason settings load error:", e);
+    }
+}
+
+function withOtherComment(reason) {
+    if (reason !== "Другое" && reason !== "other") {
+        return reason;
+    }
+    const comment = prompt("Комментарий к причине «Другое» (необязательно):");
+    const text = String(comment || "").trim();
+    return text ? `Другое: ${text}` : "Другое";
+}
+
 function parseTicketCalledAt(ticket) {
     if (!ticket || !ticket.called_at) return null;
 
@@ -1311,7 +1339,7 @@ function showCancelReasonPopup() {
             ...OperatorQueueSections.cancelReasons.map(reason => ({
                 text: reason.label,
                 className: "btn-outline",
-                onClick: () => cancelCurrent({ reason: reason.value })
+                onClick: () => cancelCurrent({ reason: withOtherComment(reason.value) })
             })),
             {
                 text: "Назад",
@@ -1334,7 +1362,7 @@ function showDeferReasonPopup() {
             ...OperatorQueueSections.deferReasons.map(reason => ({
                 text: reason.label,
                 className: "btn-outline",
-                onClick: () => deferCurrentTicket(reason.value)
+                onClick: () => deferCurrentTicket(withOtherComment(reason.value))
             })),
             {
                 text: "Отмена",

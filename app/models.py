@@ -66,9 +66,9 @@ class Ticket(Base):
         server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
     )
     returned_to_queue_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
-    defer_reason = Column(String(64), nullable=True)
+    defer_reason = Column(String(255), nullable=True)
     deferred_at = Column(TIMESTAMP, nullable=True)
-    cancel_reason = Column(String(64), nullable=True)
+    cancel_reason = Column(String(255), nullable=True)
     called_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 
@@ -240,6 +240,8 @@ class SystemSettings(Base):
     )
     board_ticker_text = Column(String(500), default="")
     board_ticker_messages = Column(String(4000), default="")
+    cancel_reason_options = Column(String(4000), default="")
+    defer_reason_options = Column(String(4000), default="")
 
 
 class QueueModePeriod(Base):

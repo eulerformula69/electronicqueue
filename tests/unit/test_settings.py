@@ -4,14 +4,18 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.models import SystemSettings
+from app.models import SystemSettings, Window
+from app.routers import admin as admin_router
 from app.schemas import PublicSettingsResponse, SystemSettingsResponse, SystemSettingsUpdate
 from app.services.settings import (
     _bool_to_str,
     _str_to_bool,
     build_board_ticker_text,
+    normalize_ticket_reason,
+    normalize_ticket_reason_options,
     normalize_board_ticker_messages,
     serialize_board_ticker_messages,
+    serialize_ticket_reason_options,
 )
 from app.services.settings import get_system_settings_dict
 
@@ -61,6 +65,12 @@ def test_board_ticker_messages_are_in_admin_settings_schemas():
         assert "board_ticker_messages" in _schema_fields(schema)
 
     assert "board_ticker_messages" not in _schema_fields(PublicSettingsResponse)
+
+
+def test_ticket_reason_options_are_in_settings_schemas():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "cancel_reason_options" in _schema_fields(schema)
+        assert "defer_reason_options" in _schema_fields(schema)
 
 
 def test_ticket_print_scale_percent_is_in_settings_schemas():
@@ -172,6 +182,33 @@ def test_board_ticker_text_uses_only_enabled_messages():
     assert build_board_ticker_text(messages) == "Первое | Третье"
 
 
+def test_ticket_reason_options_normalize_and_serialize():
+    options = normalize_ticket_reason_options([
+        {"text": "  Клиент ушёл  ", "enabled": True},
+        {"text": "Скрытая", "enabled": False},
+        "",
+        {"text": "x" * 140, "enabled": True},
+    ])
+
+    assert options == [
+        {"text": "Клиент ушёл", "enabled": True},
+        {"text": "Скрытая", "enabled": False},
+        {"text": "x" * 120, "enabled": True},
+    ]
+    assert serialize_ticket_reason_options(options) == (
+        '[{"text":"Клиент ушёл","enabled":true},'
+        '{"text":"Скрытая","enabled":false},'
+        f'{{"text":"{"x" * 120}","enabled":true}}]'
+    )
+
+
+def test_normalize_ticket_reason_formats_other_comment():
+    assert normalize_ticket_reason("other") == "Другое"
+    assert normalize_ticket_reason("other: клиент ушёл") == "Другое: клиент ушёл"
+    assert normalize_ticket_reason("Другое:  клиент ушёл  ") == "Другое: клиент ушёл"
+    assert normalize_ticket_reason("Другое:   ") == "Другое"
+
+
 def test_admin_routes_expose_board_ticker_text_in_public_settings():
     source = (ROOT / "app" / "routers" / "admin.py").read_text(encoding="utf-8")
 
@@ -180,3 +217,71 @@ def test_admin_routes_expose_board_ticker_text_in_public_settings():
     assert "settings.ticket_print_scale_percent = data.ticket_print_scale_percent" in source
     assert '"ticket_print_scale_percent": settings["ticket_print_scale_percent"]' in source
     assert '"board_ticker_text": settings["board_ticker_text"]' in source
+    assert '"cancel_reason_options": [' in source
+    assert '"defer_reason_options": [' in source
+
+
+@pytest.mark.asyncio
+async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
+    engine = create_engine("sqlite:///:memory:")
+    SystemSettings.__table__.create(engine)
+    Window.__table__.create(engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+    broadcasts = []
+    board_updates = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def fake_broadcast_board():
+        board_updates.append(True)
+
+    monkeypatch.setattr(admin_router, "SessionLocal", lambda: db)
+    monkeypatch.setattr(admin_router, "record_queue_mode", lambda db, mode: None)
+    monkeypatch.setattr(admin_router.manager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(admin_router, "broadcast_board", fake_broadcast_board)
+    monkeypatch.setattr(admin_router, "update_services_status_for_window", lambda db, window_id: None)
+
+    payload = SystemSettingsUpdate(
+        print_ticket=True,
+        show_print_badge=True,
+        ticket_print_scale_percent=94,
+        ticket_notice_duration_printed_seconds=7,
+        ticket_notice_duration_unprinted_seconds=45,
+        ticket_notice_printed_text="Ваш номер: <number>",
+        ticket_notice_unprinted_text="Пожалуйста, запомните номер: <number>",
+        default_operator_status="online",
+        active_ticket_on_operator_logout="return_to_queue",
+        hide_services_without_online_operators=True,
+        queue_mode="priority_fifo",
+        call_message_template="Талон <number> окно <window>",
+        board_ticket_template="Билет <number> окно <window>",
+        board_ticker_text="",
+        board_ticker_messages=[],
+        cancel_reason_options=[
+            {"text": "Клиент ушёл", "enabled": True},
+            {"text": "Ошибка", "enabled": False},
+        ],
+        defer_reason_options=[
+            {"text": "Ждёт документы", "enabled": True},
+        ],
+    )
+
+    try:
+        result = await admin_router.update_admin_settings(payload, admin=object())
+
+        assert result["cancel_reason_options"] == [
+            {"text": "Клиент ушёл", "enabled": True},
+            {"text": "Ошибка", "enabled": False},
+        ]
+        assert result["defer_reason_options"] == [
+            {"text": "Ждёт документы", "enabled": True},
+        ]
+        settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+        assert "Клиент ушёл" in settings.cancel_reason_options
+        assert "Ждёт документы" in settings.defer_reason_options
+        assert {"type": "settings_updated"} in broadcasts
+        assert board_updates == [True]
+    finally:
+        db.close()

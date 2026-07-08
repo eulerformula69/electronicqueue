@@ -37,23 +37,11 @@ class CallSpecificRequest(BaseModel):
 
 
 class DeferTicketRequest(BaseModel):
-    reason: Literal[
-        "fills_documents",
-        "pays",
-        "went_for_documents",
-        "missing_document",
-        "other",
-    ]
+    reason: str = Field(min_length=1, max_length=255)
 
 
 class CancelTicketRequest(BaseModel):
-    reason: Literal[
-        "no_show",
-        "refused_service",
-        "wrong_ticket",
-        "missing_document",
-        "other",
-    ]
+    reason: str = Field(min_length=1, max_length=255)
 
 
 class PingRequest(BaseModel):
@@ -230,6 +218,11 @@ class BoardTickerMessage(BaseModel):
     enabled: bool = True
 
 
+class TicketReasonOption(BaseModel):
+    text: str = Field(default="", max_length=120)
+    enabled: bool = True
+
+
 class SystemSettingsUpdate(BaseModel):
     print_ticket: bool
     show_print_badge: bool
@@ -246,6 +239,8 @@ class SystemSettingsUpdate(BaseModel):
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
     board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
+    cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
 
 
 class SystemSettingsResponse(BaseModel):
@@ -264,6 +259,8 @@ class SystemSettingsResponse(BaseModel):
     board_ticket_template: str
     board_ticker_text: str
     board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
+    cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
 
 
 class PublicSettingsResponse(BaseModel):
@@ -276,3 +273,5 @@ class PublicSettingsResponse(BaseModel):
     ticket_notice_unprinted_text: str
     board_ticket_template: str
     board_ticker_text: str
+    cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
