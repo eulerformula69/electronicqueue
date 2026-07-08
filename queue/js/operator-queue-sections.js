@@ -6,6 +6,13 @@ const OperatorQueueSections = (() => {
         { value: "missing_document", label: "Нет нужного документа" },
         { value: "other", label: "Другое" }
     ];
+    const cancelReasons = [
+        { value: "no_show", label: "Клиент не явился" },
+        { value: "refused_service", label: "Отказался от услуги" },
+        { value: "wrong_ticket", label: "Ошибочный талон" },
+        { value: "missing_document", label: "Нет нужного документа" },
+        { value: "other", label: "Другое" }
+    ];
     const sectionLabels = {
         waiting: "Ожидающие",
         deferred: "Отложенные",
@@ -44,6 +51,7 @@ const OperatorQueueSections = (() => {
 
     function deferReasonLabel(reason) {
         return deferReasons.find(item => item.value === reason)?.label
+            || cancelReasons.find(item => item.value === reason)?.label
             || completionReasonLabels[reason]
             || reason
             || "";
@@ -93,7 +101,7 @@ const OperatorQueueSections = (() => {
         }
 
         panel.innerHTML = tickets.map(ticket => {
-            const reason = deferReasonLabel(ticket.defer_reason || ticket.completion_reason || ticket.reason);
+            const reason = deferReasonLabel(ticket.defer_reason || ticket.cancel_reason || ticket.completion_reason || ticket.reason);
             const canResume = selectedSection === "deferred";
             const redirected = Boolean(ticket.is_redirected_to_window);
             return `
@@ -136,6 +144,7 @@ const OperatorQueueSections = (() => {
 
     return {
         deferReasons,
+        cancelReasons,
         select,
         selectDeferred,
         setSections

@@ -245,6 +245,7 @@ def test_cancel_expired_returned_tickets_finishes_only_waiting_returned_ticket()
     assert cancelled_count == 1
     assert expired_returned.status == "finished"
     assert expired_returned.completion_reason == "cancelled"
+    assert expired_returned.cancel_reason == "returned_timeout"
     assert expired_returned.finished_at == now
 
     assert fresh_returned.status == "waiting"

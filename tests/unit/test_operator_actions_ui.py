@@ -59,7 +59,7 @@ def test_operator_finish_warning_can_route_to_cancel_or_finish():
     assert 'text: "Завершить"' in source
     assert 'text: "Клиент не явился"' in source
     assert "finishCurrent({ skipWarning: true })" in source
-    assert "cancelCurrent({ skipConfirm: true })" in source
+    assert 'cancelCurrent({ reason: "no_show" })' in source
 
 
 def test_operator_actions_keep_existing_ticket_endpoints():
@@ -86,3 +86,17 @@ def test_operator_defer_requires_reason_options():
     assert 'value: "missing_document"' in queue_sections_source
     assert 'value: "other"' in queue_sections_source
     assert "Выберите причину отложения" in source
+
+
+def test_operator_cancel_requires_reason_options():
+    source = read_text("queue/js/operator.js")
+    queue_sections_source = read_text("queue/js/operator-queue-sections.js")
+
+    assert "showCancelReasonPopup()" in source
+    assert "OperatorQueueSections.cancelReasons" in source
+    assert 'body: JSON.stringify({ reason: options.reason })' in source
+    assert 'value: "no_show"' in queue_sections_source
+    assert 'value: "refused_service"' in queue_sections_source
+    assert 'value: "wrong_ticket"' in queue_sections_source
+    assert 'value: "missing_document"' in queue_sections_source
+    assert 'value: "other"' in queue_sections_source

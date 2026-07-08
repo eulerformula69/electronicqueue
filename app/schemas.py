@@ -46,6 +46,16 @@ class DeferTicketRequest(BaseModel):
     ]
 
 
+class CancelTicketRequest(BaseModel):
+    reason: Literal[
+        "no_show",
+        "refused_service",
+        "wrong_ticket",
+        "missing_document",
+        "other",
+    ]
+
+
 class PingRequest(BaseModel):
     session_id: str
 
@@ -114,6 +124,7 @@ class TicketRead(BaseModel):
     queue_entered_at: datetime | None = None
     defer_reason: str | None = None
     deferred_at: datetime | None = None
+    cancel_reason: str | None = None
     called_at: datetime | None = None
     finished_at: datetime | None = None
 

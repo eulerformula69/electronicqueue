@@ -68,6 +68,7 @@ class Ticket(Base):
     returned_to_queue_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
     defer_reason = Column(String(64), nullable=True)
     deferred_at = Column(TIMESTAMP, nullable=True)
+    cancel_reason = Column(String(64), nullable=True)
     called_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 

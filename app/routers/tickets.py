@@ -34,7 +34,7 @@ from app.dependencies import (
 )
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.schemas import (
-    CallSpecificRequest, DeferTicketRequest, RedirectRequest,
+    CallSpecificRequest, CancelTicketRequest, DeferTicketRequest, RedirectRequest,
     RedirectToWindowRequest, TicketCreate, TicketReprintResponse,
 )
 from app.security import get_password_hash, verify_password
@@ -82,7 +82,7 @@ def _format_ticket_time(value) -> str:
 
 def build_operator_ticket_detail_payload(ticket: Ticket) -> dict:
     service_name = ticket.service.name if ticket.service else "Услуга не указана"
-    reason = ticket.defer_reason or ticket.completion_reason
+    reason = ticket.defer_reason or ticket.cancel_reason or ticket.completion_reason
     return {
         "id": ticket.id,
         "number": ticket.number,
@@ -95,6 +95,7 @@ def build_operator_ticket_detail_payload(ticket: Ticket) -> dict:
         "status": ticket.status,
         "completion_reason": ticket.completion_reason,
         "defer_reason": ticket.defer_reason,
+        "cancel_reason": ticket.cancel_reason,
         "reason": reason,
     }
 
@@ -393,6 +394,7 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
         ticket.finished_at = None
         ticket.defer_reason = None
         ticket.deferred_at = None
+        ticket.cancel_reason = None
 
         db.commit()
         db.refresh(ticket)
@@ -484,6 +486,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         ticket.finished_at = None
         ticket.defer_reason = None
         ticket.deferred_at = None
+        ticket.cancel_reason = None
 
         db.commit()
         db.refresh(ticket)
@@ -507,7 +510,10 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
 
 
 @router.post("/tickets/cancel", tags=["Tickets"])
-async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
+async def cancel_current_ticket(
+    data: CancelTicketRequest | None = Body(default=None),
+    operator: Operator = Depends(verify_session),
+):
     db = SessionLocal()
 
     if not operator.window_id:
@@ -527,6 +533,7 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
     # Устанавливаем статус отмены и время завершения
     ticket.status = "cancelled"
     ticket.completion_reason = "cancelled"
+    ticket.cancel_reason = data.reason if data else "no_show"
     if ticket.operator_id is None:
         ticket.operator_id = operator.id
     ticket.finished_at = datetime.now()
@@ -544,7 +551,11 @@ async def cancel_current_ticket(operator: Operator = Depends(verify_session)):
 
     db.close()
 
-    return {"status": "cancelled", "ticket_number": ticket.number}
+    return {
+        "status": "cancelled",
+        "ticket_number": ticket.number,
+        "cancel_reason": ticket.cancel_reason,
+    }
 
 
 @router.post("/tickets/return-to-queue", tags=["Tickets"])

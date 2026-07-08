@@ -742,7 +742,7 @@ function showFinishWarningPopup() {
             {
                 text: "Клиент не явился",
                 className: "btn-outline",
-                onClick: () => cancelCurrent({ skipConfirm: true })
+                onClick: () => cancelCurrent({ reason: "no_show" })
             },
             {
                 text: "Отмена",
@@ -1252,14 +1252,19 @@ async function cancelCurrent(options = {}) {
         return;
     }
 
-    if (!options.skipConfirm && !confirm("Отменить билет? Клиент будет помечен как неявившийся.")) return;
+    if (!options.reason) {
+        showCancelReasonPopup();
+        return;
+    }
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/cancel`, {
             method: "POST",
             headers: {
+                "Content-Type": "application/json",
                 "session-id": sessionId 
-            }
+            },
+            body: JSON.stringify({ reason: options.reason })
         });
 
         let data = {};
@@ -1296,6 +1301,24 @@ async function cancelCurrent(options = {}) {
         console.error("Критическая ошибка в cancelCurrent:", e);
         alert("Произошла ошибка при выполнении запроса.");
     }
+}
+
+function showCancelReasonPopup() {
+    showOperatorPopup({
+        title: "Отменить клиента",
+        message: "Выберите причину отмены. Талон будет отображаться в колонке «Отменённые».",
+        actions: [
+            ...OperatorQueueSections.cancelReasons.map(reason => ({
+                text: reason.label,
+                className: "btn-outline",
+                onClick: () => cancelCurrent({ reason: reason.value })
+            })),
+            {
+                text: "Назад",
+                className: "btn-outline"
+            }
+        ]
+    });
 }
 
 function showDeferReasonPopup() {

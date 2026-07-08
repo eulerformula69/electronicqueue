@@ -31,6 +31,7 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None
+    ticket.cancel_reason = None
     ticket.queue_entered_at = returned_at + timedelta(minutes=RETURN_TO_QUEUE_DELAY_MINUTES)
     ticket.returned_to_queue_count = (ticket.returned_to_queue_count or 0) + 1
 
@@ -54,6 +55,7 @@ def defer_ticket(
     ticket.target_window_id = None
     ticket.defer_reason = reason
     ticket.deferred_at = deferred_at
+    ticket.cancel_reason = None
     ticket.finished_at = None
 
 
@@ -75,6 +77,7 @@ def resume_deferred_ticket(
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None
+    ticket.cancel_reason = None
 
 
 def cancel_expired_returned_tickets(db: Session, *, now: datetime | None = None) -> int:
@@ -90,6 +93,7 @@ def cancel_expired_returned_tickets(db: Session, *, now: datetime | None = None)
     for ticket in tickets:
         ticket.status = "finished"
         ticket.completion_reason = "cancelled"
+        ticket.cancel_reason = "returned_timeout"
         ticket.finished_at = cancelled_at
 
     return len(tickets)

@@ -287,11 +287,12 @@ def migrate_ticket_return_count_schema(engine):
 
 
 def migrate_ticket_defer_schema(engine):
-    """Add fields used by operator-owned deferred tickets."""
+    """Add fields used by operator-owned deferred tickets and cancellations."""
     ddl = """
     ALTER TABLE tickets
         ADD COLUMN IF NOT EXISTS defer_reason varchar(64),
-        ADD COLUMN IF NOT EXISTS deferred_at timestamp without time zone;
+        ADD COLUMN IF NOT EXISTS deferred_at timestamp without time zone,
+        ADD COLUMN IF NOT EXISTS cancel_reason varchar(64);
 
     CREATE INDEX IF NOT EXISTS ix_tickets_operator_deferred_at
         ON tickets (operator_id, deferred_at);
