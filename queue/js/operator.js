@@ -291,12 +291,44 @@ function closeOperatorMoreMenu() {
     if (menu) menu.classList.remove("visible");
 }
 
+function setOperatorSettingsPopupVisible(visible) {
+    const popup = document.getElementById("operator-settings-popup");
+    const button = document.getElementById("operator-settings-toggle");
+
+    if (!popup || !button) return;
+
+    popup.classList.toggle("visible", visible);
+    button.setAttribute("aria-expanded", String(visible));
+}
+
+function toggleOperatorSettingsPopup() {
+    const popup = document.getElementById("operator-settings-popup");
+    if (!popup) return;
+
+    setOperatorSettingsPopupVisible(!popup.classList.contains("visible"));
+}
+
+function closeOperatorSettingsPopup() {
+    setOperatorSettingsPopupVisible(false);
+}
+
 document.addEventListener("click", event => {
     const container = event.target.closest(".operator-more-actions");
     const menu = document.getElementById("operator-more-menu");
 
     if (!container && menu) {
         menu.classList.remove("visible");
+    }
+
+    const settingsContainer = event.target.closest(".operator-settings");
+    if (!settingsContainer) {
+        closeOperatorSettingsPopup();
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        closeOperatorSettingsPopup();
     }
 });
 

@@ -30,40 +30,85 @@
 
     </div>
     
-    <div class="button-group">
-	
-<button
-    id="new-ticket-sound-toggle"
-    class="btn-outline icon-button sound-toggle-button"
-    type="button"
-    onclick="toggleNewTicketSound()"
-    title="Звук при новом тикете"
->
-    <img
-        id="new-ticket-sound-icon"
-        src="icons/volume-on.svg"
-        alt=""
-        class="button-icon"
-    >
-</button>
-	
-<button
-    id="new-ticket-notification-toggle"
-    class="btn-outline icon-button notification-toggle-button"
-    type="button"
-    onclick="toggleNewTicketSystemNotification()"
-    title="Системные уведомления при новом тикете"
->
-    <img
-        id="new-ticket-notification-icon"
-        src="icons/notification-off.svg"
-        alt=""
-        class="button-icon"
-    >
-</button>
-	
-	
-        <button class="btn-outline" type="button" onclick="openOperatorChangelogHistory()">ОБНОВЛЕНИЯ</button>
+    <div class="button-group header-actions">
+        <div class="operator-settings">
+            <button
+                id="operator-settings-toggle"
+                class="btn-outline icon-button operator-settings-toggle"
+                type="button"
+                onclick="toggleOperatorSettingsPopup()"
+                aria-expanded="false"
+                aria-controls="operator-settings-popup"
+                title="Настройки"
+            >
+                <img src="icons/settings.svg" alt="" class="button-icon">
+                <span>НАСТРОЙКИ</span>
+            </button>
+
+            <div id="operator-settings-popup" class="operator-settings-popup" role="dialog" aria-label="Настройки оператора">
+                <div class="operator-settings-header">
+                    <strong>Настройки</strong>
+                    <button class="operator-settings-close" type="button" onclick="closeOperatorSettingsPopup()" aria-label="Закрыть">×</button>
+                </div>
+
+                <div class="operator-settings-list">
+                    <div class="operator-settings-row">
+                        <div>
+                            <strong>Автовызов</strong>
+                            <span id="auto-call-status" class="auto-call-status-text"></span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-call-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <div class="operator-settings-row">
+                        <div>
+                            <strong>Звук</strong>
+                            <span>При новом тикете</span>
+                        </div>
+                        <button
+                            id="new-ticket-sound-toggle"
+                            class="btn-outline icon-button sound-toggle-button"
+                            type="button"
+                            onclick="toggleNewTicketSound()"
+                            title="Звук при новом тикете"
+                        >
+                            <img
+                                id="new-ticket-sound-icon"
+                                src="icons/volume-on.svg"
+                                alt=""
+                                class="button-icon"
+                            >
+                        </button>
+                    </div>
+
+                    <div class="operator-settings-row">
+                        <div>
+                            <strong>Уведомления</strong>
+                            <span>Системные оповещения</span>
+                        </div>
+                        <button
+                            id="new-ticket-notification-toggle"
+                            class="btn-outline icon-button notification-toggle-button"
+                            type="button"
+                            onclick="toggleNewTicketSystemNotification()"
+                            title="Системные уведомления при новом тикете"
+                        >
+                            <img
+                                id="new-ticket-notification-icon"
+                                src="icons/notification-off.svg"
+                                alt=""
+                                class="button-icon"
+                            >
+                        </button>
+                    </div>
+
+                    <button class="btn-outline operator-settings-wide-button" type="button" onclick="openOperatorChangelogHistory()">ОБНОВЛЕНИЯ</button>
+                </div>
+            </div>
+        </div>
         <button class="btn-outline" onclick="logout()">ВЫЙТИ</button>
     </div>
 </header>
@@ -124,19 +169,6 @@
 			</div>
 		</div> --->
 	</div>
-
-		<div class="bottom-controls">
-			<div class="auto-call-group">
-				<div class="auto-call-container">
-					<label class="switch">
-						<input type="checkbox" id="auto-call-toggle">
-						<span class="slider round"></span>
-					</label>
-					<span class="auto-call-label">Автовызов</span>
-				</div>
-				<div id="auto-call-status" class="auto-call-status-text"></div>
-			</div>
-		</div>
 
     </section>
 

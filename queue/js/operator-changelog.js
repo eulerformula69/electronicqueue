@@ -150,6 +150,10 @@
     }
 
     window.openOperatorChangelogHistory = function () {
+        if (typeof window.closeOperatorSettingsPopup === "function") {
+            window.closeOperatorSettingsPopup();
+        }
+
         loadOperatorChangelog({
             force: true,
             includePrevious: true,

@@ -305,6 +305,94 @@ body.operator-page .operator-more-menu button{
 body.operator-page .operator-more-menu button:hover{
     background: #f1f5f9;
 }
+body.operator-page .header-actions{
+    align-items: center;
+}
+body.operator-page .operator-settings{
+    position: relative;
+}
+body.operator-page .operator-settings-toggle{
+    white-space: nowrap;
+}
+body.operator-page .operator-settings-popup{
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 2200;
+    width: min(360px, calc(100vw - 32px));
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+}
+body.operator-page .operator-settings-popup.visible{
+    display: block;
+}
+body.operator-page .operator-settings-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+body.operator-page .operator-settings-header strong{
+    color: var(--text-main);
+    font-size: 1.05rem;
+}
+body.operator-page .operator-settings-close{
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+body.operator-page .operator-settings-close:hover{
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+body.operator-page .operator-settings-list{
+    display: grid;
+    gap: 10px;
+}
+body.operator-page .operator-settings-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 10px;
+}
+body.operator-page .operator-settings-row > div{
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+body.operator-page .operator-settings-row strong{
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+body.operator-page .operator-settings-row span{
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.25;
+}
+body.operator-page .operator-settings-row .icon-button{
+    flex: 0 0 auto;
+    min-width: 54px;
+    justify-content: center;
+    padding: 10px 12px;
+}
+body.operator-page .operator-settings-wide-button{
+    width: 100%;
+    text-align: center;
+}
 body.operator-page .operator-popup-overlay{
     position: fixed;
     inset: 0;
@@ -592,10 +680,10 @@ body.operator-page .auto-call-container{
     box-shadow: 0 -4px 12px rgba(0,0,0,0.05); /* Тень вверх */
 }
 body.operator-page .auto-call-status-text{
-    font-size: 1.1rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--success);
-    text-align: center;
+    text-align: left;
 }
 body.operator-page .service-row{
     display: flex;
