@@ -25,7 +25,6 @@ def test_suspicious_operator_completions_panel():
 
     raw_sql = panel["targets"][0]["rawSql"]
     expected_columns = [
-        "operator_id",
         "operator_name",
         "window_id",
         "window_name",
@@ -43,8 +42,11 @@ def test_suspicious_operator_completions_panel():
     assert "t.finished_at IS NOT NULL" in raw_sql
     assert "$__timeFrom()" in raw_sql
     assert "$__timeTo()" in raw_sql
-    assert "(t.finished_at - t.called_at) < INTERVAL '5 minutes'" in raw_sql
-    assert "GROUP BY t.operator_id, o.name, t.window_id, w.name" in raw_sql
+    assert "(t.finished_at - t.called_at) < INTERVAL '1.5 minutes'" in raw_sql
+    assert "operator_aliases AS" in raw_sql
+    assert "COALESCE(oa.operator_label" in raw_sql
+    assert "COALESCE(o.name" not in raw_sql
+    assert "GROUP BY COALESCE(oa.operator_label" in raw_sql
     assert "ORDER BY suspicious_count DESC, avg_duration_seconds ASC" in raw_sql
 
 
@@ -84,3 +86,31 @@ def test_operator_efficiency_is_stage_based():
     assert "closed_stage_percent" in raw_sql
     assert "t.completion_reason IN ('completed', 'redirected')" in raw_sql
     assert "NULLIF(count(*), 0)" in raw_sql
+
+
+def test_dashboard_percentile_and_operator_filter_are_variable_based():
+    dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
+    variables = {item["name"]: item for item in dashboard["templating"]["list"]}
+
+    assert "percentile" in variables
+    assert variables["operator_id"]["query"].startswith("SELECT 'Сотрудник '")
+
+    raw_sql_values = []
+
+    def collect_raw_sql(panels):
+        for panel in panels:
+            raw_sql_values.extend(
+                target["rawSql"]
+                for target in panel.get("targets", [])
+                if "rawSql" in target
+            )
+            collect_raw_sql(panel.get("panels", []))
+
+    collect_raw_sql(dashboard["panels"])
+    raw_sql = "\n".join(raw_sql_values)
+
+    assert "percentile_cont(0.9)" not in raw_sql
+    assert "percentile_cont((${percentile:raw}::numeric / 100.0))" in raw_sql
+    assert "${operator_name:sqlstring}" not in raw_sql
+    assert "o.name IN" not in raw_sql
+    assert "o.id::text IN (${operator_id:sqlstring})" in raw_sql

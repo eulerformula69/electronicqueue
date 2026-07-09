@@ -18,10 +18,11 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 19,
   "links": [],
   "panels": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -29,708 +30,707 @@
         "y": 0
       },
       "id": 15,
-      "panels": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 5,
-            "x": 0,
-            "y": 1
-          },
-          "id": 20,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "select count(t.id) from tickets t\r\nwhere status = 'waiting'",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Билеты в ожидании",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 5,
-            "x": 5,
-            "y": 1
-          },
-          "id": 25,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "select count(t.id) from tickets t\r\nwhere status = 'called'",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Билеты в обслуживании",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 4,
-            "x": 10,
-            "y": 1
-          },
-          "id": 21,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "select count(w.id) from windows w\r\nwhere status = 'online'",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Сотрудников работает",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 5,
-            "x": 14,
-            "y": 1
-          },
-          "id": 22,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "select count(w.id) from windows w\r\nwhere status = 'break'",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Сотрудников на перерыве",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 5,
-            "x": 19,
-            "y": 1
-          },
-          "id": 23,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "select count(w.id) from windows w\r\nwhere status = 'offline'",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Сотрудников офлайн",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "custom": {
-                "align": "auto",
-                "cellOptions": {
-                  "type": "auto"
-                },
-                "inspect": false
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Сервис"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 236
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Номер билета"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 140
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Время создания"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 189
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 16,
-            "w": 12,
-            "x": 0,
-            "y": 8
-          },
-          "id": 19,
-          "options": {
-            "cellHeight": "sm",
-            "footer": {
-              "countRows": false,
-              "fields": "",
-              "reducer": [
-                "sum"
-              ],
-              "show": false
-            },
-            "showHeader": true,
-            "sortBy": [
-              {
-                "desc": true,
-                "displayName": "Ожидание (мин)"
-              }
-            ]
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "SELECT \r\n    t.number AS \"Номер билета\",\r\n    s.name AS \"Сервис\",\r\n    to_char(t.created_at, 'YYYY-MM-DD HH24:MI:SS') AS \"Время создания\",\r\n    ROUND(EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk') - t.created_at))/60, 2) AS \"Ожидание (мин)\"\r\nFROM tickets t\r\nLEFT JOIN services s ON t.service_id = s.id\r\nLEFT JOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.status = 'waiting'\r\nORDER BY t.created_at ASC;",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Билеты в ожидании",
-          "type": "table"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "custom": {
-                "align": "auto",
-                "cellOptions": {
-                  "type": "auto"
-                },
-                "inspect": false
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Услуга"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 368
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 8
-          },
-          "id": 24,
-          "options": {
-            "cellHeight": "sm",
-            "footer": {
-              "countRows": false,
-              "fields": "",
-              "reducer": [
-                "sum"
-              ],
-              "show": false
-            },
-            "showHeader": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "SELECT \r\n    s.name AS \"Услуга\",\r\n    CASE \r\n        WHEN s.status = 'active' THEN 'Предоставляется'\r\n        WHEN s.status = 'inactive' THEN 'Не предоставляется'\r\n        ELSE 'Неизвестно'\r\n    END AS \"Статус\"\r\nFROM services s;",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Статус услуг",
-          "type": "table"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "custom": {
-                "align": "auto",
-                "cellOptions": {
-                  "type": "auto"
-                },
-                "inspect": false
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 16
-          },
-          "id": 16,
-          "options": {
-            "cellHeight": "sm",
-            "footer": {
-              "countRows": false,
-              "fields": "",
-              "reducer": [
-                "sum"
-              ],
-              "show": false
-            },
-            "showHeader": true
-          },
-          "pluginVersion": "11.5.1",
-          "targets": [
-            {
-              "dataset": "postgres",
-              "editorMode": "code",
-              "format": "table",
-              "rawQuery": true,
-              "rawSql": "SELECT \r\n    s.name AS \"Сервис\",\r\n    COUNT(t.id) AS \"Билетов в ожидании\"\r\nFROM tickets t\r\nJOIN services s ON t.service_id = s.id\r\nWHERE t.status = 'waiting'\r\nGROUP BY s.name\r\nORDER BY \"Билетов в ожидании\" DESC;",
-              "refId": "A",
-              "sql": {
-                "columns": [
-                  {
-                    "parameters": [],
-                    "type": "function"
-                  }
-                ],
-                "groupBy": [
-                  {
-                    "property": {
-                      "type": "string"
-                    },
-                    "type": "groupBy"
-                  }
-                ],
-                "limit": 50
-              }
-            }
-          ],
-          "title": "Билетов в ожидании на услугу",
-          "type": "table"
-        }
-      ],
+      "panels": [],
       "title": "Текущая ситуация",
       "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "id": 20,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(t.id) from tickets t\r\nwhere status = 'waiting'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Билеты в ожидании",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(t.id) from tickets t\r\nwhere status = 'called'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Билеты в обслуживании",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 10,
+        "y": 1
+      },
+      "id": 21,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(w.id) from windows w\r\nwhere status = 'online'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Сотрудников работает",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 14,
+        "y": 1
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(w.id) from windows w\r\nwhere status = 'break'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Сотрудников на перерыве",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 19,
+        "y": 1
+      },
+      "id": 23,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select count(w.id) from windows w\r\nwhere status = 'offline'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Сотрудников офлайн",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Сервис"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 236
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Номер билета"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Время создания"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 189
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 15,
+        "x": 0,
+        "y": 8
+      },
+      "id": 19,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Ожидание (мин)"
+          }
+        ]
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    t.number AS \"Номер билета\",\r\n    s.name AS \"Сервис\",\r\n    to_char(t.created_at, 'YYYY-MM-DD HH24:MI:SS') AS \"Время создания\",\r\n    ROUND(EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk') - t.created_at))/60, 2) AS \"Ожидание (мин)\",\r\n    CASE \r\n        WHEN t.status = 'waiting' THEN 'Ожидает'\r\n        WHEN t.status = 'deferred' THEN 'Отложен'\r\n        ELSE t.status\r\n    END AS \"Статус\",\r\n    COALESCE(t.defer_reason, 'Нет причины') AS \"Причина\"\r\nFROM tickets t\r\nLEFT JOIN services s ON t.service_id = s.id\r\nLEFT JOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.status in ('waiting', 'deferred')\r\nORDER BY t.created_at ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Билеты в ожидании + отложенные",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Услуга"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 368
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 9,
+        "x": 15,
+        "y": 8
+      },
+      "id": 24,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    s.name AS \"Услуга\",\r\n    CASE \r\n        WHEN s.status = 'active' THEN 'Предоставляется'\r\n        WHEN s.status = 'inactive' THEN 'Не предоставляется'\r\n        ELSE 'Неизвестно'\r\n    END AS \"Статус\"\r\nFROM services s;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Статус услуг",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfj1koltzk5j4e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 9,
+        "x": 15,
+        "y": 15
+      },
+      "id": 16,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.5.1",
+      "targets": [
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \r\n    s.name AS \"Сервис\",\r\n    COUNT(t.id) AS \"Билетов в ожидании\"\r\nFROM tickets t\r\nJOIN services s ON t.service_id = s.id\r\nWHERE t.status = 'waiting'\r\nGROUP BY s.name\r\nORDER BY \"Билетов в ожидании\" DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Билетов в ожидании на услугу",
+      "type": "table"
     },
     {
       "collapsed": false,
@@ -738,7 +738,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 22
       },
       "id": 10,
       "panels": [],
@@ -748,7 +748,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -781,9 +781,9 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 20,
+        "w": 19,
         "x": 0,
-        "y": 2
+        "y": 23
       },
       "id": 14,
       "options": {
@@ -811,7 +811,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH base_stats AS (\n\n    SELECT\n\n        o.name AS operator_name,\n\n        COUNT(t.id) AS served_count,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS p90_wait,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS p90_service,\n\n        percentile_cont(0.9) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS p90_total\n\n    FROM tickets t\n\n    JOIN windows w ON t.window_id = w.id\n\n    LEFT JOIN operators o ON o.id = t.operator_id\n\n    WHERE t.called_at IS NOT NULL\n\n      AND t.finished_at IS NOT NULL\n\n      AND t.completion_reason IN ('completed', 'redirected')\n\n      -- Глобальный фильтр времени Grafana (заменяет весь блок с day/week/month)\n\n      AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n\n      -- Фильтр по сотрудникам\n\n      AND (\n\n          'All' IN (${operator_name:sqlstring})\n\n          OR o.name IN (${operator_name:sqlstring})\n\n      )\n\n    GROUP BY o.name\n\n)\n\nSELECT\n\n    operator_name AS \"Сотрудник\",\n\n    served_count AS \"Этапов закрыто\",\n\n    ROUND(p90_wait::numeric, 2) AS \"p90 ожид. (мин)\",\n\n    ROUND(p90_service::numeric, 2) AS \"p90 обслуж. (мин)\",\n\n    ROUND(p90_total::numeric, 2) AS \"p90 сумм. (мин)\",\n\n    -- KPI оставляем на переменных, так как это ручной ввод лимитов\n\n    CASE WHEN p90_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\n\n    CASE WHEN p90_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\n\n    CASE WHEN p90_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\n\nFROM base_stats\n\nORDER BY \"Этапов закрыто\" DESC;",
+          "rawSql": "WITH operator_aliases AS (\n    SELECT\n        id,\n        'Сотрудник ' || row_number() OVER (ORDER BY id) AS operator_label\n    FROM operators\n),\nbase_stats AS (\n    SELECT\n        COALESCE(oa.operator_label, 'Неизвестно') AS operator_name,\n        COUNT(t.id) AS served_count,\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60) AS percentile_wait,\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60) AS percentile_service,\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60) AS percentile_total\n    FROM tickets t\n    JOIN windows w ON t.window_id = w.id\n    LEFT JOIN operators o ON o.id = t.operator_id\n    LEFT JOIN operator_aliases oa ON oa.id = o.id\n    WHERE t.called_at IS NOT NULL\n      AND t.finished_at IS NOT NULL\n      AND t.completion_reason IN ('completed', 'redirected')\n      AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n      AND (\n          'All' IN (${operator_id:sqlstring})\n          OR o.id::text IN (${operator_id:sqlstring})\n      )\n    GROUP BY COALESCE(oa.operator_label, 'Неизвестно')\n)\nSELECT\n    operator_name AS \"Сотрудник\",\n    served_count AS \"Этапов закрыто\",\n    ROUND(percentile_wait::numeric, 2) AS \"P${percentile:raw} ожид. (мин)\",\n    ROUND(percentile_service::numeric, 2) AS \"P${percentile:raw} обслуж. (мин)\",\n    ROUND(percentile_total::numeric, 2) AS \"P${percentile:raw} сумм. (мин)\",\n    CASE WHEN percentile_wait <= ${kpi_p90_wait:raw}::numeric THEN 1 ELSE 0 END AS \"KPI ожид.\",\n    CASE WHEN percentile_service <= ${kpi_p90_service:raw}::numeric THEN 1 ELSE 0 END AS \"KPI обслуж.\",\n    CASE WHEN percentile_total <= ${kpi_p90_total:raw}::numeric THEN 1 ELSE 0 END AS \"KPI сумм.\"\nFROM base_stats\nORDER BY \"Этапов закрыто\" DESC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -832,13 +832,13 @@
           }
         }
       ],
-      "title": "p90 KPI сотрудников",
+      "title": "KPI сотрудников по перцентилю",
       "type": "table"
     },
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -860,9 +860,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 20,
-        "y": 2
+        "w": 5,
+        "x": 19,
+        "y": 23
       },
       "id": 26,
       "options": {
@@ -888,12 +888,12 @@
           "dataset": "postgres",
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "bfj1koltzk5j4e"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS called\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "rawSql": "SELECT count(t.id) AS called\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring}) \r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  )",
           "refId": "A",
           "sql": {
             "columns": [
@@ -920,7 +920,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -942,9 +942,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 20,
-        "y": 5
+        "w": 5,
+        "x": 19,
+        "y": 26
       },
       "id": 1,
       "options": {
@@ -970,12 +970,12 @@
           "dataset": "postgres",
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "bfj1koltzk5j4e"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(DISTINCT COALESCE(t.root_ticket_id, t.id)) AS completed_clients\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.completion_reason = 'completed'\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "rawSql": "SELECT count(DISTINCT COALESCE(t.root_ticket_id, t.id)) AS completed_clients\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.completion_reason = 'completed'\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring}) \r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  )",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1002,7 +1002,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1024,9 +1024,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 20,
-        "y": 8
+        "w": 5,
+        "x": 19,
+        "y": 29
       },
       "id": 35,
       "options": {
@@ -1052,12 +1052,12 @@
           "dataset": "postgres",
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
+            "uid": "bfj1koltzk5j4e"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS closed_operator_stages\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring}) \r\n      OR o.name IN (${operator_name:sqlstring})\r\n  )",
+          "rawSql": "SELECT count(t.id) AS closed_operator_stages\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring}) \r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  )",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1078,13 +1078,13 @@
           }
         }
       ],
-      "title": "Этапов закрыто оператором",
+      "title": "Клиентов перенаправлено + завершено",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1112,7 +1112,7 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 11
+        "y": 32
       },
       "id": 6,
       "options": {
@@ -1139,7 +1139,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время ожидания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время ожидания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1166,7 +1166,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1194,7 +1194,7 @@
         "h": 5,
         "w": 4,
         "x": 4,
-        "y": 11
+        "y": 32
       },
       "id": 4,
       "options": {
@@ -1221,7 +1221,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. время обслуживания\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1248,7 +1248,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1276,7 +1276,7 @@
         "h": 5,
         "w": 4,
         "x": 8,
-        "y": 11
+        "y": 32
       },
       "id": 7,
       "options": {
@@ -1303,7 +1303,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        AVG(EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60)::numeric,\r\n        2\r\n    ) AS \"Ср. общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1330,7 +1330,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1354,7 +1354,7 @@
         "h": 5,
         "w": 4,
         "x": 12,
-        "y": 11
+        "y": 32
       },
       "id": 13,
       "options": {
@@ -1381,7 +1381,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 ожидание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.called_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"P${percentile:raw} ожидание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1402,13 +1402,13 @@
           }
         }
       ],
-      "title": "р90 время ожидания (мин)",
+      "title": "перцентиль время ожидания (мин)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1436,7 +1436,7 @@
         "h": 5,
         "w": 4,
         "x": 16,
-        "y": 11
+        "y": 32
       },
       "id": 12,
       "options": {
@@ -1463,7 +1463,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.called_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"P${percentile:raw} обслуживание\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1484,13 +1484,13 @@
           }
         }
       ],
-      "title": "р90 время обслуживания (мин)",
+      "title": "перцентиль время обслуживания (мин)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1518,7 +1518,7 @@
         "h": 5,
         "w": 4,
         "x": 20,
-        "y": 11
+        "y": 32
       },
       "id": 11,
       "options": {
@@ -1545,7 +1545,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont(0.9) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"p90 общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT \r\n    ROUND(\r\n        percentile_cont((${percentile:raw}::numeric / 100.0)) WITHIN GROUP (\r\n            ORDER BY EXTRACT(EPOCH FROM (t.finished_at - t.created_at)) / 60\r\n        )::numeric,\r\n        2\r\n    ) AS \"P${percentile:raw} общее время\"\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.finished_at IS NOT NULL\r\n  AND t.completion_reason IN ('completed', 'redirected')\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1566,13 +1566,13 @@
           }
         }
       ],
-      "title": "р90 общее время  (мин)",
+      "title": "перцентиль общее время  (мин)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1596,7 +1596,7 @@
         "h": 4,
         "w": 5,
         "x": 0,
-        "y": 16
+        "y": 37
       },
       "id": 28,
       "options": {
@@ -1623,7 +1623,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS problematic_unfinished\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      t.completion_reason = 'cancelled'\r\n      OR (\r\n          t.status IS DISTINCT FROM 'called'\r\n          AND t.completion_reason IS DISTINCT FROM 'completed'\r\n          AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n      )\r\n  )\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT count(t.id) AS problematic_unfinished\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      t.completion_reason = 'cancelled'\r\n      OR (\r\n          t.status IS DISTINCT FROM 'called'\r\n          AND t.completion_reason IS DISTINCT FROM 'completed'\r\n          AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n      )\r\n  )\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1650,7 +1650,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1674,7 +1674,7 @@
         "h": 4,
         "w": 5,
         "x": 5,
-        "y": 16
+        "y": 37
       },
       "id": 29,
       "options": {
@@ -1701,7 +1701,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS cancelled\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'cancelled'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT count(t.id) AS cancelled\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'cancelled'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1728,7 +1728,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1752,7 +1752,7 @@
         "h": 4,
         "w": 5,
         "x": 10,
-        "y": 16
+        "y": 37
       },
       "id": 32,
       "options": {
@@ -1779,7 +1779,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS other_not_completed\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND t.completion_reason IS DISTINCT FROM 'completed'\r\n  AND t.completion_reason IS DISTINCT FROM 'cancelled'\r\n  AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n  AND t.status IS DISTINCT FROM 'called'\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT count(t.id) AS other_not_completed\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND t.completion_reason IS DISTINCT FROM 'completed'\r\n  AND t.completion_reason IS DISTINCT FROM 'cancelled'\r\n  AND t.completion_reason IS DISTINCT FROM 'redirected'\r\n  AND t.status IS DISTINCT FROM 'called'\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1806,7 +1806,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1830,7 +1830,7 @@
         "h": 4,
         "w": 5,
         "x": 15,
-        "y": 16
+        "y": 37
       },
       "id": 30,
       "options": {
@@ -1857,7 +1857,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(t.id) AS redirected\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'redirected'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_name:sqlstring})\r\n      OR o.name IN (${operator_name:sqlstring})\r\n  );",
+          "rawSql": "SELECT count(t.id) AS redirected\r\nFROM tickets t\r\nJOIN windows w ON t.window_id = w.id\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nWHERE t.called_at IS NOT NULL\r\n  AND t.completion_reason = 'redirected'\r\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (\r\n      'All' IN (${operator_id:sqlstring})\r\n      OR o.id::text IN (${operator_id:sqlstring})\r\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1884,7 +1884,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -1916,7 +1916,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 16
+        "y": 37
       },
       "id": 33,
       "options": {
@@ -1943,7 +1943,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(\n    ROUND(\n        100.0 * count(*) FILTER (\n            WHERE t.completion_reason IN ('completed', 'redirected')\n              AND t.finished_at IS NOT NULL\n        ) / NULLIF(count(*), 0),\n        1\n    ),\n    0\n) AS closed_stage_percent\nFROM tickets t\nJOIN windows w ON t.window_id = w.id\nLEFT JOIN operators o ON o.id = t.operator_id\nWHERE t.called_at IS NOT NULL\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n  AND (\n      'All' IN (${operator_name:sqlstring})\n      OR o.name IN (${operator_name:sqlstring})\n  );",
+          "rawSql": "SELECT COALESCE(\n    ROUND(\n        100.0 * count(*) FILTER (\n            WHERE t.completion_reason IN ('completed', 'redirected')\n              AND t.finished_at IS NOT NULL\n        ) / NULLIF(count(*), 0),\n        1\n    ),\n    0\n) AS closed_stage_percent\nFROM tickets t\nJOIN windows w ON t.window_id = w.id\nLEFT JOIN operators o ON o.id = t.operator_id\nWHERE t.called_at IS NOT NULL\n  AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n  AND (\n      'All' IN (${operator_id:sqlstring})\n      OR o.id::text IN (${operator_id:sqlstring})\n  );",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1970,7 +1970,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -2001,7 +2001,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 41
       },
       "id": 34,
       "options": {
@@ -2023,7 +2023,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH called_tickets AS (\n    SELECT\n        CASE\n            WHEN t.completion_reason = 'completed' AND t.finished_at IS NOT NULL THEN 'Этап завершен успешно'\n            WHEN t.completion_reason = 'redirected' AND t.finished_at IS NOT NULL THEN 'Этап перенаправлен'\n            WHEN t.completion_reason = 'cancelled' THEN 'Отменено'\n            WHEN t.status = 'called' THEN 'В обслуживании сейчас'\n            ELSE 'Не завершено / прочее'\n        END AS outcome\n    FROM tickets t\n    JOIN windows w ON t.window_id = w.id\n    LEFT JOIN operators o ON o.id = t.operator_id\n    WHERE t.called_at IS NOT NULL\n      AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n      AND (\n          'All' IN (${operator_name:sqlstring})\n          OR o.name IN (${operator_name:sqlstring})\n      )\n)\nSELECT\n    outcome AS \"Исход\",\n    count(*) AS \"Этапов\",\n    ROUND(100.0 * count(*) / NULLIF(sum(count(*)) OVER (), 0), 1) AS \"Доля, %\"\nFROM called_tickets\nGROUP BY outcome\nORDER BY \"Этапов\" DESC;",
+          "rawSql": "WITH called_tickets AS (\n    SELECT\n        CASE\n            WHEN t.completion_reason = 'completed' AND t.finished_at IS NOT NULL THEN 'Этап завершен успешно'\n            WHEN t.completion_reason = 'redirected' AND t.finished_at IS NOT NULL THEN 'Этап перенаправлен'\n            WHEN t.completion_reason = 'cancelled' THEN 'Отменено'\n            WHEN t.status = 'called' THEN 'В обслуживании сейчас'\n            ELSE 'Не завершено / прочее'\n        END AS outcome\n    FROM tickets t\n    JOIN windows w ON t.window_id = w.id\n    LEFT JOIN operators o ON o.id = t.operator_id\n    WHERE t.called_at IS NOT NULL\n      AND t.called_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n      AND (\n          'All' IN (${operator_id:sqlstring})\n          OR o.id::text IN (${operator_id:sqlstring})\n      )\n)\nSELECT\n    outcome AS \"Исход\",\n    count(*) AS \"Этапов\",\n    ROUND(100.0 * count(*) / NULLIF(sum(count(*)) OVER (), 0), 1) AS \"Доля, %\"\nFROM called_tickets\nGROUP BY outcome\nORDER BY \"Этапов\" DESC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -2050,7 +2050,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
+        "uid": "bfj1koltzk5j4e"
       },
       "fieldConfig": {
         "defaults": {
@@ -2081,7 +2081,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 46
       },
       "id": 27,
       "options": {
@@ -2109,7 +2109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n    t.operator_id AS operator_id,\r\n    COALESCE(o.name, 'Неизвестно') AS operator_name,\r\n    t.window_id AS window_id,\r\n    COALESCE(w.name, 'Неизвестно') AS window_name,\r\n    COUNT(*) AS suspicious_count,\r\n    ROUND(AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)))::numeric, 1) AS avg_duration_seconds,\r\n    MIN(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS min_duration_seconds,\r\n    MAX(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS max_duration_seconds\r\nFROM tickets t\r\nLEFT JOIN operators o ON o.id = t.operator_id\r\nLEFT JOIN windows w ON w.id = t.window_id\r\nWHERE t.status = 'finished'\r\n  AND t.completion_reason = 'completed'\r\n  AND t.called_at IS NOT NULL\r\n  AND t.finished_at IS NOT NULL\r\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\r\n  AND (t.finished_at - t.called_at) < INTERVAL '5 minutes'\r\nGROUP BY t.operator_id, o.name, t.window_id, w.name\r\nORDER BY suspicious_count DESC, avg_duration_seconds ASC;",
+          "rawSql": "WITH operator_aliases AS (\n    SELECT\n        id,\n        'Сотрудник ' || row_number() OVER (ORDER BY id) AS operator_label\n    FROM operators\n)\nSELECT\n    COALESCE(oa.operator_label, 'Неизвестно') AS operator_name,\n    t.window_id AS window_id,\n    COALESCE(w.name, 'Неизвестно') AS window_name,\n    COUNT(*) AS suspicious_count,\n    ROUND(AVG(EXTRACT(EPOCH FROM (t.finished_at - t.called_at)))::numeric, 1) AS avg_duration_seconds,\n    MIN(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS min_duration_seconds,\n    MAX(EXTRACT(EPOCH FROM (t.finished_at - t.called_at))) AS max_duration_seconds\nFROM tickets t\nLEFT JOIN operators o ON o.id = t.operator_id\nLEFT JOIN operator_aliases oa ON oa.id = o.id\nLEFT JOIN windows w ON w.id = t.window_id\nWHERE t.status = 'finished'\n  AND t.completion_reason = 'completed'\n  AND t.called_at IS NOT NULL\n  AND t.finished_at IS NOT NULL\n  AND t.finished_at BETWEEN ($__timeFrom() AT TIME ZONE 'Asia/Irkutsk') AND ($__timeTo() AT TIME ZONE 'Asia/Irkutsk')\n  AND (t.finished_at - t.called_at) < INTERVAL '1.5 minutes'\nGROUP BY COALESCE(oa.operator_label, 'Неизвестно'), t.window_id, w.name\nORDER BY suspicious_count DESC, avg_duration_seconds ASC;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -2136,7 +2136,7 @@
   ],
   "preload": false,
   "refresh": "5s",
-  "schemaVersion": 42,
+  "schemaVersion": 40,
   "tags": [],
   "templating": {
     "list": [
@@ -2150,27 +2150,25 @@
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "${DS_POSTGRES}"
+          "uid": "bfj1koltzk5j4e"
         },
-        "definition": "SELECT name from operators ORDER BY id",
+        "definition": "SELECT 'Сотрудник ' || row_number() OVER (ORDER BY id) AS __text, id::text AS __value FROM operators ORDER BY id",
         "includeAll": true,
         "label": "Сотрудник",
         "multi": true,
-        "name": "operator_name",
+        "name": "operator_id",
         "options": [],
-        "query": "SELECT name from operators ORDER BY id",
+        "query": "SELECT 'Сотрудник ' || row_number() OVER (ORDER BY id) AS __text, id::text AS __value FROM operators ORDER BY id",
         "refresh": 1,
         "regex": "",
-        "type": "query",
-        "allValue": "",
-        "regexApplyTo": "value"
+        "type": "query"
       },
       {
         "current": {
           "text": "15",
           "value": "15"
         },
-        "label": "KPI p90 ожидание (мин)",
+        "label": "KPI перцентиль ожидание (мин)",
         "name": "kpi_p90_wait",
         "options": [
           {
@@ -2187,7 +2185,7 @@
           "text": "15",
           "value": "15"
         },
-        "label": "KPI p90 обслуживание (мин)",
+        "label": "KPI перцентиль обслуживание (мин)",
         "name": "kpi_p90_service",
         "options": [
           {
@@ -2204,7 +2202,7 @@
           "text": "30",
           "value": "30"
         },
-        "label": "KPI p90 общее (мин)",
+        "label": "KPI перцентиль общее (мин)",
         "name": "kpi_p90_total",
         "options": [
           {
@@ -2215,27 +2213,35 @@
         ],
         "query": "30",
         "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "50",
+          "value": "50"
+        },
+        "description": "",
+        "label": "Перцентиль",
+        "name": "percentile",
+        "options": [
+          {
+            "selected": true,
+            "text": "50",
+            "value": "50"
+          }
+        ],
+        "query": "50",
+        "type": "textbox"
       }
     ]
   },
   "time": {
-    "from": "now/d",
-    "to": "now"
+    "from": "2026-06-30T16:00:00.000Z",
+    "to": "2026-07-08T15:59:59.000Z"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Статистика для очереди 2 исправлено",
-  "uid": null,
-  "version": 4,
-  "weekStart": "",
-  "__inputs": [
-    {
-      "name": "DS_POSTGRES",
-      "label": "PostgreSQL",
-      "description": "Выберите ваш PostgreSQL datasource при импорте",
-      "type": "datasource",
-      "pluginId": "grafana-postgresql-datasource",
-      "pluginName": "PostgreSQL"
-    }
-  ]
+  "title": "Статистика для очереди 2 исправлено11",
+  "uid": "cfqnxl9hiww00b",
+  "version": 12,
+  "weekStart": ""
 }
