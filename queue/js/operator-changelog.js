@@ -2,9 +2,11 @@
     const CHANGELOG_URL = "/queue/changelog/operator.json";
     const STORAGE_KEY = "operatorChangelogVersion";
     const CHECK_INTERVAL_MS = 60000;
+    const ACTIVITY_CHECK_COOLDOWN_MS = 30000;
     const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу (ctrl + F5)";
     let pageChangelogVersion = null;
     let checkInProgress = false;
+    let lastActivityCheckAt = 0;
 
     function isValidChangelog(data) {
         return data
@@ -147,6 +149,14 @@
         }
     }
 
+    function checkOperatorChangelogOnActivity() {
+        const now = Date.now();
+        if (now - lastActivityCheckAt < ACTIVITY_CHECK_COOLDOWN_MS) return;
+
+        lastActivityCheckAt = now;
+        loadOperatorChangelog({ checkForUpdate: true });
+    }
+
     window.openOperatorChangelogHistory = function () {
         if (typeof window.closeOperatorSettingsPopup === "function") {
             window.closeOperatorSettingsPopup();
@@ -161,4 +171,5 @@
 
     loadOperatorChangelog();
     setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS);
+    document.addEventListener("click", checkOperatorChangelogOnActivity);
 })();

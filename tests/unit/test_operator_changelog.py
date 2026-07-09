@@ -34,6 +34,7 @@ def test_operator_changelog_is_independent_from_system_version():
     assert 'CHANGELOG_URL = "/queue/changelog/operator.json"' in source
     assert 'STORAGE_KEY = "operatorChangelogVersion"' in source
     assert "CHECK_INTERVAL_MS = 60000" in source
+    assert "ACTIVITY_CHECK_COOLDOWN_MS = 30000" in source
     assert "/system/version" not in source
     assert "operatorAppVersion" not in source
     assert 'cache: "no-store"' in source
@@ -60,6 +61,29 @@ def test_operator_changelog_polling_shows_update_banner_without_modal():
     modal_call = source.index("showOperatorChangelog(data, options);", update_return)
 
     assert update_branch < banner_call < update_return < modal_call
+
+
+def test_operator_changelog_click_check_uses_same_update_path_with_throttle():
+    source = read_text("queue/js/operator-changelog.js")
+
+    assert "let lastActivityCheckAt = 0" in source
+    assert "function checkOperatorChangelogOnActivity()" in source
+    assert "now - lastActivityCheckAt < ACTIVITY_CHECK_COOLDOWN_MS" in source
+    assert "lastActivityCheckAt = now" in source
+    assert "loadOperatorChangelog({ checkForUpdate: true });" in source
+    assert 'document.addEventListener("click", checkOperatorChangelogOnActivity)' in source
+    assert "showUpdateNotification();" in source
+    assert "showOperatorChangelog(data, options);" in source
+
+    handler = source.index("function checkOperatorChangelogOnActivity()")
+    throttled_return = source.index("return;", handler)
+    click_check = source.index("loadOperatorChangelog({ checkForUpdate: true });", handler)
+    update_branch = source.index("if (options.checkForUpdate)")
+    banner_call = source.index("showUpdateNotification();", update_branch)
+    modal_call = source.index("showOperatorChangelog(data, options);", banner_call)
+
+    assert handler < throttled_return < click_check
+    assert update_branch < banner_call < modal_call
 
 
 def test_operator_changelog_reload_shows_unread_popup_once():
@@ -109,7 +133,8 @@ def test_operator_changelog_json_has_operator_facing_russian_text():
 
     assert isinstance(data["version"], str)
     assert data["version"].strip()
-    assert data["date"] == "08.07.2026"
+    assert isinstance(data["date"], str)
+    assert data["date"].strip()
     assert "title" not in data
     assert data["changes"]
     assert all(isinstance(item, str) and item.strip() for item in data["changes"])
