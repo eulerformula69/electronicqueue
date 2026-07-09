@@ -171,28 +171,20 @@ def list_window_services(
     return result
 
 
-@router.get("/window-services/{window_id}", response_model=List[WindowServiceRead], tags=["Windows"])
+@router.get("/window-services/{window_id}", tags=["Windows"])
 def get_window_services(window_id: int, admin: Admin = Depends(verify_admin_session)):
     db = SessionLocal()
-    try:
-        services = (
-            db.query(WindowService)
-            .join(Service, Service.id == WindowService.service_id)
-            .filter(WindowService.window_id == window_id)
-            .filter(Service.is_archived == 0)
-            .order_by(WindowService.priority.asc(), WindowService.service_id.asc())
-            .all()
-        )
-        return [
-            WindowServiceRead(
-                window_id=item.window_id,
-                service_id=item.service_id,
-                priority=item.priority or 1,
-            )
-            for item in services
-        ]
-    finally:
-        db.close()
+
+    services = (
+        db.query(WindowService)
+        .join(Service, Service.id == WindowService.service_id)
+        .filter(WindowService.window_id == window_id)
+        .filter(Service.is_archived == 0)
+        .all()
+    )
+
+    db.close()
+    return services
 
 
 @router.put("/window-services/{window_id}", tags=["Windows"])
