@@ -2,7 +2,7 @@
     const CHANGELOG_URL = "/queue/changelog/operator.json";
     const STORAGE_KEY = "operatorChangelogVersion";
     const CHECK_INTERVAL_MS = 60000;
-    const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу";
+    const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу (ctrl + F5)";
     let pageChangelogVersion = null;
     let checkInProgress = false;
 
@@ -82,9 +82,7 @@
 
         const title = document.createElement("h2");
         title.id = "operator-changelog-title";
-        title.textContent = options.includePrevious
-            ? "Обновления"
-            : formatOperatorChangelogTitle(data, version);
+        title.textContent = "Обновление:";//options.includePrevious ? "Обновления" : formatOperatorChangelogTitle(data, version);
 
         const content = document.createElement("div");
         content.className = "operator-changelog-content";
