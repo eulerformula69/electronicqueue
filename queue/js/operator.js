@@ -932,7 +932,10 @@ function getRedirectWindowTitle(windowItem) {
 
 function getFilteredRedirectServices() {
     const query = normalizeRedirectText(redirectState.serviceQuery);
-    const services = allServices;
+    const selectedWindow = getRedirectWindow(redirectState.windowId);
+    const services = selectedWindow && selectedWindow.status === "online" && Array.isArray(selectedWindow.services)
+        ? selectedWindow.services
+        : allServices;
 
     return services.filter(service => {
         if (Number(service.is_archived) === 1) return false;
@@ -945,9 +948,11 @@ function getFilteredRedirectServices() {
 function getFilteredRedirectWindows() {
     const query = normalizeRedirectText(redirectState.windowQuery);
     return allWindows.filter(windowItem => {
-        if (!redirectState.serviceId) return false;
         if (windowItem.status !== "online") return false;
-        if (!redirectWindowSupportsService(windowItem, redirectState.serviceId)) return false;
+        if (
+            redirectState.serviceId &&
+            !redirectWindowSupportsService(windowItem, redirectState.serviceId)
+        ) return false;
         if (!query) return true;
         const serviceNames = Array.isArray(windowItem.service_names)
             ? windowItem.service_names.join(" ")
@@ -1149,9 +1154,7 @@ function createRedirectWindowList() {
     if (!windows.length) {
         const empty = document.createElement("div");
         empty.className = "redirect-empty";
-        empty.textContent = redirectState.serviceId
-            ? "Окна не найдены"
-            : "Сначала выберите услугу";
+        empty.textContent = "Окна не найдены";
         list.appendChild(empty);
         return list;
     }
@@ -1180,6 +1183,12 @@ function createRedirectWindowList() {
         button.appendChild(status);
         button.addEventListener("click", () => {
             redirectState.windowId = Number(windowItem.id);
+            if (
+                redirectState.serviceId &&
+                !redirectWindowSupportsService(windowItem, redirectState.serviceId)
+            ) {
+                redirectState.serviceId = null;
+            }
             renderRedirectModal();
         });
         list.appendChild(button);
@@ -1197,9 +1206,9 @@ function createRedirectSummary() {
 
     const lines = [];
     lines.push(`Услуга: ${service ? service.name : "не выбрана"}`);
-    lines.push(`Кому: ${redirectState.mode === "service"
-        ? "любой доступный оператор"
-        : (windowItem ? getRedirectWindowTitle(windowItem) : "не выбрано")}`);
+    lines.push(`Кому: ${windowItem
+        ? getRedirectWindowTitle(windowItem)
+        : "любой доступный оператор"}`);
 
     const title = document.createElement("strong");
     title.textContent = "Резюме";
@@ -1238,7 +1247,7 @@ function createRedirectActions() {
 
 function canConfirmRedirect() {
     if (!redirectState.serviceId) return false;
-    if (redirectState.mode === "service") return true;
+    if (!redirectState.windowId) return true;
 
     const windowItem = getRedirectWindow(redirectState.windowId);
     return Boolean(windowItem && redirectWindowSupportsService(windowItem, redirectState.serviceId));
@@ -1254,14 +1263,14 @@ async function confirmRedirectFromModal() {
     renderRedirectModal();
 
     try {
-        const endpoint = redirectState.mode === "service"
-            ? "/tickets/redirect"
-            : "/tickets/redirect-to-window";
+        const endpoint = redirectState.windowId
+            ? "/tickets/redirect-to-window"
+            : "/tickets/redirect";
         const payload = {
             ticket_id: currentTicketId,
             new_service_id: Number(redirectState.serviceId)
         };
-        if (redirectState.mode === "window") {
+        if (redirectState.windowId) {
             payload.window_id = Number(redirectState.windowId);
         }
 

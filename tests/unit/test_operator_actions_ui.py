@@ -100,15 +100,14 @@ def test_operator_redirect_uses_single_modal_button():
     assert "На услугу" not in js
     assert "К оператору/окну" not in js
     assert "new_service_id: Number(redirectState.serviceId)" in js
-    assert 'redirectState.mode === "service"' in js
     assert "modal.appendChild(createRedirectRecipientSection());" in js
     assert 'if (redirectState.mode === "window")' in js
     assert "modal.appendChild(createRedirectWindowSection());" in js
     assert 'service.status !== "active"' in js
     assert 'windowItem.status !== "online"' in js
     assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
-    assert "? \"/tickets/redirect\"" in js
-    assert ": \"/tickets/redirect-to-window\"" in js
+    assert "? \"/tickets/redirect-to-window\"" in js
+    assert ": \"/tickets/redirect\"" in js
     assert "payload.window_id = Number(redirectState.windowId);" in js
     assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
     assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
@@ -119,6 +118,40 @@ def test_operator_redirect_uses_single_modal_button():
     assert ".redirect-mode-group" in css
     assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
     assert "width: 100%" in css
+
+
+def test_operator_redirect_by_service_does_not_require_window():
+    js = read_text("queue/js/operator.js")
+
+    assert "if (!redirectState.windowId) return true;" in js
+    assert "const endpoint = redirectState.windowId" in js
+    assert "? \"/tickets/redirect-to-window\"" in js
+    assert ": \"/tickets/redirect\"" in js
+    assert "if (redirectState.windowId) {" in js
+    assert "payload.window_id = Number(redirectState.windowId);" in js
+
+
+def test_operator_redirect_to_window_requires_compatible_service():
+    js = read_text("queue/js/operator.js")
+
+    assert "const windowItem = getRedirectWindow(redirectState.windowId);" in js
+    assert "return Boolean(windowItem && redirectWindowSupportsService(windowItem, redirectState.serviceId));" in js
+    assert "redirectState.serviceId &&" in js
+    assert "!redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
+    assert "redirectState.serviceId = null;" in js
+
+
+def test_operator_redirect_services_filter_by_selected_online_window():
+    js = read_text("queue/js/operator.js")
+
+    assert "const selectedWindow = getRedirectWindow(redirectState.windowId);" in js
+    assert 'selectedWindow.status === "online"' in js
+    assert "? selectedWindow.services" in js
+    assert ": allServices" in js
+    assert "if (Number(service.is_archived) === 1) return false;" in js
+    assert 'if (service.status !== "active") return false;' in js
+    assert "redirectState.serviceId &&" in js
+    assert "!redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
 
 
 def test_operator_defer_requires_reason_options():
