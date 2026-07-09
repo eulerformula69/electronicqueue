@@ -95,14 +95,15 @@ def test_operator_redirect_uses_single_modal_button():
     assert "Поиск услуги" in js
     assert "Кому" in js
     assert "Любому доступному оператору" in js
-    assert "Конкретному оператору" in js
-    assert "Поиск оператора или окна" in js
+    assert "Конкретному оператору" not in js
+    assert "Поиск оператора или окна" not in js
     assert "На услугу" not in js
     assert "К оператору/окну" not in js
     assert "new_service_id: Number(redirectState.serviceId)" in js
     assert "modal.appendChild(createRedirectRecipientSection());" in js
-    assert 'if (redirectState.mode === "window")' in js
-    assert "modal.appendChild(createRedirectWindowSection());" in js
+    assert 'redirectState.mode' not in js
+    assert "createRedirectWindowSection" not in js
+    assert "DEFAULT_REDIRECT_RECIPIENT_LABEL" in js
     assert 'service.status !== "active"' in js
     assert 'windowItem.status !== "online"' in js
     assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
@@ -115,8 +116,7 @@ def test_operator_redirect_uses_single_modal_button():
     assert "windowList.replaceWith(nextWindowList)" in js
     assert "width: min(950px, 100%)" in css
     assert ".redirect-confirm-button" in css
-    assert ".redirect-mode-group" in css
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
+    assert ".redirect-mode-group" not in css
     assert "width: 100%" in css
 
 
@@ -152,6 +152,17 @@ def test_operator_redirect_services_filter_by_selected_online_window():
     assert 'if (service.status !== "active") return false;' in js
     assert "redirectState.serviceId &&" in js
     assert "!redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
+
+
+def test_operator_redirect_recipient_search_replaces_mode_buttons():
+    js = read_text("queue/js/operator.js")
+
+    assert 'input.placeholder = DEFAULT_REDIRECT_RECIPIENT_LABEL;' in js
+    assert "redirectState.windowQuery || DEFAULT_REDIRECT_RECIPIENT_LABEL" in js
+    assert "redirectWindowMatchesQuery(getRedirectWindow(redirectState.windowId), redirectState.windowQuery)" in js
+    assert "if (!query && !redirectState.windowId) return [];" in js
+    assert "redirectState.windowQuery = getRedirectWindowTitle(windowItem);" in js
+    assert "getRedirectWindowActiveServices(windowItem)" in js
 
 
 def test_operator_defer_requires_reason_options():

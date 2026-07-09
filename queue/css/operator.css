@@ -806,14 +806,6 @@ body.operator-page .redirect-modal h2 {
     font-size: 1.35rem;
 }
 
-body.operator-page .redirect-mode-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-body.operator-page .redirect-mode-group button,
 body.operator-page .redirect-option {
     border: 1px solid #dbe3ef;
     background: #ffffff;
@@ -822,12 +814,6 @@ body.operator-page .redirect-option {
     cursor: pointer;
 }
 
-body.operator-page .redirect-mode-group button {
-    padding: 10px 12px;
-    font-weight: 800;
-}
-
-body.operator-page .redirect-mode-group button.active,
 body.operator-page .redirect-option.selected {
     border-color: var(--primary);
     background: #edf6ff;

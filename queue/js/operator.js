@@ -888,17 +888,17 @@ async function loadAllWindows() {
    Перенаправление
 ========================= */
 const redirectState = {
-    mode: "service",
     serviceId: null,
     windowId: null,
     serviceQuery: "",
     windowQuery: "",
     isSubmitting: false
 };
+const DEFAULT_REDIRECT_RECIPIENT_LABEL = "Любому доступному оператору";
 
 function showRedirect() { return showRedirectModal(); }
-function showRedirectToService() { return showRedirectModal("service"); }
-function showRedirectToWindow() { return showRedirectModal("window"); }
+function showRedirectToService() { return showRedirectModal(); }
+function showRedirectToWindow() { return showRedirectModal(); }
 
 function normalizeRedirectText(value) {
     return String(value || "").toLowerCase().trim();
@@ -924,10 +924,27 @@ function redirectWindowSupportsService(windowItem, serviceId) {
     ));
 }
 
+function getRedirectWindowActiveServices(windowItem) {
+    if (!windowItem || !Array.isArray(windowItem.services)) return [];
+    return windowItem.services.filter(service => service.status === "active");
+}
+
 function getRedirectWindowTitle(windowItem) {
     const operatorName = windowItem.operator_name || "оператор не назначен";
     const windowName = windowItem.name || `Окно ${windowItem.id}`;
     return `${operatorName} / ${windowName}`;
+}
+
+function redirectWindowMatchesQuery(windowItem, query) {
+    if (!windowItem) return false;
+    const serviceNames = getRedirectWindowActiveServices(windowItem)
+        .map(service => service.name)
+        .join(" ");
+    return normalizeRedirectText([
+        windowItem.name,
+        windowItem.operator_name,
+        serviceNames
+    ].join(" ")).includes(normalizeRedirectText(query));
 }
 
 function getFilteredRedirectServices() {
@@ -947,21 +964,11 @@ function getFilteredRedirectServices() {
 
 function getFilteredRedirectWindows() {
     const query = normalizeRedirectText(redirectState.windowQuery);
+    if (!query && !redirectState.windowId) return [];
     return allWindows.filter(windowItem => {
         if (windowItem.status !== "online") return false;
-        if (
-            redirectState.serviceId &&
-            !redirectWindowSupportsService(windowItem, redirectState.serviceId)
-        ) return false;
-        if (!query) return true;
-        const serviceNames = Array.isArray(windowItem.service_names)
-            ? windowItem.service_names.join(" ")
-            : "";
-        return normalizeRedirectText([
-            windowItem.name,
-            windowItem.operator_name,
-            serviceNames
-        ].join(" ")).includes(query);
+        if (Number(windowItem.id) === Number(redirectState.windowId)) return true;
+        return redirectWindowMatchesQuery(windowItem, query);
     });
 }
 
@@ -970,7 +977,7 @@ function closeRedirectModal() {
     if (modal) modal.remove();
 }
 
-async function showRedirectModal(mode = "service") {
+async function showRedirectModal() {
     if (!currentTicketId) {
         alert("Нет текущего клиента");
         return;
@@ -983,7 +990,6 @@ async function showRedirectModal(mode = "service") {
         await loadAllWindows();
     }
 
-    redirectState.mode = mode;
     redirectState.serviceId = null;
     redirectState.windowId = null;
     redirectState.serviceQuery = "";
@@ -1011,11 +1017,8 @@ function renderRedirectModal() {
     title.textContent = "Перенаправить";
 
     modal.appendChild(title);
-    modal.appendChild(createRedirectServiceSection());
     modal.appendChild(createRedirectRecipientSection());
-    if (redirectState.mode === "window") {
-        modal.appendChild(createRedirectWindowSection());
-    }
+    modal.appendChild(createRedirectServiceSection());
     modal.appendChild(createRedirectSummary());
     modal.appendChild(createRedirectActions());
 
@@ -1097,47 +1100,45 @@ function createRedirectRecipientSection() {
 
     const label = document.createElement("label");
     label.textContent = "Кому";
-    section.appendChild(label);
-
-    const options = document.createElement("div");
-    options.className = "redirect-mode-group";
-    [
-        { value: "service", label: "Любому доступному оператору" },
-        { value: "window", label: "Конкретному оператору" }
-    ].forEach(option => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = option.value === redirectState.mode ? "active" : "";
-        button.textContent = option.label;
-        button.addEventListener("click", () => {
-            redirectState.mode = option.value;
-            redirectState.windowId = null;
-            renderRedirectModal();
-        });
-        options.appendChild(button);
-    });
-
-    section.appendChild(options);
-    return section;
-}
-
-function createRedirectWindowSection() {
-    const section = document.createElement("div");
-    section.className = "redirect-section";
-
-    const label = document.createElement("label");
-    label.textContent = "Оператор/окно";
 
     const input = document.createElement("input");
     input.type = "search";
-    input.placeholder = "Поиск оператора или окна";
-    input.value = redirectState.windowQuery;
+    input.placeholder = DEFAULT_REDIRECT_RECIPIENT_LABEL;
+    input.value = redirectState.windowId
+        ? redirectState.windowQuery
+        : (redirectState.windowQuery || DEFAULT_REDIRECT_RECIPIENT_LABEL);
     let windowList = createRedirectWindowList();
+    input.addEventListener("focus", () => {
+        if (!redirectState.windowId && input.value === DEFAULT_REDIRECT_RECIPIENT_LABEL) {
+            input.value = "";
+        }
+    });
     input.addEventListener("input", event => {
-        redirectState.windowQuery = event.target.value;
+        const value = event.target.value;
+        const hadSelectedWindow = Boolean(redirectState.windowId);
+        redirectState.windowQuery = value === DEFAULT_REDIRECT_RECIPIENT_LABEL ? "" : value;
+        if (!redirectState.windowQuery.trim()) {
+            redirectState.windowId = null;
+        } else if (
+            redirectState.windowId &&
+            !redirectWindowMatchesQuery(getRedirectWindow(redirectState.windowId), redirectState.windowQuery)
+        ) {
+            redirectState.windowId = null;
+        }
+
+        if (hadSelectedWindow && !redirectState.windowId) {
+            renderRedirectModal();
+            return;
+        }
+
         const nextWindowList = createRedirectWindowList();
         windowList.replaceWith(nextWindowList);
         windowList = nextWindowList;
+    });
+    input.addEventListener("blur", () => {
+        if (!redirectState.windowId && !redirectState.windowQuery.trim()) {
+            input.value = DEFAULT_REDIRECT_RECIPIENT_LABEL;
+        }
     });
 
     section.appendChild(label);
@@ -1152,6 +1153,7 @@ function createRedirectWindowList() {
 
     const windows = getFilteredRedirectWindows();
     if (!windows.length) {
+        if (!redirectState.windowQuery.trim() && !redirectState.windowId) return list;
         const empty = document.createElement("div");
         empty.className = "redirect-empty";
         empty.textContent = "Окна не найдены";
@@ -1160,8 +1162,9 @@ function createRedirectWindowList() {
     }
 
     windows.forEach(windowItem => {
-        const serviceNames = Array.isArray(windowItem.service_names) && windowItem.service_names.length
-            ? windowItem.service_names.join(", ")
+        const activeServices = getRedirectWindowActiveServices(windowItem);
+        const serviceNames = activeServices.length
+            ? activeServices.map(service => service.name).join(", ")
             : "услуги не назначены";
 
         const button = document.createElement("button");
@@ -1183,6 +1186,7 @@ function createRedirectWindowList() {
         button.appendChild(status);
         button.addEventListener("click", () => {
             redirectState.windowId = Number(windowItem.id);
+            redirectState.windowQuery = getRedirectWindowTitle(windowItem);
             if (
                 redirectState.serviceId &&
                 !redirectWindowSupportsService(windowItem, redirectState.serviceId)
@@ -1310,12 +1314,10 @@ async function confirmRedirectFromModal() {
 }
 
 async function confirmRedirect() {
-    redirectState.mode = "service";
     return confirmRedirectFromModal();
 }
 
 async function confirmRedirectToWindow() {
-    redirectState.mode = "window";
     return confirmRedirectFromModal();
 }
 
