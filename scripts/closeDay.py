@@ -34,6 +34,7 @@ class CloseDayResult:
     windows_offline: int
     tickets_finished: int
     tickets_cancelled: int
+    tickets_deferred: int
     sessions_deleted: int
     deleted_session_ids: tuple[str, ...]
 
@@ -88,6 +89,19 @@ def close_day(db) -> CloseDayResult:
             synchronize_session=False,
         )
     )
+    
+    tickets_deferred = (
+        db.query(Ticket)
+        .filter(Ticket.status == "deferred")
+        .update(
+            {
+                Ticket.status: "cancelled",
+                Ticket.completion_reason: "cancelled",
+                Ticket.finished_at: now,
+            },
+            synchronize_session=False,
+        )
+    )
 
     operators = db.query(Operator).order_by(Operator.id).all()
     for operator in operators:
@@ -116,6 +130,7 @@ def close_day(db) -> CloseDayResult:
         windows_offline=windows_offline,
         tickets_finished=tickets_finished,
         tickets_cancelled=tickets_cancelled,
+        tickets_deferred=tickets_deferred,
         sessions_deleted=sessions_deleted,
         deleted_session_ids=deleted_session_ids,
     )
@@ -151,6 +166,7 @@ def main() -> int:
     print(f"Окон переведено в offline: {result.windows_offline}")
     print(f"Текущих билетов завершено: {result.tickets_finished}")
     print(f"Ожидающих билетов отменено: {result.tickets_cancelled}")
+    print(f"Отложенных билетов отменено: {result.tickets_deferred}")
     print(f"Сессий операторов закрыто: {result.sessions_deleted}")
 
     try:
