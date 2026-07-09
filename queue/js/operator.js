@@ -857,7 +857,7 @@ async function finishCurrent(options = {}) {
 ========================= */
 async function loadAllServices() {
     try {
-        const res = await fetch(`${CONFIG.API_URL}/services/`);
+        const res = await fetch(`${CONFIG.API_URL}/services/?include_hidden=true`);
         allServices = await res.json();
     } catch (e) {
         console.error("Ошибка загрузки услуг:", e);

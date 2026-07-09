@@ -72,6 +72,12 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/redirect-to-window" in source
 
 
+def test_operator_redirect_loads_services_hidden_on_terminal():
+    source = read_text("queue/js/operator.js")
+
+    assert "`${CONFIG.API_URL}/services/?include_hidden=true`" in source
+
+
 def test_operator_redirect_uses_single_modal_button():
     html = read_text("queue/operator.html")
     js = read_text("queue/js/operator.js")
