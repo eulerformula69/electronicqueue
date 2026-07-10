@@ -122,6 +122,24 @@ def test_settings_view_renders_and_saves_ticket_print_scale_percent():
     assert "scale(var(--ticket-print-scale, 0.94))" in terminal_html
 
 
+def test_settings_view_renders_and_saves_auto_call_settings():
+    modern_source = _read("queue/js/admin/views/settings.view.js")
+    legacy_source = _read("queue/js/admin/settings.js")
+
+    for source in (modern_source, legacy_source):
+        assert "auto_call_enabled" in source
+        assert "auto_call_delay_seconds" in source
+
+    assert 'min=\\"0\\"' in modern_source
+    assert 'max=\\"600\\"' in modern_source
+    assert 'min="0"' in legacy_source
+    assert 'max="600"' in legacy_source
+
+    assert "validAutoCallDelay" in modern_source
+    assert "setting-auto-call-enabled" in legacy_source
+    assert "setting-auto-call-delay-seconds" in legacy_source
+
+
 def test_services_view_uses_drag_order_without_click_sorting():
     source = _read("queue/js/admin/views/services.view.js")
 

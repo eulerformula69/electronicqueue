@@ -242,6 +242,8 @@ class SystemSettingsUpdate(BaseModel):
     board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    auto_call_enabled: bool = False
+    auto_call_delay_seconds: int = Field(default=60, ge=0, le=600)
 
 
 class SystemSettingsResponse(BaseModel):
@@ -262,6 +264,8 @@ class SystemSettingsResponse(BaseModel):
     board_ticker_messages: List[BoardTickerMessage] = Field(default_factory=list)
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    auto_call_enabled: bool
+    auto_call_delay_seconds: int
 
 
 class PublicSettingsResponse(BaseModel):
@@ -276,3 +280,5 @@ class PublicSettingsResponse(BaseModel):
     board_ticker_text: str
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
+    auto_call_enabled: bool
+    auto_call_delay_seconds: int

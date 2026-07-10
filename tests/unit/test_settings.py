@@ -78,6 +78,12 @@ def test_ticket_print_scale_percent_is_in_settings_schemas():
         assert "ticket_print_scale_percent" in _schema_fields(schema)
 
 
+def test_auto_call_settings_are_in_settings_schemas():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "auto_call_enabled" in _schema_fields(schema)
+        assert "auto_call_delay_seconds" in _schema_fields(schema)
+
+
 def test_system_settings_dict_includes_board_ticker_text():
     engine = create_engine("sqlite:///:memory:")
     SystemSettings.__table__.create(engine)
@@ -130,6 +136,39 @@ def test_system_settings_dict_clamps_ticket_print_scale_percent():
         db.commit()
 
         assert get_system_settings_dict(db)["ticket_print_scale_percent"] == 150
+    finally:
+        db.close()
+
+
+def test_system_settings_dict_includes_auto_call_settings():
+    engine = create_engine("sqlite:///:memory:")
+    SystemSettings.__table__.create(engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    try:
+        db.add(SystemSettings(id=1, auto_call_enabled="true", auto_call_delay_seconds=30))
+        db.commit()
+
+        result = get_system_settings_dict(db)
+
+        assert result["auto_call_enabled"] is True
+        assert result["auto_call_delay_seconds"] == 30
+    finally:
+        db.close()
+
+
+def test_system_settings_dict_clamps_auto_call_delay_seconds():
+    engine = create_engine("sqlite:///:memory:")
+    SystemSettings.__table__.create(engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    try:
+        db.add(SystemSettings(id=1, auto_call_delay_seconds=999))
+        db.commit()
+
+        assert get_system_settings_dict(db)["auto_call_delay_seconds"] == 600
     finally:
         db.close()
 
@@ -217,6 +256,8 @@ def test_admin_routes_expose_board_ticker_text_in_public_settings():
     assert "settings.ticket_print_scale_percent = data.ticket_print_scale_percent" in source
     assert '"ticket_print_scale_percent": settings["ticket_print_scale_percent"]' in source
     assert '"board_ticker_text": settings["board_ticker_text"]' in source
+    assert '"auto_call_enabled": settings["auto_call_enabled"]' in source
+    assert '"auto_call_delay_seconds": settings["auto_call_delay_seconds"]' in source
     assert '"cancel_reason_options": [' in source
     assert '"defer_reason_options": [' in source
 
@@ -266,6 +307,8 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         defer_reason_options=[
             {"text": "Ждёт документы", "enabled": True},
         ],
+        auto_call_enabled=True,
+        auto_call_delay_seconds=15,
     )
 
     try:
@@ -278,9 +321,13 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         assert result["defer_reason_options"] == [
             {"text": "Ждёт документы", "enabled": True},
         ]
+        assert result["auto_call_enabled"] is True
+        assert result["auto_call_delay_seconds"] == 15
         settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
         assert "Клиент ушёл" in settings.cancel_reason_options
         assert "Ждёт документы" in settings.defer_reason_options
+        assert settings.auto_call_enabled == "true"
+        assert settings.auto_call_delay_seconds == 15
         assert {"type": "settings_updated"} in broadcasts
         assert board_updates == [True]
     finally:

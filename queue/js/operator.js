@@ -53,6 +53,10 @@ let newTicketSystemNotificationEnabled =
 let lastNewTicketNotificationAt = 0;
 const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;	
 let serviceNotificationSettings = new Map();
+let operatorSettings = {
+    auto_call_enabled: false,
+    auto_call_delay_seconds: 60
+};
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -194,8 +198,20 @@ async function loadOperatorReasonSettings() {
         const res = await fetch(`${CONFIG.API_URL}/settings/public`);
         if (!res.ok) throw new Error("Settings load failed");
         const settings = await res.json();
+        const hadActiveAutoCallTimer = Boolean(autoCallTimer);
+        operatorSettings = {
+            ...operatorSettings,
+            auto_call_enabled: settings.auto_call_enabled === true,
+            auto_call_delay_seconds: normalizeAutoCallDelay(settings.auto_call_delay_seconds)
+        };
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
+        }
+        updateAutoCallStatus();
+        if (!operatorSettings.auto_call_enabled) {
+            stopAutoCall("Автоочередь отключена администратором");
+        } else if (hadActiveAutoCallTimer) {
+            startAutoCallAfterFinish();
         }
     } catch (e) {
         console.debug("Operator reason settings load error:", e);
@@ -708,19 +724,24 @@ async function loadQueue(options = {}) {
             const counter = document.getElementById("served-today-count");
             if (counter) counter.textContent = data.tickets_served_today;
         }
+        return tickets;
 
     } catch (e) {
         console.error("Ошибка загрузки очереди:", e);
+        return [];
     }
 }
 
 /* =========================
    Вызов следующего клиента
 ========================= */
-async function callNext() {
+async function callNext(options = {}) {
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
+    }
+    if (!options.autoCall) {
+        stopAutoCall("");
     }
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/next`, {
@@ -734,6 +755,7 @@ async function callNext() {
 
         const ticket = await res.json();
         if (res.ok && ticket.id) {
+            stopAutoCall("");
             // Обновляем текущий билет и услугу
             setCurrentTicket(ticket);
             document.getElementById("current").textContent = ticket.number;
@@ -834,6 +856,7 @@ async function finishCurrent(options = {}) {
             document.getElementById("current").textContent = "Рабочее место свободно";
             // Также скрываем уведомление, если оно висело
             document.getElementById("toast-notification").style.display = "none";
+            startAutoCallAfterFinish();
         } else {
             // Если сервер вернул ошибку (например, клиент уже был завершен)
             alert(result.detail || "Ошибка при завершении");
@@ -1380,6 +1403,9 @@ async function changeWindowStatus(newStatus) {
         
         // Обновляем UI - подсветка кнопок
         updateStatusButtons(result.status); 
+        if (result.status !== "online") {
+            stopAutoCall("Автовызов на паузе: оператор не в статусе Online");
+        }
 
     } catch (e) {
         console.error(e);
@@ -1429,6 +1455,7 @@ async function loadCurrentTicket() {
         const data = await res.json();
 
         if (data.ticket) {
+            stopAutoCall("");
             setCurrentTicket(data.ticket);
             document.getElementById("current").textContent = data.ticket.number;
             // Ищем название услуги по service_id
@@ -1449,6 +1476,7 @@ async function loadCurrentTicket() {
 
 async function logout() {
     if (!confirm("Вы уверены, что хотите завершить работу?")) return;
+    stopAutoCall("");
 
     const sessionId = sessionStorage.getItem("session_id");
 
@@ -1712,6 +1740,7 @@ async function resumeDeferredTicket(ticketId) {
             throw new Error(data.detail || "Не удалось вернуть клиента в обслуживание");
         }
 
+        stopAutoCall("");
         setCurrentTicket(data);
         document.getElementById("current").textContent = data.number;
         document.getElementById("current-service").textContent = data.service_name || "Услуга не указана";
@@ -1814,92 +1843,119 @@ async function confirmReturnCurrentToQueue() {
 }
 
 let autoCallTimer = null;
-let secondsLeft = 5;
+let secondsLeft = 60;
 
-function stopAutoCall() {
+function normalizeAutoCallDelay(value) {
+    const delay = Number(value);
+    if (!Number.isInteger(delay)) return 60;
+    return Math.max(0, Math.min(600, delay));
+}
+
+function getAutoCallStatusDisplay() {
+    return document.getElementById("auto-call-status");
+}
+
+function isOperatorOnline() {
+    const startBtn = document.getElementById("btn-start");
+    return Boolean(startBtn && startBtn.classList.contains("status-active"));
+}
+
+function hasCurrentTicket() {
+    return currentTicketId !== null && currentTicketId !== undefined;
+}
+
+function updateAutoCallStatus(message) {
+    const statusDisplay = getAutoCallStatusDisplay();
+    if (!statusDisplay) return;
+
+    if (typeof message === "string") {
+        statusDisplay.textContent = message;
+        return;
+    }
+
+    statusDisplay.textContent = operatorSettings.auto_call_enabled
+        ? "Автоочередь включена"
+        : "Автоочередь отключена администратором";
+}
+
+function stopAutoCall(message) {
     if (autoCallTimer) {
         clearInterval(autoCallTimer);
         autoCallTimer = null;
     }
-    secondsLeft = 5;
-    const statusDisplay = document.getElementById("auto-call-status");
-    if (statusDisplay) statusDisplay.textContent = "";
+    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
+    if (message !== undefined) {
+        updateAutoCallStatus(message);
+    }
 }
 
-function runAutoCallLogic() {
-    stopAutoCall(); // Чистим всё перед запуском, чтобы не было дублей
-    autoCallTimer = setInterval(async () => {
-        const toggle = document.getElementById('auto-call-toggle');
-        const statusDisplay = document.getElementById("auto-call-status");
-        
-        // Если кнопку выключили, немедленно убиваем цикл
-        if (!toggle || !toggle.checked) {
-            stopAutoCall();
+function startAutoCallAfterFinish() {
+    stopAutoCall();
+
+    if (!operatorSettings.auto_call_enabled) {
+        updateAutoCallStatus("Автоочередь отключена администратором");
+        return;
+    }
+
+    if (!isOperatorOnline()) {
+        updateAutoCallStatus("Автовызов на паузе: оператор не в статусе Online");
+        return;
+    }
+
+    if (hasCurrentTicket()) {
+        updateAutoCallStatus("");
+        return;
+    }
+
+    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
+    if (secondsLeft === 0) {
+        runAutoCallNow();
+        return;
+    }
+
+    updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`);
+    autoCallTimer = setInterval(() => {
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+            clearInterval(autoCallTimer);
+            autoCallTimer = null;
+            runAutoCallNow();
             return;
         }
-
-        const nextBtn = document.getElementById("next-btn");
-        const currentElement = document.getElementById("current");
-        const startBtn = document.getElementById("btn-start");
-
-        if (!currentElement || !startBtn) return;
-
-        const currentText = currentElement.textContent;
-        const isFree = currentText.includes("Рабочее место свободно") || currentText === "--";
-        const isOnline = startBtn.classList.contains("status-active");
-        
-        if (isOnline && isFree) {
-            const queueItems = document.querySelectorAll('.queue-item');
-            
-            if (queueItems.length > 0) {
-                if (nextBtn && nextBtn.disabled) {
-                    statusDisplay.textContent = "Ожидание готовности...";
-                    return;
-                }
-
-                statusDisplay.textContent = `Следующий клиент через ${secondsLeft}...`;
-                
-                if (secondsLeft <= 0) {
-                    statusDisplay.textContent = "Вызываю...";
-                    secondsLeft = 5;
-                    await callNext();
-                } else {
-                    secondsLeft--;
-                }
-            } else {
-                statusDisplay.textContent = "Очередь пуста";
-                secondsLeft = 5;
-            }
-        } else if (!isFree) {
-            statusDisplay.textContent = "Клиент в обслуживании";
-            secondsLeft = 5;
-        } else {
-            statusDisplay.textContent = "Автовызов на паузе (Перерыв)";
-        }
+        updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`);
     }, 1000);
 }
 
-const autoCallToggle = document.getElementById('auto-call-toggle');
-
-if (autoCallToggle) {
-    const savedStatus = localStorage.getItem('autoCallActive');   
-    // Прямая проверка: запускаем только если в базе четко 'true'
-    if (savedStatus === 'true') {
-        autoCallToggle.checked = true;
-        runAutoCallLogic();
-    } else {
-        autoCallToggle.checked = false;
-        stopAutoCall();
+async function runAutoCallNow() {
+    if (!operatorSettings.auto_call_enabled) {
+        stopAutoCall("Автоочередь отключена администратором");
+        return;
     }
-    autoCallToggle.addEventListener('change', function(e) {
-        if (e.target.checked) {
-            localStorage.setItem('autoCallActive', 'true');
-            runAutoCallLogic();
-        } else {
-            localStorage.setItem('autoCallActive', 'false');
-            stopAutoCall();
-        }
-    });
+
+    if (!isOperatorOnline()) {
+        stopAutoCall("Автовызов на паузе: оператор не в статусе Online");
+        return;
+    }
+
+    if (hasCurrentTicket()) {
+        stopAutoCall("");
+        return;
+    }
+
+    const nextBtn = document.getElementById("next-btn");
+    if (nextBtn && nextBtn.disabled) {
+        stopAutoCall("Ожидание готовности...");
+        return;
+    }
+
+    const tickets = await loadQueue({ checkNewTickets: false });
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+        stopAutoCall("Очередь пуста");
+        return;
+    }
+
+    updateAutoCallStatus("Вызываю следующего клиента...");
+    await callNext({ autoCall: true });
 }
 
 /* =========================
@@ -1935,6 +1991,7 @@ async function promptCallByNumber() {
         const data = await res.json();
 
         if (res.ok && data.id) {
+            stopAutoCall("");
             // Успешно вызвали
             setCurrentTicket(data);
             document.getElementById("current").textContent = data.number;

@@ -471,6 +471,22 @@ def migrate_ticket_reason_settings_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_auto_call_settings_schema(engine):
+    """Add global auto-call settings controlled from admin settings."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS auto_call_enabled varchar DEFAULT 'false',
+        ADD COLUMN IF NOT EXISTS auto_call_delay_seconds integer DEFAULT 60;
+
+    UPDATE system_settings
+    SET auto_call_enabled = COALESCE(auto_call_enabled, 'false'),
+        auto_call_delay_seconds = COALESCE(auto_call_delay_seconds, 60);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

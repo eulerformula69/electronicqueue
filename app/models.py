@@ -242,6 +242,8 @@ class SystemSettings(Base):
     board_ticker_messages = Column(String(4000), default="")
     cancel_reason_options = Column(String(4000), default="")
     defer_reason_options = Column(String(4000), default="")
+    auto_call_enabled = Column(String, default="false")
+    auto_call_delay_seconds = Column(Integer, default=60)
 
 
 class QueueModePeriod(Base):

@@ -39,6 +39,9 @@ function render() {
                     {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
                     {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
                 ], settings.queue_mode))}
+                ${ctx.ui.field("Автоматический вызов следующего клиента", ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled))}
+                ${ctx.ui.field("Задержка перед автовызовом, сек.", ctx.ui.input("auto_call_delay_seconds", settings.auto_call_delay_seconds ?? 60, "type=\"number\" min=\"0\" max=\"600\" step=\"1\""))}
+                <small class="settings-hint">Отсчёт начинается после завершения текущего клиента.</small>
                 <div class="admin-field">
                     <span>Причины отмены</span>
                     <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>
@@ -166,6 +169,8 @@ async function save() {
         active_ticket_on_operator_logout: data.active_ticket_on_operator_logout,
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
         queue_mode: data.queue_mode,
+        auto_call_enabled: Boolean(data.auto_call_enabled),
+        auto_call_delay_seconds: Number(data.auto_call_delay_seconds),
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
         board_ticker_text: data.board_ticker_text.trim(),
@@ -179,6 +184,9 @@ async function save() {
     }
     if (!validTicketPrintScale(payload.ticket_print_scale_percent)) {
         return ctx.toast("Размер печатного талона должен быть от 50 до 150%", "error");
+    }
+    if (!validAutoCallDelay(payload.auto_call_delay_seconds)) {
+        return ctx.toast("Задержка автовызова должна быть целым числом от 0 до 600 секунд", "error");
     }
     if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
         return ctx.toast("Тексты терминала должны содержать <number>", "error");
@@ -201,6 +209,10 @@ function validDuration(value) {
 
 function validTicketPrintScale(value) {
     return Number.isInteger(value) && value >= 50 && value <= 150;
+}
+
+function validAutoCallDelay(value) {
+    return Number.isInteger(value) && value >= 0 && value <= 600;
 }
 
 function collectBoardTickerMessages() {

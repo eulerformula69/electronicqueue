@@ -137,6 +137,23 @@ export async function loadExtraSettings() {
 					</option>
 				</select>
 			</label>
+            <label class="settings-field-row">
+                <span class="settings-label">Автоматический вызов следующего клиента:</span>
+                <input type="checkbox" id="setting-auto-call-enabled" ${settings.auto_call_enabled ? "checked" : ""}>
+            </label>
+            <label class="settings-field-row">
+                <span class="settings-label">Задержка перед автовызовом, сек.:</span>
+                <input
+                    type="number"
+                    id="setting-auto-call-delay-seconds"
+                    class="settings-input"
+                    min="0"
+                    max="600"
+                    step="1"
+                    value="${settings.auto_call_delay_seconds ?? 60}"
+                >
+            </label>
+            <small class="settings-hint">Отсчёт начинается после завершения текущего клиента.</small>
             <div class="settings-field-row">
                 <span class="settings-label">Причины отмены:</span>
                 <div id="setting-cancel-reason-options">
@@ -215,6 +232,8 @@ export async function saveExtraSettings() {
 		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
 		hide_services_without_online_operators: document.getElementById("setting-unavailable-services-mode").value === "hide",
 		queue_mode: document.getElementById("setting-queue-mode").value,
+        auto_call_enabled: document.getElementById("setting-auto-call-enabled").checked,
+        auto_call_delay_seconds: Number(document.getElementById("setting-auto-call-delay-seconds").value),
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
@@ -242,6 +261,15 @@ export async function saveExtraSettings() {
         payload.ticket_print_scale_percent > 150
     ) {
         alert("Размер печатного талона должен быть от 50 до 150%");
+        return;
+    }
+
+    if (
+        !Number.isInteger(payload.auto_call_delay_seconds) ||
+        payload.auto_call_delay_seconds < 0 ||
+        payload.auto_call_delay_seconds > 600
+    ) {
+        alert("Задержка автовызова должна быть целым числом от 0 до 600 секунд");
         return;
     }
 

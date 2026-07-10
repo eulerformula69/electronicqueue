@@ -72,6 +72,25 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/redirect-to-window" in source
 
 
+def test_operator_auto_call_uses_global_settings_without_local_toggle():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+
+    assert 'id="auto-call-toggle"' not in html
+    assert "autoCallActive" not in source
+    assert "localStorage.getItem('autoCallActive')" not in source
+    assert "localStorage.setItem('autoCallActive'" not in source
+    assert "operatorSettings" in source
+    assert "auto_call_enabled" in source
+    assert "auto_call_delay_seconds" in source
+    assert "startAutoCallAfterFinish();" in source
+    assert "runAutoCallNow" in source
+    assert "await callNext({ autoCall: true });" in source
+    assert "loadQueue({ checkNewTickets: false })" in source
+    assert "Очередь пуста" in source
+    assert "auto-call-info-block" in html
+
+
 def test_operator_redirect_loads_services_hidden_on_terminal():
     source = read_text("queue/js/operator.js")
 
