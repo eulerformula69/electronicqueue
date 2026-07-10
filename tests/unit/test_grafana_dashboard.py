@@ -87,6 +87,26 @@ def test_operator_efficiency_is_stage_based():
     assert "NULLIF(count(*), 0)" in raw_sql
 
 
+def test_operator_day_status_timeline_panel():
+    dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
+    panel = _find_panel(dashboard["panels"], "Статусы сотрудников за рабочий день")
+
+    assert panel is not None
+    assert panel["type"] == "state-timeline"
+    assert panel["targets"][0]["format"] == "time_series"
+
+    raw_sql = panel["targets"][0]["rawSql"]
+    assert "operator_status_periods osp" in raw_sql
+    assert "GREATEST(osp.started_at, bounds.time_from)" in raw_sql
+    assert "LEAST(COALESCE(osp.ended_at, bounds.time_to), bounds.time_to)" in raw_sql
+    assert "osp.started_at < bounds.time_to" in raw_sql
+    assert "COALESCE(osp.ended_at, bounds.time_to) > bounds.time_from" in raw_sql
+    assert "osp.operator_id::text IN (${operator_id:sqlstring})" in raw_sql
+    assert "WHEN 'offline' THEN 0" in raw_sql
+    assert "WHEN 'online' THEN 1" in raw_sql
+    assert "WHEN 'break' THEN 2" in raw_sql
+
+
 def test_dashboard_percentile_and_operator_filter_are_variable_based():
     dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
     variables = {item["name"]: item for item in dashboard["templating"]["list"]}
