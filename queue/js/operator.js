@@ -209,7 +209,7 @@ async function loadOperatorReasonSettings() {
         }
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
-            stopAutoCall("Автоочередь отключена администратором");
+            stopAutoCall("Отключена администратором");
         } else if (hadActiveAutoCallTimer) {
             startAutoCallAfterFinish();
         }
@@ -1404,7 +1404,7 @@ async function changeWindowStatus(newStatus) {
         // Обновляем UI - подсветка кнопок
         updateStatusButtons(result.status); 
         if (result.status !== "online") {
-            stopAutoCall("Автовызов на паузе: оператор не в статусе Online");
+            stopAutoCall("На паузе: оператор не в статусе Online");
         }
 
     } catch (e) {
@@ -1855,6 +1855,10 @@ function getAutoCallStatusDisplay() {
     return document.getElementById("auto-call-status");
 }
 
+function getAutoCallHintDisplay() {
+    return document.getElementById("auto-call-hint");
+}
+
 function isOperatorOnline() {
     const startBtn = document.getElementById("btn-start");
     return Boolean(startBtn && startBtn.classList.contains("status-active"));
@@ -1864,18 +1868,29 @@ function hasCurrentTicket() {
     return currentTicketId !== null && currentTicketId !== undefined;
 }
 
-function updateAutoCallStatus(message) {
+function updateAutoCallStatus(message, options = {}) {
     const statusDisplay = getAutoCallStatusDisplay();
     if (!statusDisplay) return;
+    const hintDisplay = getAutoCallHintDisplay();
 
     if (typeof message === "string") {
         statusDisplay.textContent = message;
+        statusDisplay.dataset.state = options.state || "";
+        if (hintDisplay) hintDisplay.textContent = options.hint || "";
         return;
     }
 
-    statusDisplay.textContent = operatorSettings.auto_call_enabled
-        ? "Автоочередь включена"
-        : "Автоочередь отключена администратором";
+    if (operatorSettings.auto_call_enabled) {
+        statusDisplay.textContent = "Автоочередь включена";
+        statusDisplay.dataset.state = "enabled";
+        if (hintDisplay) {
+            hintDisplay.textContent = "Отсчёт начнётся после завершения текущего клиента.";
+        }
+    } else {
+        statusDisplay.textContent = "Отключена администратором";
+        statusDisplay.dataset.state = "disabled";
+        if (hintDisplay) hintDisplay.textContent = "";
+    }
 }
 
 function stopAutoCall(message) {
@@ -1885,7 +1900,11 @@ function stopAutoCall(message) {
     }
     secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
     if (message !== undefined) {
-        updateAutoCallStatus(message);
+        let state = "";
+        if (message.includes("Отключена")) state = "disabled";
+        if (message.includes("паузе") || message.includes("Ожидание")) state = "paused";
+        if (message.includes("пуста")) state = "empty";
+        updateAutoCallStatus(message, {state});
     }
 }
 
@@ -1893,12 +1912,12 @@ function startAutoCallAfterFinish() {
     stopAutoCall();
 
     if (!operatorSettings.auto_call_enabled) {
-        updateAutoCallStatus("Автоочередь отключена администратором");
+        updateAutoCallStatus("Отключена администратором", {state: "disabled"});
         return;
     }
 
     if (!isOperatorOnline()) {
-        updateAutoCallStatus("Автовызов на паузе: оператор не в статусе Online");
+        updateAutoCallStatus("На паузе: оператор не в статусе Online", {state: "paused"});
         return;
     }
 
@@ -1913,7 +1932,10 @@ function startAutoCallAfterFinish() {
         return;
     }
 
-    updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`);
+    updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
+        state: "countdown",
+        hint: "Не вызывайте вручную, если хотите дождаться автовызова."
+    });
     autoCallTimer = setInterval(() => {
         secondsLeft -= 1;
         if (secondsLeft <= 0) {
@@ -1922,18 +1944,21 @@ function startAutoCallAfterFinish() {
             runAutoCallNow();
             return;
         }
-        updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`);
+        updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
+            state: "countdown",
+            hint: "Не вызывайте вручную, если хотите дождаться автовызова."
+        });
     }, 1000);
 }
 
 async function runAutoCallNow() {
     if (!operatorSettings.auto_call_enabled) {
-        stopAutoCall("Автоочередь отключена администратором");
+        stopAutoCall("Отключена администратором");
         return;
     }
 
     if (!isOperatorOnline()) {
-        stopAutoCall("Автовызов на паузе: оператор не в статусе Online");
+        stopAutoCall("На паузе: оператор не в статусе Online");
         return;
     }
 
@@ -1954,7 +1979,7 @@ async function runAutoCallNow() {
         return;
     }
 
-    updateAutoCallStatus("Вызываю следующего клиента...");
+    updateAutoCallStatus("Вызываю следующего клиента...", {state: "calling"});
     await callNext({ autoCall: true });
 }
 
