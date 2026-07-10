@@ -1,6 +1,7 @@
 let ctx;
 let operators = [];
 let windows = [];
+let settings = {};
 let sortState = {key: "name", direction: "asc"};
 const sortStorageKey = "admin.operators.sort";
 
@@ -12,12 +13,14 @@ export async function mount(context) {
 }
 
 async function load() {
-    const [operatorData, windowData] = await Promise.all([
+    const [operatorData, windowData, settingsData] = await Promise.all([
         ctx.api.request("/operators/"),
-        ctx.api.request("/windows/")
+        ctx.api.request("/windows/"),
+        ctx.api.request("/admin/settings")
     ]);
     operators = Array.isArray(operatorData) ? operatorData : [];
     windows = Array.isArray(windowData) ? windowData : [];
+    settings = settingsData || {};
 }
 
 function render() {
@@ -33,7 +36,23 @@ function render() {
     `);
 
     ctx.view.innerHTML = `
-        <div class="admin-toolbar">${ctx.ui.button("Добавить оператора", {variant: "primary", action: "create"})}</div>
+        <div class="operator-top-row">
+            <form id="operator-auto-call-form" class="admin-card operator-auto-call-card">
+                <strong>Автовызов</strong>
+                <div class="operator-auto-call-controls">
+                    <label class="operator-auto-call-switch">
+                        ${ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled)}
+                        <span>По умолчанию</span>
+                    </label>
+                    <label class="operator-auto-call-delay">
+                        <span>Задержка, сек.</span>
+                        <input class="admin-input" name="auto_call_delay_seconds" type="number" min="0" max="600" step="1" value="${ctx.ui.escapeHtml(settings.auto_call_delay_seconds ?? 60)}">
+                    </label>
+                    ${ctx.ui.button("Сохранить", {variant: "primary", action: "save-auto-call"})}
+                </div>
+            </form>
+            ${ctx.ui.button("Добавить оператора", {variant: "primary", action: "create", className: "operator-add-button"})}
+        </div>
         ${ctx.ui.table([
             ctx.ui.sortHeader("ID", "id", sortState),
             ctx.ui.sortHeader("ФИО", "name", sortState),
@@ -46,12 +65,16 @@ function render() {
     ctx.view.onclick = handleClick;
 }
 
-function handleClick(event) {
+async function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) return;
     if (button.dataset.action === "sort") {
         setSort(button.dataset.sortKey);
         render();
+        return;
+    }
+    if (button.dataset.action === "save-auto-call") {
+        await saveAutoCallSettings();
         return;
     }
     if (button.dataset.action === "create") openDrawer();
@@ -189,6 +212,28 @@ async function saveOperator(id) {
     await load();
     render();
     ctx.toast("Оператор сохранён", "success");
+}
+
+async function saveAutoCallSettings() {
+    const form = document.getElementById("operator-auto-call-form");
+    const data = Object.fromEntries(new FormData(form).entries());
+    const auto_call_delay_seconds = Number(data.auto_call_delay_seconds);
+
+    if (!Number.isInteger(auto_call_delay_seconds) || auto_call_delay_seconds < 0 || auto_call_delay_seconds > 600) {
+        ctx.toast("Задержка автовызова должна быть целым числом от 0 до 600 секунд", "error");
+        return;
+    }
+
+    settings = await ctx.api.json("/admin/settings", {
+        method: "PUT",
+        body: {
+            ...settings,
+            auto_call_enabled: Boolean(data.auto_call_enabled),
+            auto_call_delay_seconds
+        }
+    });
+    ctx.toast("Настройки автовызова сохранены", "success");
+    render();
 }
 
 async function deleteOperator(id) {

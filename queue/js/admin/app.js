@@ -41,7 +41,7 @@ const routes = {
         mount: mountMedia
     },
     settings: {
-        label: "Настройки",
+        label: "Общее",
         description: "Реальные параметры терминала, очереди и табло",
         icon: "⚙",
         mount: mountSettings

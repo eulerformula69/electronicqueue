@@ -39,9 +39,6 @@ function render() {
                     {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
                     {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
                 ], settings.queue_mode))}
-                ${ctx.ui.field("Автовызов по умолчанию для операторов", ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled))}
-                ${ctx.ui.field("Задержка перед автовызовом, сек.", ctx.ui.input("auto_call_delay_seconds", settings.auto_call_delay_seconds ?? 60, "type=\"number\" min=\"0\" max=\"600\" step=\"1\""))}
-                <small class="settings-hint">Отсчёт начинается после завершения текущего клиента.</small>
                 <div class="admin-field">
                     <span>Причины отмены</span>
                     <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>
@@ -169,8 +166,8 @@ async function save() {
         active_ticket_on_operator_logout: data.active_ticket_on_operator_logout,
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
         queue_mode: data.queue_mode,
-        auto_call_enabled: Boolean(data.auto_call_enabled),
-        auto_call_delay_seconds: Number(data.auto_call_delay_seconds),
+        auto_call_enabled: settings.auto_call_enabled === true,
+        auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
         board_ticker_text: data.board_ticker_text.trim(),

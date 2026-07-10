@@ -5,6 +5,7 @@ const API = CONFIG.API_URL;
 let windows = [];
 let operators = [];
 let services = [];
+let operatorSettings = {};
 let openedServices = null;
 
 function resetOpened() {
@@ -36,6 +37,7 @@ export async function loadOperators(){
     windows = await fetchJSON(`${API}/windows/`);
     operators = await fetchJSON(`${API}/operators/`);
     services = await fetchJSON(`${API}/services/`);
+    operatorSettings = await fetchJSON(`${API}/admin/settings`) || {};
     operators.sort((a,b) => a.id - b.id);
 
     let html = `<tr><th>ID</th><th>Имя</th><th>Рабочее место</th><th>Автовызов</th><th>Действия</th></tr>`;
@@ -60,6 +62,22 @@ export async function loadOperators(){
     setTable(html);
     setForm(`
         <div class="form">
+          <h3>Автовызов</h3>
+          <label>
+            <input type="checkbox" id="operator-auto-call-enabled" ${operatorSettings.auto_call_enabled ? "checked" : ""}>
+            Автовызов по умолчанию для операторов
+          </label>
+          <input
+            id="operator-auto-call-delay-seconds"
+            type="number"
+            min="0"
+            max="600"
+            step="1"
+            value="${operatorSettings.auto_call_delay_seconds ?? 60}"
+            placeholder="Задержка, сек."
+          >
+          <button onclick="saveOperatorAutoCallSettings()">Сохранить автовызов</button>
+          <hr>
           <input id="newOperatorName" placeholder="Имя оператора">
           <input id="newOperatorLogin" placeholder="Логин">
           <input id="newOperatorPassword" placeholder="Пароль">
@@ -158,6 +176,30 @@ if(!r.ok){
 }
 loadOperators();
 resetOpened();
+}
+
+export async function saveOperatorAutoCallSettings(){
+  const auto_call_delay_seconds = Number(document.getElementById("operator-auto-call-delay-seconds").value);
+  if (!Number.isInteger(auto_call_delay_seconds) || auto_call_delay_seconds < 0 || auto_call_delay_seconds > 600) {
+    alert("Задержка автовызова должна быть целым числом от 0 до 600 секунд");
+    return;
+  }
+
+  const res = await fetchJSON(`${API}/admin/settings`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...operatorSettings,
+      auto_call_enabled: document.getElementById("operator-auto-call-enabled").checked,
+      auto_call_delay_seconds
+    })
+  });
+
+  if (res) {
+    operatorSettings = res;
+    alert("Настройки автовызова сохранены");
+    loadOperators();
+  }
 }
 
 export function editOperatorAutoCall(id, current){

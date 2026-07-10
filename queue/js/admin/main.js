@@ -10,6 +10,7 @@ import {
     loadTickets,
     saveLoginPassword,
     saveOperatorAutoCall,
+    saveOperatorAutoCallSettings,
     saveOperatorName,
     saveOperatorWindow,
 } from "./operators.js";
@@ -79,6 +80,7 @@ Object.assign(window, mapModule, {
     retryMediaJob,
     saveLoginPassword,
     saveOperatorAutoCall,
+    saveOperatorAutoCallSettings,
     saveOperatorName,
     saveOperatorWindow,
     saveServices,
