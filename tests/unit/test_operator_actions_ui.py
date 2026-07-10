@@ -112,6 +112,16 @@ def test_operator_auto_call_schedules_after_workspace_freeing_actions():
         assert "scheduleAutoCallAfterWorkspaceFreed();" in section
 
 
+def test_operator_auto_call_resumes_when_operator_goes_online():
+    source = read_text("queue/js/operator.js")
+    change_status_section = source.split("async function changeWindowStatus", 1)[1]
+    change_status_section = change_status_section.split("function updateStatusButtons", 1)[0]
+
+    assert 'stopAutoCall("На паузе")' in change_status_section
+    assert "scheduleAutoCallAfterWorkspaceFreed();" in change_status_section
+    assert "На паузе: оператор не в статусе Online" not in source
+
+
 def test_operator_redirect_loads_services_hidden_on_terminal():
     source = read_text("queue/js/operator.js")
 

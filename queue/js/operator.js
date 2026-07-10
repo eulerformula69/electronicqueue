@@ -1405,7 +1405,9 @@ async function changeWindowStatus(newStatus) {
         // Обновляем UI - подсветка кнопок
         updateStatusButtons(result.status); 
         if (result.status !== "online") {
-            stopAutoCall("На паузе: оператор не в статусе Online");
+            stopAutoCall("На паузе");
+        } else {
+            scheduleAutoCallAfterWorkspaceFreed();
         }
 
     } catch (e) {
@@ -1921,7 +1923,7 @@ function startAutoCallAfterFinish() {
     }
 
     if (!isOperatorOnline()) {
-        updateAutoCallStatus("На паузе: оператор не в статусе Online", {state: "paused"});
+        updateAutoCallStatus("На паузе", {state: "paused"});
         return;
     }
 
@@ -1964,7 +1966,7 @@ async function runAutoCallNow() {
     }
 
     if (!isOperatorOnline()) {
-        stopAutoCall("На паузе: оператор не в статусе Online");
+        stopAutoCall("На паузе");
         return;
     }
 
