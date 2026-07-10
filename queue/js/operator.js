@@ -1,5 +1,6 @@
 let sessionId = sessionStorage.getItem("session_id")
 let operatorId = null; // Вынесено в глобальную область видимости
+let currentWindowStatus = "offline";
 const panel = document.getElementById("queue-list");
 
 // Глобальный WebSocket оператора (терминальный канал)
@@ -57,6 +58,8 @@ let operatorSettings = {
     auto_call_enabled: false,
     auto_call_delay_seconds: 60
 };
+let recallCooldown = false;
+const CLIENT_OPERATIONS_ON_BREAK_MESSAGE = "Нельзя выполнять операции с клиентом во время перерыва";
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -740,6 +743,8 @@ async function callNext(options = {}) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
+
     if (!options.autoCall) {
         stopAutoCall("");
     }
@@ -835,6 +840,8 @@ function showFinishWarningPopup() {
 }
 
 async function finishCurrent(options = {}) {
+    if (!ensureClientOperationsAllowed()) return;
+
     if (!options.skipWarning && shouldWarnBeforeFinish()) {
         showFinishWarningPopup();
         return;
@@ -1005,6 +1012,7 @@ async function showRedirectModal() {
         alert("Нет текущего клиента");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
 
     if (!allServices.length) {
         await loadAllServices();
@@ -1281,6 +1289,8 @@ function canConfirmRedirect() {
 }
 
 async function confirmRedirectFromModal() {
+    if (!ensureClientOperationsAllowed()) return;
+
     if (!canConfirmRedirect()) {
         alert("Выберите услугу и подходящего получателя");
         return;
@@ -1417,10 +1427,33 @@ async function changeWindowStatus(newStatus) {
 }
 
 function updateStatusButtons(status) {
+    currentWindowStatus = status || "offline";
     const startBtn = document.getElementById("btn-start");
     const stopBtn = document.getElementById("btn-stop");
     const statusText = document.getElementById("status-text");
     const statusDot = document.getElementById("status-dot");
+    const callDisabled = currentWindowStatus === "break";
+    const clientActionButtonIds = [
+        "next-btn",
+        "call-by-number-btn",
+        "finish-btn",
+        "defer-ticket-btn",
+        "cancel-btn",
+        "recall-btn",
+        "redirect-btn",
+        "return-to-queue-btn",
+    ];
+
+    clientActionButtonIds.forEach(id => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.disabled = callDisabled || (id === "recall-btn" && recallCooldown);
+        }
+    });
+    if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.refresh) {
+        OperatorQueueSections.refresh();
+    }
+
     // Базовый сброс для всех состояний
     startBtn.classList.remove("status-active");
     stopBtn.classList.remove("btn-warning-active");
@@ -1428,7 +1461,7 @@ function updateStatusButtons(status) {
     statusDot.style.boxShadow = "none";
     statusDot.style.backgroundColor = "";
 
-    if (status === "online") {
+    if (currentWindowStatus === "online") {
         startBtn.classList.add("status-active");
         statusDot.className = "dot online";
         statusText.textContent = "В сети";
@@ -1436,7 +1469,7 @@ function updateStatusButtons(status) {
         return;
     }
 
-    if (status === "break") {
+    if (currentWindowStatus === "break") {
         stopBtn.classList.add("btn-warning-active");
         statusDot.style.backgroundColor = "var(--warning)";
         statusDot.style.boxShadow = "0 0 8px var(--warning)";
@@ -1536,10 +1569,10 @@ if (sessionStorage.getItem("refresh")) {
     sessionStorage.removeItem("refresh");
 }
 
-let recallCooldown = false;
 const RECALL_CD_TIME = 10000; // 10 секунд ограничения
 
 async function recallCurrent(options = {}) {
+    if (!ensureClientOperationsAllowed()) return;
     if (recallCooldown) return;
 
     try {
@@ -1576,7 +1609,7 @@ function startRecallTimer() {
         if (secondsLeft <= 0) {
             clearInterval(interval);
             recallCooldown = false;
-            btn.disabled = false;
+            btn.disabled = isOperatorOnBreak();
             btn.textContent = originalText;
         }
     }, 1000);
@@ -1587,6 +1620,8 @@ let cancelCooldown = false;
 const CANCEL_CD_TIME = 60000;
 
 async function cancelCurrent(options = {}) {
+    if (!ensureClientOperationsAllowed()) return;
+
     // есть ли вообще кого отменять?
     if (!currentTicketId) {
         alert("Нет активного клиента для отмены.");
@@ -1646,6 +1681,8 @@ async function cancelCurrent(options = {}) {
 }
 
 function showCancelReasonPopup() {
+    if (!ensureClientOperationsAllowed()) return;
+
     showOperatorPopup({
         title: "Отменить клиента",
         message: "Выберите причину отмены. Талон будет отображаться в колонке «Отменённые».",
@@ -1668,6 +1705,7 @@ function showDeferReasonPopup() {
         alert("Нет активного клиента для отложения.");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
 
     showOperatorPopup({
         title: "Отложить клиента",
@@ -1687,6 +1725,8 @@ function showDeferReasonPopup() {
 }
 
 async function deferCurrentTicket(reason) {
+    if (!ensureClientOperationsAllowed()) return;
+
     if (!reason) {
         alert("Выберите причину отложения.");
         return;
@@ -1724,7 +1764,7 @@ async function deferCurrentTicket(reason) {
         console.error("Ошибка отложения билета:", e);
         alert(e.message || "Не удалось отложить клиента");
     } finally {
-        if (button) button.disabled = false;
+        if (button) button.disabled = isOperatorOnBreak();
     }
 }
 
@@ -1733,6 +1773,7 @@ async function resumeDeferredTicket(ticketId) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/resume`, {
@@ -1764,6 +1805,7 @@ async function returnCurrentToQueue() {
         alert("Нет активного клиента для возврата в очередь.");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
 
     const returnedToQueueCount = await getCurrentTicketReturnedToQueueCount();
 
@@ -1817,6 +1859,8 @@ function showRepeatedReturnWarning() {
 }
 
 async function confirmReturnCurrentToQueue() {
+    if (!ensureClientOperationsAllowed()) return;
+
     const button = document.getElementById("return-to-queue-btn");
     if (button) button.disabled = true;
 
@@ -1844,7 +1888,7 @@ async function confirmReturnCurrentToQueue() {
         console.error("Ошибка возврата билета в очередь:", e);
         alert(e.message || "Не удалось вернуть клиента в очередь");
     } finally {
-        if (button) button.disabled = false;
+        if (button) button.disabled = isOperatorOnBreak();
     }
 }
 
@@ -1866,8 +1910,18 @@ function getAutoCallHintDisplay() {
 }
 
 function isOperatorOnline() {
-    const startBtn = document.getElementById("btn-start");
-    return Boolean(startBtn && startBtn.classList.contains("status-active"));
+    return currentWindowStatus === "online";
+}
+
+function isOperatorOnBreak() {
+    return currentWindowStatus === "break";
+}
+
+function ensureClientOperationsAllowed() {
+    if (!isOperatorOnBreak()) return true;
+
+    showToast(CLIENT_OPERATIONS_ON_BREAK_MESSAGE, "warning");
+    return false;
 }
 
 function hasCurrentTicket() {
@@ -2001,6 +2055,7 @@ async function promptCallByNumber() {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
+    if (!ensureClientOperationsAllowed()) return;
 
     const numStr = prompt("Введите номер талона для вызова:");
     if (!numStr) return; // Если нажали "Отмена" или ввели пустую строку

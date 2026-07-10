@@ -145,7 +145,7 @@
 			
 	<div class="button-group primary-actions">
 		<button id="next-btn" class="btn-primary" onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
-		<button class="btn-danger" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
+		<button class="btn-danger" id="finish-btn" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
 	</div>
 
 	<div class="button-group secondary-actions secondary-critical-actions">
@@ -155,7 +155,7 @@
 
 	<div class="button-group secondary-actions tertiary-actions">
 		<button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-		<button class="btn-outline" type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
+		<button class="btn-outline" id="call-by-number-btn" type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
 		<button class="btn-outline" id="redirect-btn" onclick="showRedirectModal()">ПЕРЕНАПРАВИТЬ</button>
 		<!---<div class="operator-more-actions">
 			<button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>

@@ -51,6 +51,7 @@ router = APIRouter()
 COMPLETED_TODAY_TICKET_DETAIL = (
     "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
 )
+CLIENT_OPERATIONS_ON_BREAK_DETAIL = "Нельзя выполнять операции с клиентом, пока оператор на перерыве"
 
 
 def is_ticket_redirected_to_operator_window(ticket, operator_window_id: int | None) -> bool:
@@ -58,6 +59,19 @@ def is_ticket_redirected_to_operator_window(ticket, operator_window_id: int | No
         ticket.target_window_id == operator_window_id
         and ticket.completion_reason == "redirected"
     )
+
+
+def operator_window_is_on_break(db: Session, operator: Operator) -> bool:
+    if not operator.window_id:
+        return False
+
+    window = db.query(Window).filter(Window.id == operator.window_id).first()
+    return bool(window and window.status == "break")
+
+
+def ensure_client_operations_allowed(db: Session, operator: Operator) -> None:
+    if operator_window_is_on_break(db, operator):
+        raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
 
 
 def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) -> dict:
@@ -320,6 +334,12 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     if not operator.window_id:
         db.close()
         raise HTTPException(status_code=404, detail="Operator or window not found")
+
+    try:
+        ensure_client_operations_allowed(db, operator)
+    except HTTPException:
+        db.close()
+        raise
     
     ticket = db.query(Ticket).filter(
         Ticket.window_id == operator.window_id,
@@ -353,6 +373,8 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
     try:
         if not operator.window_id:
             return {"detail": "Оператору не назначено окно"}
+
+        ensure_client_operations_allowed(db, operator)
 
         current = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
@@ -444,6 +466,8 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
     try:
         if not operator.window_id:
             return {"detail": "Оператору не назначено окно"}
+
+        ensure_client_operations_allowed(db, operator)
 
         # Проверяем, не обслуживается ли уже клиент
         current = db.query(Ticket).filter(
@@ -541,6 +565,12 @@ async def cancel_current_ticket(
         db.close()
         return {"detail": "Оператору не назначено окно"}
 
+    try:
+        ensure_client_operations_allowed(db, operator)
+    except HTTPException:
+        db.close()
+        raise
+
     # Ищем текущий вызванный билет в этом окне
     ticket = db.query(Ticket).filter(
         Ticket.window_id == operator.window_id,
@@ -590,6 +620,8 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
         if not operator.window_id:
             raise HTTPException(status_code=400, detail="Оператору не назначено окно")
 
+        ensure_client_operations_allowed(db, operator)
+
         ticket = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
             Ticket.status == "called"
@@ -631,6 +663,8 @@ async def defer_current_ticket(
         if not operator.window_id:
             raise HTTPException(status_code=400, detail="Оператору не назначено окно")
 
+        ensure_client_operations_allowed(db, operator)
+
         ticket = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
             Ticket.status == "called",
@@ -670,6 +704,8 @@ async def resume_operator_deferred_ticket(
     try:
         if not operator.window_id:
             raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
 
         current = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
@@ -900,6 +936,8 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         if not operator.window_id:
             raise HTTPException(status_code=400, detail="Оператору не назначено окно")
 
+        ensure_client_operations_allowed(db, operator)
+
         ticket = db.query(Ticket).filter(
             Ticket.id == data.ticket_id,
             Ticket.status == "called"
@@ -961,6 +999,11 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
 async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(verify_session)):
     db = SessionLocal()
     try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
+
         settings = get_system_settings_dict(db)
 
         ticket = db.query(Ticket).filter(
@@ -1050,6 +1093,11 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
 async def recall_ticket(operator: Operator = Depends(verify_session)):
     db = SessionLocal()
     try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
+
         ticket = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
             Ticket.status == "called"
