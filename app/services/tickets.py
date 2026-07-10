@@ -350,12 +350,10 @@ def build_ticket_called_event(
     window: Window,
     *,
     service: Service | None,
-    operator: Operator | None,
     settings: dict,
     call_id: str,
 ) -> dict:
     service_name = service.name if service else None
-    operator_name = operator.name if operator else None
     tts_text = render_ticket_template(
         settings["call_message_template"],
         ticket.number,
@@ -375,7 +373,6 @@ def build_ticket_called_event(
         "window_id": window.id,
         "window_name": window.name,
         "operator_id": ticket.operator_id,
-        "operator_name": operator_name,
         "display_text": display_text,
         "tts_text": tts_text
     }
@@ -390,7 +387,6 @@ def build_ticket_called_event(
         "window_id": window.id,
         "window_name": window.name,
         "operator_id": ticket.operator_id,
-        "operator_name": operator_name,
         "ticket": ticket_payload,
         "tts_text": tts_text,
         "display_text": display_text,
@@ -402,9 +398,6 @@ async def broadcast_ticket_called(ticket: Ticket, window: Window):
     try:
         settings = get_system_settings_dict(db)
         service = db.query(Service).filter(Service.id == ticket.service_id).first()
-        operator = None
-        if ticket.operator_id:
-            operator = db.query(Operator).filter(Operator.id == ticket.operator_id).first()
     finally:
         db.close()
 
@@ -418,7 +411,6 @@ async def broadcast_ticket_called(ticket: Ticket, window: Window):
         ticket,
         window,
         service=service,
-        operator=operator,
         settings=settings,
         call_id=call_id,
     ))

@@ -97,12 +97,11 @@
         const popup = ensureCallPopup();
         const number = getCallValue(data, "number") ?? getCallValue(data, "ticket_number");
         const serviceName = getCallValue(data, "service_name");
-        const operatorName = getCallValue(data, "operator_name");
         const windowName = getCallValue(data, "window_name");
 
         document.getElementById("board-call-popup-number").textContent = String(number ?? "");
         setOptionalText(document.getElementById("board-call-popup-service"), serviceName);
-        setOptionalText(document.getElementById("board-call-popup-operator"), operatorName);
+        setOptionalText(document.getElementById("board-call-popup-operator"), windowName ? "Оператор" : "");
         setOptionalText(document.getElementById("board-call-popup-window"), windowName);
 
         popup.hidden = false;

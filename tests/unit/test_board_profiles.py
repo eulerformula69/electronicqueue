@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.models import Operator, Service, Ticket, Window
+from app.models import Service, Ticket, Window
 from app.services.tickets import build_ticket_called_event
 
 
@@ -55,21 +55,26 @@ def test_board_popup_uses_safe_dom_text_assignment_and_auto_hides():
     assert "popup.hidden = true" in source
 
 
-def test_ticket_called_payload_contains_popup_fields():
+def test_board_popup_uses_operator_label_without_operator_name():
+    source = _read("queue/js/board-profiles.js")
+
+    assert 'getCallValue(data, "operator_name")' not in source
+    assert 'setOptionalText(document.getElementById("board-call-popup-operator"), windowName ? "Оператор" : "")' in source
+
+
+def test_ticket_called_payload_contains_popup_fields_without_operator_name():
     ticket = Ticket(id=123, number=45, service_id=7, operator_id=12)
-    window = Window(id=3, name="Окно 3")
-    service = Service(id=7, name="Название услуги")
-    operator = Operator(id=12, name="Имя оператора")
+    window = Window(id=3, name="Window 3")
+    service = Service(id=7, name="Consultation")
     settings = {
-        "call_message_template": "Талон <number> к <window>",
-        "board_ticket_template": "Билет <number> -> <window>",
+        "call_message_template": "Ticket <number> to <window>",
+        "board_ticket_template": "Ticket <number> -> <window>",
     }
 
     payload = build_ticket_called_event(
         ticket,
         window,
         service=service,
-        operator=operator,
         settings=settings,
         call_id="123:2026-07-10T10:00:00",
     )
@@ -78,10 +83,10 @@ def test_ticket_called_payload_contains_popup_fields():
     assert payload["ticket_id"] == 123
     assert payload["number"] == 45
     assert payload["service_id"] == 7
-    assert payload["service_name"] == "Название услуги"
+    assert payload["service_name"] == "Consultation"
     assert payload["window_id"] == 3
-    assert payload["window_name"] == "Окно 3"
+    assert payload["window_name"] == "Window 3"
     assert payload["operator_id"] == 12
-    assert payload["operator_name"] == "Имя оператора"
-    assert payload["ticket"]["service_name"] == "Название услуги"
-    assert payload["ticket"]["operator_name"] == "Имя оператора"
+    assert "operator_name" not in payload
+    assert payload["ticket"]["service_name"] == "Consultation"
+    assert "operator_name" not in payload["ticket"]
