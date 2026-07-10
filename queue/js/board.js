@@ -151,7 +151,10 @@ function handleMessage(event) {
 
                 pendingDrawTicketIds.delete(cleanId);
                 currentlyCallingId = cleanId;
-                highlightTickets.add(cleanId);
+
+                if (!window.BoardProfiles || window.BoardProfiles.shouldHighlightCall()) {
+                    highlightTickets.add(cleanId);
+                }
 
                 renderLatestTickets();
             } else {

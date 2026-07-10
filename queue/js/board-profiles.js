@@ -2,9 +2,11 @@
     const BOARD_PROFILES = {
         default: {
             callPopup: false,
+            callHighlight: true,
         },
         "2": {
             callPopup: true,
+            callHighlight: false,
         },
     };
 
@@ -119,5 +121,8 @@
         getCurrentProfile,
         handleTicketCalled: showCallPopup,
         normalizeBoardProfile,
+        shouldHighlightCall() {
+            return getCurrentProfile().callHighlight !== false;
+        },
     };
 })();

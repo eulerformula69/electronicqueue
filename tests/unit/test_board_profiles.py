@@ -23,14 +23,16 @@ def test_board_profiles_normalize_screen_values_and_enable_popup_only_for_screen
 
     assert "const BOARD_PROFILES" in source
     assert "callPopup: false" in source
+    assert "callHighlight: true" in source
     assert '"2": {' in source
     assert "callPopup: true" in source
+    assert "callHighlight: false" in source
     assert 'value === "1"' in source
     assert 'return "default";' in source
     assert 'new URLSearchParams(window.location.search).get("screen")' in source
 
 
-def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events():
+def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
     source = _read("queue/js/board.js")
 
     ticket_called_index = source.index('if (data.type === "ticket_called")')
@@ -40,6 +42,7 @@ def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events():
 
     assert duplicate_index < popup_index < recall_index
     assert "window.BoardProfiles.handleTicketCalled(data)" in source
+    assert "window.BoardProfiles.shouldHighlightCall()" in source
 
 
 def test_board_popup_uses_safe_dom_text_assignment_and_auto_hides():
