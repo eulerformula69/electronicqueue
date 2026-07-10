@@ -68,15 +68,16 @@
 
         const service = document.createElement("div");
         service.id = "board-call-popup-service";
-        service.className = "board-call-popup__detail";
+        service.className = "board-call-popup__detail board-call-popup__service";
 
         const operator = document.createElement("div");
         operator.id = "board-call-popup-operator";
-        operator.className = "board-call-popup__detail";
+        operator.className = "board-call-popup__detail board-call-popup__operator";
 
         const windowName = document.createElement("div");
         windowName.id = "board-call-popup-window";
         windowName.className = "board-call-popup__detail";
+        windowName.hidden = true;
 
         details.append(service, operator, windowName);
         content.append(label, number, details);
@@ -101,8 +102,8 @@
 
         document.getElementById("board-call-popup-number").textContent = String(number ?? "");
         setOptionalText(document.getElementById("board-call-popup-service"), serviceName);
-        setOptionalText(document.getElementById("board-call-popup-operator"), windowName ? "Оператор" : "");
-        setOptionalText(document.getElementById("board-call-popup-window"), windowName);
+        setOptionalText(document.getElementById("board-call-popup-operator"), windowName ? `Оператор ${windowName}` : "");
+        setOptionalText(document.getElementById("board-call-popup-window"), "");
 
         popup.hidden = false;
         popup.classList.add("is-visible");

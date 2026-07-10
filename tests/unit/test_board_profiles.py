@@ -55,11 +55,21 @@ def test_board_popup_uses_safe_dom_text_assignment_and_auto_hides():
     assert "popup.hidden = true" in source
 
 
-def test_board_popup_uses_operator_label_without_operator_name():
+def test_board_popup_uses_single_orange_operator_window_line():
     source = _read("queue/js/board-profiles.js")
+    board_css = _read("queue/css/board.css")
 
     assert 'getCallValue(data, "operator_name")' not in source
-    assert 'setOptionalText(document.getElementById("board-call-popup-operator"), windowName ? "Оператор" : "")' in source
+    assert 'windowName ? `Оператор ${windowName}` : ""' in source
+    assert 'setOptionalText(document.getElementById("board-call-popup-window"), "")' in source
+    assert "board-call-popup__service" in source
+    assert "board-call-popup__operator" in source
+    assert "body.board-page .board-call-popup__service" in board_css
+    assert "font-size: clamp(24px, 3vw, 46px);" in board_css
+    assert "body.board-page .board-call-popup__operator" in board_css
+    assert "font-size: clamp(42px, 5.4vw, 84px);" in board_css
+    assert "color: #ff7f50;" in board_css
+    assert "white-space: nowrap;" in board_css
 
 
 def test_ticket_called_payload_contains_popup_fields_without_operator_name():
