@@ -39,7 +39,7 @@ function render() {
                     {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
                     {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
                 ], settings.queue_mode))}
-                ${ctx.ui.field("Автоматический вызов следующего клиента", ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled))}
+                ${ctx.ui.field("Автовызов по умолчанию для операторов", ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled))}
                 ${ctx.ui.field("Задержка перед автовызовом, сек.", ctx.ui.input("auto_call_delay_seconds", settings.auto_call_delay_seconds ?? 60, "type=\"number\" min=\"0\" max=\"600\" step=\"1\""))}
                 <small class="settings-hint">Отсчёт начинается после завершения текущего клиента.</small>
                 <div class="admin-field">

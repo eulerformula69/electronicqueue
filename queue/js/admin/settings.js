@@ -138,7 +138,7 @@ export async function loadExtraSettings() {
 				</select>
 			</label>
             <label class="settings-field-row">
-                <span class="settings-label">Автоматический вызов следующего клиента:</span>
+                <span class="settings-label">Автовызов по умолчанию для операторов:</span>
                 <input type="checkbox" id="setting-auto-call-enabled" ${settings.auto_call_enabled ? "checked" : ""}>
             </label>
             <label class="settings-field-row">

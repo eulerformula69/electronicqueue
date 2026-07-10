@@ -133,6 +133,7 @@ class OperatorCreate(BaseModel):
     login: str
     password: str
     window_id: int | None = None
+    auto_call_mode: str = "default"
 
 
 class WindowCreate(BaseModel):

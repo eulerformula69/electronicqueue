@@ -27,6 +27,7 @@ function render() {
             <td><strong>${ctx.ui.escapeHtml(operator.name)}</strong></td>
             <td>${ctx.ui.escapeHtml(operator.login || "-")}</td>
             <td>${ctx.ui.escapeHtml(windowName(operator.window_id))}</td>
+            <td>${ctx.ui.escapeHtml(autoCallModeLabel(operator.auto_call_mode))}</td>
             <td>${ctx.ui.button("Редактировать", {variant: "link", action: "edit", id: operator.id})}</td>
         </tr>
     `);
@@ -38,6 +39,7 @@ function render() {
             ctx.ui.sortHeader("ФИО", "name", sortState),
             ctx.ui.sortHeader("Логин", "login", sortState),
             ctx.ui.sortHeader("Рабочее место", "window", sortState),
+            ctx.ui.sortHeader("Автовызов", "auto_call", sortState),
             "Действия"
         ], rows)}
     `;
@@ -75,6 +77,7 @@ function operatorSortValue(operator, key) {
     if (key === "id") return operator.id ?? 0;
     if (key === "login") return operator.login || "";
     if (key === "window") return windowName(operator.window_id);
+    if (key === "auto_call") return autoCallModeLabel(operator.auto_call_mode);
     return operator.name || "";
 }
 
@@ -85,7 +88,7 @@ function compareValues(a, b) {
 function loadSortState(fallback) {
     try {
         const parsed = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
-        if (parsed && ["id", "name", "login", "window"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
+        if (parsed && ["id", "name", "login", "window", "auto_call"].includes(parsed.key) && ["asc", "desc"].includes(parsed.direction)) {
             return parsed;
         }
     } catch (error) {
@@ -113,6 +116,18 @@ function windowOptions(selectedId) {
     ];
 }
 
+function autoCallModeOptions() {
+    return [
+        {value: "default", label: "По общей настройке"},
+        {value: "enabled", label: "Включён"},
+        {value: "disabled", label: "Выключен"}
+    ];
+}
+
+function autoCallModeLabel(mode) {
+    return autoCallModeOptions().find(item => item.value === mode)?.label || "По общей настройке";
+}
+
 function openDrawer(operator = null) {
     const isEdit = Boolean(operator);
     ctx.openDrawer(isEdit ? "Редактирование оператора" : "Новый оператор", `
@@ -121,6 +136,7 @@ function openDrawer(operator = null) {
             ${ctx.ui.field("Логин", ctx.ui.input("login", operator?.login || "", "required"))}
             ${ctx.ui.field("Пароль", ctx.ui.input("password", "", `${isEdit ? "placeholder=\"Оставьте пустым, чтобы не менять\"" : "required"} type="password"`))}
             ${ctx.ui.field("Рабочее место", ctx.ui.select("window_id", windowOptions(operator?.window_id), operator?.window_id ?? ""))}
+            ${ctx.ui.field("Автовызов", ctx.ui.select("auto_call_mode", autoCallModeOptions(), operator?.auto_call_mode || "default"))}
         </form>
     `, {
         footer: `
@@ -148,6 +164,7 @@ async function saveOperator(id) {
     const login = data.login?.trim();
     const password = data.password?.trim();
     const window_id = data.window_id ? Number(data.window_id) : null;
+    const auto_call_mode = data.auto_call_mode || "default";
 
     if (!name || !login || (!id && !password)) {
         ctx.toast("Заполните имя, логин и пароль", "error");
@@ -155,14 +172,14 @@ async function saveOperator(id) {
     }
 
     if (!id) {
-        await ctx.api.json("/operators/", {method: "POST", body: {name, login, password, window_id}});
+        await ctx.api.json("/operators/", {method: "POST", body: {name, login, password, window_id, auto_call_mode}});
     } else {
         const current = operators.find(item => item.id === id);
         if (current && login !== current.login && !password) {
             ctx.toast("Для смены логина укажите новый пароль", "error");
             return;
         }
-        await ctx.api.json(`/operators/${id}`, {method: "PATCH", body: {name, window_id}});
+        await ctx.api.json(`/operators/${id}`, {method: "PATCH", body: {name, window_id, auto_call_mode}});
         if (password) {
             await ctx.api.json(`/operators/${id}/login`, {method: "PUT", body: {login, password}});
         }

@@ -487,6 +487,22 @@ def migrate_auto_call_settings_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_operator_auto_call_schema(engine):
+    """Add per-operator auto-call override."""
+    ddl = """
+    ALTER TABLE operators
+        ADD COLUMN IF NOT EXISTS auto_call_mode varchar DEFAULT 'default';
+
+    UPDATE operators
+    SET auto_call_mode = 'default'
+    WHERE auto_call_mode IS NULL
+       OR auto_call_mode NOT IN ('default', 'enabled', 'disabled');
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

@@ -198,18 +198,27 @@ const RECALL_FINISH_WARNING_COUNT = 2;
 
 async function loadOperatorReasonSettings() {
     try {
-        const res = await fetch(`${CONFIG.API_URL}/settings/public`);
-        if (!res.ok) throw new Error("Settings load failed");
-        const settings = await res.json();
+        const [settingsRes, detailsRes] = await Promise.all([
+            fetch(`${CONFIG.API_URL}/settings/public`),
+            fetch(`${CONFIG.API_URL}/operators/details`, {
+                headers: { "session-id": sessionId }
+            })
+        ]);
+        if (!settingsRes.ok) throw new Error("Settings load failed");
+        const settings = await settingsRes.json();
+        const details = detailsRes.ok ? await detailsRes.json() : {};
         const hadActiveAutoCallTimer = Boolean(autoCallTimer);
         operatorSettings = {
             ...operatorSettings,
-            auto_call_enabled: settings.auto_call_enabled === true,
-            auto_call_delay_seconds: normalizeAutoCallDelay(settings.auto_call_delay_seconds)
+            auto_call_enabled: (details.auto_call_enabled ?? settings.auto_call_enabled) === true,
+            auto_call_delay_seconds: normalizeAutoCallDelay(
+                details.auto_call_delay_seconds ?? settings.auto_call_delay_seconds
+            )
         };
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
         }
+        syncAutoCallVisibility();
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
             stopAutoCall("Отключена администратором");
@@ -1909,6 +1918,16 @@ function getAutoCallHintDisplay() {
     return document.getElementById("auto-call-hint");
 }
 
+function getAutoCallInfoBlock() {
+    return document.getElementById("auto-call-info-block");
+}
+
+function syncAutoCallVisibility() {
+    const block = getAutoCallInfoBlock();
+    if (!block) return;
+    block.style.display = operatorSettings.auto_call_enabled ? "" : "none";
+}
+
 function isOperatorOnline() {
     return currentWindowStatus === "online";
 }
@@ -1929,6 +1948,7 @@ function hasCurrentTicket() {
 }
 
 function updateAutoCallStatus(message, options = {}) {
+    syncAutoCallVisibility();
     const statusDisplay = getAutoCallStatusDisplay();
     if (!statusDisplay) return;
     const hintDisplay = getAutoCallHintDisplay();

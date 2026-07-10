@@ -82,6 +82,7 @@ class Operator(Base):
     login = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     window_id = Column(Integer, ForeignKey("windows.id"), unique=True)
+    auto_call_mode = Column(String, default="default")
 
 
 class OperatorServiceNotification(Base):

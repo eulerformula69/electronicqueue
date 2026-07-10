@@ -42,8 +42,27 @@ from app.schemas import (
 )
 from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state
+from app.services.settings import get_system_settings_dict
 
 router = APIRouter()
+
+AUTO_CALL_MODES = {"default", "enabled", "disabled"}
+
+
+def normalize_auto_call_mode(value) -> str:
+    mode = str(value or "default").strip().lower()
+    if mode not in AUTO_CALL_MODES:
+        raise HTTPException(status_code=400, detail="Некорректный режим автовызова")
+    return mode
+
+
+def resolve_operator_auto_call_enabled(operator: Operator, global_enabled: bool) -> bool:
+    mode = getattr(operator, "auto_call_mode", None) or "default"
+    if mode == "enabled":
+        return True
+    if mode == "disabled":
+        return False
+    return bool(global_enabled)
 
 
 def build_service_notification_payload(service_id, service_name, priority, enabled):
@@ -153,6 +172,7 @@ def create_operator(
             login=operator.login,
             password=hashed_password,
             window_id=operator.window_id,
+            auto_call_mode=normalize_auto_call_mode(operator.auto_call_mode),
         )
 
         db.add(db_operator)
@@ -165,6 +185,7 @@ def create_operator(
             "name": db_operator.name,
             "login": db_operator.login,
             "window_id": db_operator.window_id,
+            "auto_call_mode": db_operator.auto_call_mode,
             "password": "••••••",  # Админ видит это на экране вместо хэша
         }
     except Exception as e:
@@ -193,6 +214,7 @@ async def list_operators(
                 "name": op.name,
                 "login": op.login,
                 "window_id": op.window_id,
+                "auto_call_mode": op.auto_call_mode or "default",
                 "password": "••••••"  # Прячем хэш от фронтенда
             })
             
@@ -295,6 +317,9 @@ async def update_operator(operator_id: int, data: dict, admin: Admin = Depends(v
     if "name" in data:
         op.name = data["name"]
 
+    if "auto_call_mode" in data:
+        op.auto_call_mode = normalize_auto_call_mode(data["auto_call_mode"])
+
     if "window_id" in data:
 
         new_window = data["window_id"]
@@ -329,10 +354,12 @@ async def update_operator(operator_id: int, data: dict, admin: Admin = Depends(v
                 db, op.id, new_window, new_window_status
             )
 
-
-    await manager.broadcast({"type": "services_updated", "target": "operator"})
     db.commit()
     db.refresh(op)
+
+    await manager.broadcast({"type": "services_updated", "target": "operator"})
+    await manager.broadcast({"type": "settings_updated"})
+
     db.close()
 
     return op
@@ -466,6 +493,8 @@ async def get_my_details(operator: Operator = Depends(verify_session)):
         window = None
         if operator.window_id:
             window = db.query(Window).filter(Window.id == operator.window_id).first()
+        settings = get_system_settings_dict(db)
+        auto_call_mode = operator.auto_call_mode or "default"
         
         services_with_priority = []
         if operator.window_id:
@@ -484,6 +513,12 @@ async def get_my_details(operator: Operator = Depends(verify_session)):
             "window_id": operator.window_id,
             "window_name": window.name if window else "Не назначено",
             "window_status": window.status if window else "offline",
+            "auto_call_mode": auto_call_mode,
+            "auto_call_enabled": resolve_operator_auto_call_enabled(
+                operator,
+                settings["auto_call_enabled"],
+            ),
+            "auto_call_delay_seconds": settings["auto_call_delay_seconds"],
             "services": services_with_priority # Теперь это список объектов
         }
     finally:

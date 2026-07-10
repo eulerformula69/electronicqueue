@@ -17,6 +17,12 @@ function getWindowName(id) {
     return windowItem ? windowItem.name : "-";
 }
 
+function getAutoCallModeLabel(mode) {
+    if (mode === "enabled") return "Включён";
+    if (mode === "disabled") return "Выключен";
+    return "По общей настройке";
+}
+
 export async function loadOperators(){
 	resetOpened();
 	// Показываем форму и таблицу обратно
@@ -32,7 +38,7 @@ export async function loadOperators(){
     services = await fetchJSON(`${API}/services/`);
     operators.sort((a,b) => a.id - b.id);
 
-    let html = `<tr><th>ID</th><th>Имя</th><th>Рабочее место</th><th>Действия</th></tr>`;
+    let html = `<tr><th>ID</th><th>Имя</th><th>Рабочее место</th><th>Автовызов</th><th>Действия</th></tr>`;
 
     for(let op of operators){
         html += `
@@ -40,9 +46,11 @@ export async function loadOperators(){
           <td>${op.id}</td>
           <td id="name-${op.id}">${op.name}</td>
           <td id="window-${op.id}">${getWindowName(op.window_id)}</td>
+          <td id="auto-call-${op.id}">${getAutoCallModeLabel(op.auto_call_mode)}</td>
           <td>
             <button onclick="editOperatorName(${op.id},'${op.name}')">Имя</button>
             <button onclick="editOperatorWindow(${op.id},${op.window_id})">Рабочее место</button>
+            <button onclick="editOperatorAutoCall(${op.id},'${op.auto_call_mode || "default"}')">Автовызов</button>
             <button onclick="editLoginPassword(${op.id})">Данные</button>
             <button style="background: #ffcccc;" onclick="deleteOperator(${op.id})">Удалить</button>
           </td>
@@ -75,7 +83,7 @@ export function editOperatorName(id,name){
   let row = document.getElementById("row-"+id);
 
   let html = '<tr class="nameRow" data-operator-id="'+id+'" data-type="name">' +
-             '<td></td><td></td><td></td>' +
+             '<td></td><td></td><td></td><td></td>' +
              '<td><input id="nameInput-'+id+'" value="'+name+'"> ' +
              '<button onclick="saveOperatorName('+id+')">OK</button></td></tr>';
 
@@ -109,7 +117,7 @@ export function editOperatorWindow(id,current){
   openedServices?.remove();
 
   let html = '<tr class="windowRow" data-operator-id="'+id+'" data-type="window">' +
-             '<td></td><td></td><td></td>' +
+             '<td></td><td></td><td></td><td></td>' +
              '<td><select id="windowSelect-'+id+'">';
   html += '<option value="">Нет окна</option>';
   for(let w of windows){
@@ -150,6 +158,42 @@ if(!r.ok){
 }
 loadOperators();
 resetOpened();
+}
+
+export function editOperatorAutoCall(id, current){
+  if(openedServices && openedServices.dataset.type === "auto-call" && openedServices.dataset.operatorId == id){
+    openedServices.remove();
+    openedServices = null;
+    return;
+  }
+  openedServices?.remove();
+
+  const mode = current || "default";
+  const html = '<tr class="autoCallRow" data-operator-id="'+id+'" data-type="auto-call">' +
+             '<td></td><td></td><td></td><td></td>' +
+             '<td><select id="autoCallSelect-'+id+'">' +
+             '<option value="default" '+(mode==="default"?"selected":"")+'>По общей настройке</option>' +
+             '<option value="enabled" '+(mode==="enabled"?"selected":"")+'>Включён</option>' +
+             '<option value="disabled" '+(mode==="disabled"?"selected":"")+'>Выключен</option>' +
+             '</select> <button onclick="saveOperatorAutoCall('+id+')">OK</button></td></tr>';
+
+  const row = document.getElementById("row-"+id);
+  row.insertAdjacentHTML("afterend", html);
+  openedServices = row.nextElementSibling;
+}
+
+export async function saveOperatorAutoCall(id){
+  const auto_call_mode = document.getElementById(`autoCallSelect-${id}`).value || "default";
+  const res = await fetchJSON(`${API}/operators/${id}`,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({auto_call_mode})
+  });
+
+  if (!res) return;
+
+  loadOperators();
+  resetOpened();
 }
 
 
@@ -229,6 +273,7 @@ export async function editLoginPassword(operator_id) {
 
 let html = `
 <tr id="loginPassRow" data-operator-id="${operator_id}">
+<td></td>
 <td></td>
 <td></td>
 <td></td>
