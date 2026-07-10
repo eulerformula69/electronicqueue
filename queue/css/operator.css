@@ -718,12 +718,13 @@ body.operator-page .auto-call-info-block{
 }
 body.operator-page .display-zone .auto-call-info-block{
     width: 100%;
-    margin-top: 22px;
+    margin-top: auto;
     padding: 16px 18px;
     border: 1px solid #dbe5f1;
     border-radius: 8px;
     background: #f8fafc;
-    text-align: left;
+    align-items: center;
+    text-align: center;
 }
 body.operator-page .auto-call-info-block strong{
     font-size: 0.95rem;
