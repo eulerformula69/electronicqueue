@@ -96,6 +96,7 @@
     function hardReloadBeforeWebOsStalls() {
         var url;
 
+        if (window.BOARD_DISABLE_FORCED_RELOAD) return;
         if (new Date().getTime() - startedAt < HARD_RELOAD_AFTER_MS) return;
 
         url = window.location.pathname + "?lgLiteReload=" + new Date().getTime();

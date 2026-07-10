@@ -80,7 +80,7 @@
 
         video.addEventListener("ended", function () {
             /* Перезапуск на границе роликов освобождает память LG WebView. */
-            if (new Date().getTime() - startedAt >= RELOAD_AFTER_MS) {
+            if (!window.BOARD_DISABLE_FORCED_RELOAD && new Date().getTime() - startedAt >= RELOAD_AFTER_MS) {
                 window.location.reload();
                 return;
             }
