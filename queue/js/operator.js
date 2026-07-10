@@ -1937,8 +1937,7 @@ function startAutoCallAfterFinish() {
     }
 
     updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-        state: "countdown",
-        hint: "Не вызывайте вручную, если хотите дождаться автовызова."
+        state: "countdown"
     });
     autoCallTimer = setInterval(() => {
         secondsLeft -= 1;
@@ -1949,8 +1948,7 @@ function startAutoCallAfterFinish() {
             return;
         }
         updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-            state: "countdown",
-            hint: "Не вызывайте вручную, если хотите дождаться автовызова."
+            state: "countdown"
         });
     }, 1000);
 }

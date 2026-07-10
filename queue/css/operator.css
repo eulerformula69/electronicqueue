@@ -719,10 +719,10 @@ body.operator-page .auto-call-info-block{
 body.operator-page .display-zone .auto-call-info-block{
     width: 100%;
     margin-top: auto;
-    padding: 16px 18px;
-    border: 1px solid #dbe5f1;
-    border-radius: 8px;
-    background: #f8fafc;
+    padding: 16px 18px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     align-items: center;
     text-align: center;
 }
@@ -755,11 +755,13 @@ body.operator-page .auto-call-info-block .auto-call-status-text[data-state="disa
 }
 body.operator-page .auto-call-hint{
     display: block;
-    min-height: 1rem;
     font-size: 0.82rem;
     line-height: 1.35;
     color: var(--text-muted);
     overflow-wrap: anywhere;
+}
+body.operator-page .auto-call-hint:empty{
+    display: none;
 }
 body.operator-page .service-row{
     display: flex;
