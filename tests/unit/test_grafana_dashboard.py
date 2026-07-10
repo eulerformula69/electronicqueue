@@ -102,6 +102,7 @@ def test_operator_day_status_timeline_panel():
     assert "osp.started_at < bounds.time_to" in raw_sql
     assert "COALESCE(osp.ended_at, bounds.time_to) > bounds.time_from" in raw_sql
     assert "osp.operator_id::text IN (${operator_id:sqlstring})" in raw_sql
+    assert "event_time AT TIME ZONE 'Asia/Irkutsk' AS \"time\"" in raw_sql
     assert "WHEN 'offline' THEN 0" in raw_sql
     assert "WHEN 'online' THEN 1" in raw_sql
     assert "WHEN 'break' THEN 2" in raw_sql
