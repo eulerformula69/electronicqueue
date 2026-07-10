@@ -75,6 +75,9 @@ def test_operator_actions_keep_existing_ticket_endpoints():
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
+    display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
+    display_zone = display_zone.split('<section class="glass-card">', 1)[0]
+    info_panel = html.split('<div id="operator-info"', 1)[1]
 
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
@@ -88,7 +91,25 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "await callNext({ autoCall: true });" in source
     assert "loadQueue({ checkNewTickets: false })" in source
     assert "Очередь пуста" in source
-    assert "auto-call-info-block" in html
+    assert "auto-call-info-block" in display_zone
+    assert "auto-call-info-block" not in info_panel
+
+
+def test_operator_auto_call_schedules_after_workspace_freeing_actions():
+    source = read_text("queue/js/operator.js")
+
+    assert "function scheduleAutoCallAfterWorkspaceFreed()" in source
+    assert source.count("scheduleAutoCallAfterWorkspaceFreed();") >= 5
+
+    for marker in [
+        "async function finishCurrent",
+        "async function confirmRedirectFromModal",
+        "async function cancelCurrent",
+        "async function deferCurrentTicket",
+        "async function confirmReturnCurrentToQueue",
+    ]:
+        section = source.split(marker, 1)[1].split("async function ", 1)[0]
+        assert "scheduleAutoCallAfterWorkspaceFreed();" in section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():

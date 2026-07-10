@@ -856,7 +856,7 @@ async function finishCurrent(options = {}) {
             document.getElementById("current").textContent = "Рабочее место свободно";
             // Также скрываем уведомление, если оно висело
             document.getElementById("toast-notification").style.display = "none";
-            startAutoCallAfterFinish();
+            scheduleAutoCallAfterWorkspaceFreed();
         } else {
             // Если сервер вернул ошибку (например, клиент уже был завершен)
             alert(result.detail || "Ошибка при завершении");
@@ -1328,6 +1328,7 @@ async function confirmRedirectFromModal() {
         closeRedirectModal();
         await loadQueue();
         await loadCurrentTicket();
+        scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка перенаправления:", e);
         alert("Ошибка соединения с сервером");
@@ -1625,6 +1626,7 @@ async function cancelCurrent(options = {}) {
             clearCurrentTicket(); 
             loadQueue(); 
             if (typeof updateStatus === "function") updateStatus(); 
+            scheduleAutoCallAfterWorkspaceFreed();
             
         } else {
             alert(data.detail || `Ошибка сервера: ${res.status}`);
@@ -1715,6 +1717,7 @@ async function deferCurrentTicket(reason) {
             "success"
         );
         await loadQueue();
+        scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка отложения билета:", e);
         alert(e.message || "Не удалось отложить клиента");
@@ -1834,6 +1837,7 @@ async function confirmReturnCurrentToQueue() {
             "success"
         );
         await loadQueue();
+        scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка возврата билета в очередь:", e);
         alert(e.message || "Не удалось вернуть клиента в очередь");
@@ -1949,6 +1953,10 @@ function startAutoCallAfterFinish() {
             hint: "Не вызывайте вручную, если хотите дождаться автовызова."
         });
     }, 1000);
+}
+
+function scheduleAutoCallAfterWorkspaceFreed() {
+    startAutoCallAfterFinish();
 }
 
 async function runAutoCallNow() {
