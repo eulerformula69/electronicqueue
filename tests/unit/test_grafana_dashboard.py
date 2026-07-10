@@ -97,10 +97,13 @@ def test_operator_day_status_timeline_panel():
 
     raw_sql = panel["targets"][0]["rawSql"]
     assert "operator_status_periods osp" in raw_sql
-    assert "GREATEST(osp.started_at, bounds.time_from)" in raw_sql
-    assert "LEAST(COALESCE(osp.ended_at, bounds.time_to), bounds.time_to)" in raw_sql
-    assert "osp.started_at < bounds.time_to" in raw_sql
-    assert "COALESCE(osp.ended_at, bounds.time_to) > bounds.time_from" in raw_sql
+    assert "workdays AS" in raw_sql
+    assert "day::timestamp + time '08:00'" in raw_sql
+    assert "day::timestamp + time '17:00'" in raw_sql
+    assert "GREATEST(osp.started_at, workdays.day_start)" in raw_sql
+    assert "LEAST(COALESCE(osp.ended_at, workdays.day_end), workdays.day_end)" in raw_sql
+    assert "osp.started_at < workdays.day_end" in raw_sql
+    assert "COALESCE(osp.ended_at, workdays.day_end) > workdays.day_start" in raw_sql
     assert "osp.operator_id::text IN (${operator_id:sqlstring})" in raw_sql
     assert "event_time AT TIME ZONE 'Asia/Irkutsk' AS \"time\"" in raw_sql
     assert "WHEN 'offline' THEN 0" in raw_sql
