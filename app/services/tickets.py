@@ -345,22 +345,66 @@ def build_ticket_tts_text(ticket_number: int, window_name: str) -> str:
         db.close()
 
 
+def build_ticket_called_event(
+    ticket: Ticket,
+    window: Window,
+    *,
+    service: Service | None,
+    operator: Operator | None,
+    settings: dict,
+    call_id: str,
+) -> dict:
+    service_name = service.name if service else None
+    operator_name = operator.name if operator else None
+    tts_text = render_ticket_template(
+        settings["call_message_template"],
+        ticket.number,
+        window.name
+    )
+    display_text = render_ticket_template(
+        settings["board_ticket_template"],
+        ticket.number,
+        window.name
+    )
+
+    ticket_payload = {
+        "id": ticket.id,
+        "number": ticket.number,
+        "service_id": ticket.service_id,
+        "service_name": service_name,
+        "window_id": window.id,
+        "window_name": window.name,
+        "operator_id": ticket.operator_id,
+        "operator_name": operator_name,
+        "display_text": display_text,
+        "tts_text": tts_text
+    }
+
+    return {
+        "type": "ticket_called",
+        "call_id": call_id,
+        "ticket_id": ticket.id,
+        "number": ticket.number,
+        "service_id": ticket.service_id,
+        "service_name": service_name,
+        "window_id": window.id,
+        "window_name": window.name,
+        "operator_id": ticket.operator_id,
+        "operator_name": operator_name,
+        "ticket": ticket_payload,
+        "tts_text": tts_text,
+        "display_text": display_text,
+    }
+
+
 async def broadcast_ticket_called(ticket: Ticket, window: Window):
     db = SessionLocal()
     try:
         settings = get_system_settings_dict(db)
-
-        tts_text = render_ticket_template(
-            settings["call_message_template"],
-            ticket.number,
-            window.name
-        )
-
-        display_text = render_ticket_template(
-            settings["board_ticket_template"],
-            ticket.number,
-            window.name
-        )
+        service = db.query(Service).filter(Service.id == ticket.service_id).first()
+        operator = None
+        if ticket.operator_id:
+            operator = db.query(Operator).filter(Operator.id == ticket.operator_id).first()
     finally:
         db.close()
 
@@ -370,15 +414,11 @@ async def broadcast_ticket_called(ticket: Ticket, window: Window):
     else:
         call_id = f"{ticket.id}:{datetime.now().timestamp()}"
 
-    await manager.broadcast({
-        "type": "ticket_called",
-        "call_id": call_id,
-        "ticket": {
-            "id": ticket.id,
-            "number": ticket.number,
-            "window_name": window.name,
-            "display_text": display_text,
-            "tts_text": tts_text
-        },
-        "tts_text": tts_text
-    })
+    await manager.broadcast(build_ticket_called_event(
+        ticket,
+        window,
+        service=service,
+        operator=operator,
+        settings=settings,
+        call_id=call_id,
+    ))

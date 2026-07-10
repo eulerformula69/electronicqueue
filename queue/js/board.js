@@ -178,6 +178,10 @@ function handleMessage(event) {
             processedCallIds.add(data.call_id);
         }
 
+        if (window.BoardProfiles && window.BoardProfiles.handleTicketCalled) {
+            window.BoardProfiles.handleTicketCalled(data);
+        }
+
         const ticket = data.ticket || {};
 
         speakAndDrawTicket({
