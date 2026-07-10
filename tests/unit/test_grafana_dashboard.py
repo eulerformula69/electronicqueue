@@ -43,10 +43,9 @@ def test_suspicious_operator_completions_panel():
     assert "$__timeFrom()" in raw_sql
     assert "$__timeTo()" in raw_sql
     assert "(t.finished_at - t.called_at) < INTERVAL '1.5 minutes'" in raw_sql
-    assert "operator_aliases AS" in raw_sql
-    assert "COALESCE(oa.operator_label" in raw_sql
-    assert "COALESCE(o.name" not in raw_sql
-    assert "GROUP BY COALESCE(oa.operator_label" in raw_sql
+    assert "operator_aliases AS" not in raw_sql
+    assert "COALESCE(NULLIF(btrim(o.name), ''), 'Неизвестно')" in raw_sql
+    assert "GROUP BY COALESCE(NULLIF(btrim(o.name), ''), 'Неизвестно')" in raw_sql
     assert "ORDER BY suspicious_count DESC, avg_duration_seconds ASC" in raw_sql
 
 
@@ -93,7 +92,9 @@ def test_dashboard_percentile_and_operator_filter_are_variable_based():
     variables = {item["name"]: item for item in dashboard["templating"]["list"]}
 
     assert "percentile" in variables
-    assert variables["operator_id"]["query"].startswith("SELECT 'Сотрудник '")
+    assert variables["operator_id"]["query"].startswith(
+        "SELECT COALESCE(NULLIF(btrim(name), ''), 'Неизвестно') AS __text"
+    )
 
     raw_sql_values = []
 
@@ -114,3 +115,5 @@ def test_dashboard_percentile_and_operator_filter_are_variable_based():
     assert "${operator_name:sqlstring}" not in raw_sql
     assert "o.name IN" not in raw_sql
     assert "o.id::text IN (${operator_id:sqlstring})" in raw_sql
+    assert "operator_aliases AS" not in raw_sql
+    assert "'Сотрудник ' || row_number()" not in raw_sql
