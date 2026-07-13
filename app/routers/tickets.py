@@ -32,7 +32,9 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Operator, Service, Ticket, Window, WindowService
+from app.models import (
+    AVAILABLE_WINDOW_STATUSES, Operator, Service, Ticket, Window, WindowService,
+)
 from app.schemas import (
     CallSpecificRequest, CancelTicketRequest, DeferTicketRequest, RedirectRequest,
     RedirectToWindowRequest, TicketCreate, TicketReprintResponse,
@@ -47,8 +49,6 @@ from app.services.tickets import (
 )
 
 router = APIRouter()
-
-REDIRECTABLE_WINDOW_STATUSES = {"online", "break"}
 
 COMPLETED_TODAY_TICKET_DETAIL = (
     "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
@@ -235,7 +235,7 @@ async def create_ticket(
                 .join(WindowService, Window.id == WindowService.window_id)
                 .filter(
                     WindowService.service_id == service.id,
-                    Window.status == "online"
+                    Window.status.in_(AVAILABLE_WINDOW_STATUSES)
                 ).first()
             )
             if not active_windows:
@@ -256,7 +256,7 @@ async def create_ticket(
                 .filter(
                     Window.id == ticket.window_id,
                     WindowService.service_id == service.id,
-                    Window.status == "online"
+                    Window.status.in_(AVAILABLE_WINDOW_STATUSES)
                 )
                 .first()
             )
@@ -953,7 +953,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         target_window = db.query(Window).filter(Window.id == data.window_id).first()
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
-        if target_window.status not in REDIRECTABLE_WINDOW_STATUSES:
+        if target_window.status not in AVAILABLE_WINDOW_STATUSES:
             raise HTTPException(
                 status_code=400,
                 detail="Выбранное рабочее место сейчас недоступно для перенаправления",

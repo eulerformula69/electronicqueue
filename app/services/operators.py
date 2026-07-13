@@ -8,8 +8,9 @@ from app.config import OPERATOR_SESSION_AUTO_CLEANUP_ENABLED, SESSION_TIMEOUT_SE
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
 from app.models import (
-    AdminSession, Operator, OperatorServiceNotification, OperatorStatusPeriod,
-    Service, Ticket, UserSession, Window, WindowService, record_operator_status,
+    AVAILABLE_WINDOW_STATUSES, AdminSession, Operator,
+    OperatorServiceNotification, OperatorStatusPeriod, Service, Ticket,
+    UserSession, Window, WindowService, record_operator_status,
 )
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
@@ -30,14 +31,14 @@ def update_services_status_for_window(db: Session, window_id: int):
         db.commit()
         return
 
-    # Находим услуги, у которых есть хотя бы одно online-окно, одним запросом.
-    online_service_ids = {
+    # Находим услуги, у которых есть хотя бы одно доступное окно, одним запросом.
+    available_service_ids = {
         row[0]
         for row in db.query(WindowService.service_id)
         .join(Window, WindowService.window_id == Window.id)
         .filter(
             WindowService.service_id.in_(service_ids),
-            Window.status == "online"
+            Window.status.in_(AVAILABLE_WINDOW_STATUSES)
         )
         .distinct()
         .all()
@@ -49,7 +50,7 @@ def update_services_status_for_window(db: Session, window_id: int):
         .all()
     )
     for service in services:
-        new_status = "active" if service.id in online_service_ids else "inactive"
+        new_status = "active" if service.id in available_service_ids else "inactive"
         if service.status != new_status:
             service.status = new_status
 

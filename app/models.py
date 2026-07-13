@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session, relationship
 from app.database import Base
 
 
+AVAILABLE_WINDOW_STATUSES = frozenset({"online", "break"})
+
+
 class Service(Base):
     __tablename__ = "services"
     id = Column(Integer, primary_key=True, index=True)

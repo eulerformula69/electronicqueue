@@ -32,7 +32,10 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Operator, Service, ServiceGroup, Ticket, Window, WindowService
+from app.models import (
+    AVAILABLE_WINDOW_STATUSES, Admin, Operator, Service, ServiceGroup, Ticket,
+    Window, WindowService,
+)
 from app.schemas import (
     ServiceCreate,
     ServiceGroupAssignUpdate,
@@ -64,7 +67,7 @@ def _visible_services_query(db: Session, include_hidden: bool):
                 .join(Window, WindowService.window_id == Window.id)
                 .filter(
                     WindowService.service_id == Service.id,
-                    Window.status == "online",
+                    Window.status.in_(AVAILABLE_WINDOW_STATUSES),
                 )
                 .exists()
             )
@@ -522,7 +525,7 @@ def list_service_operators(
             .join(WindowService, Window.id == WindowService.window_id)
             .filter(
                 WindowService.service_id == service_id,
-                Window.status == "online"
+                Window.status.in_(AVAILABLE_WINDOW_STATUSES)
             )
             .order_by(Operator.name.asc())
             .all()
