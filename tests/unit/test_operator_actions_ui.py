@@ -155,7 +155,8 @@ def test_operator_redirect_uses_single_modal_button():
     assert "createRedirectWindowSection" not in js
     assert "DEFAULT_REDIRECT_RECIPIENT_LABEL" in js
     assert 'service.status !== "active"' in js
-    assert 'windowItem.status !== "online"' in js
+    assert '["online", "break"].includes(windowItem.status)' in js
+    assert "if (!isRedirectWindowAvailable(windowItem)) return false;" in js
     assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
     assert "? \"/tickets/redirect-to-window\"" in js
     assert ": \"/tickets/redirect\"" in js
@@ -191,11 +192,11 @@ def test_operator_redirect_to_window_requires_compatible_service():
     assert "redirectState.serviceId = null;" in js
 
 
-def test_operator_redirect_services_filter_by_selected_online_window():
+def test_operator_redirect_services_filter_by_selected_available_window():
     js = read_text("queue/js/operator.js")
 
     assert "const selectedWindow = getRedirectWindow(redirectState.windowId);" in js
-    assert 'selectedWindow.status === "online"' in js
+    assert "isRedirectWindowAvailable(selectedWindow)" in js
     assert "? selectedWindow.services" in js
     assert ": allServices" in js
     assert "if (Number(service.is_archived) === 1) return false;" in js

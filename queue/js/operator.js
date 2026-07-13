@@ -956,9 +956,13 @@ function getRedirectWindow(windowId) {
     return allWindows.find(windowItem => Number(windowItem.id) === Number(windowId)) || null;
 }
 
+function isRedirectWindowAvailable(windowItem) {
+    return Boolean(windowItem && ["online", "break"].includes(windowItem.status));
+}
+
 function redirectWindowSupportsService(windowItem, serviceId) {
     if (!windowItem || !serviceId || !Array.isArray(windowItem.services)) return false;
-    return windowItem.status === "online" && windowItem.services.some(service => (
+    return isRedirectWindowAvailable(windowItem) && windowItem.services.some(service => (
         Number(service.id) === Number(serviceId) && service.status === "active"
     ));
 }
@@ -989,7 +993,7 @@ function redirectWindowMatchesQuery(windowItem, query) {
 function getFilteredRedirectServices() {
     const query = normalizeRedirectText(redirectState.serviceQuery);
     const selectedWindow = getRedirectWindow(redirectState.windowId);
-    const services = selectedWindow && selectedWindow.status === "online" && Array.isArray(selectedWindow.services)
+    const services = isRedirectWindowAvailable(selectedWindow) && Array.isArray(selectedWindow.services)
         ? selectedWindow.services
         : allServices;
 
@@ -1005,7 +1009,7 @@ function getFilteredRedirectWindows() {
     const query = normalizeRedirectText(redirectState.windowQuery);
     if (!query && !redirectState.windowId) return [];
     return allWindows.filter(windowItem => {
-        if (windowItem.status !== "online") return false;
+        if (!isRedirectWindowAvailable(windowItem)) return false;
         if (Number(windowItem.id) === Number(redirectState.windowId)) return true;
         return redirectWindowMatchesQuery(windowItem, query);
     });
@@ -1219,7 +1223,7 @@ function createRedirectWindowList() {
         services.textContent = serviceNames;
 
         const status = document.createElement("em");
-        status.textContent = windowItem.status === "online" ? "online" : "не online";
+        status.textContent = windowItem.status;
 
         button.appendChild(title);
         button.appendChild(services);

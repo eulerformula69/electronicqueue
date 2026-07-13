@@ -63,9 +63,13 @@ class FakeDb:
         self.closed = True
 
 
-def test_redirect_to_window_creates_ticket_for_selected_service(monkeypatch):
+@pytest.mark.parametrize("target_status", ["online", "break"])
+def test_redirect_to_available_window_creates_ticket_for_selected_service(
+    monkeypatch,
+    target_status,
+):
     source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
-    target_window = Window(id=7, name="Window 7", status="online")
+    target_window = Window(id=7, name="Window 7", status=target_status)
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
     db = FakeDb(
@@ -134,7 +138,7 @@ def test_redirect_to_window_rejects_service_not_supported_by_window(monkeypatch)
 
 def test_redirect_to_window_rejects_offline_window(monkeypatch):
     source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
-    target_window = Window(id=7, name="Window 7", status="break")
+    target_window = Window(id=7, name="Window 7", status="offline")
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
     db = FakeDb(

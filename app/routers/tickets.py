@@ -48,6 +48,8 @@ from app.services.tickets import (
 
 router = APIRouter()
 
+REDIRECTABLE_WINDOW_STATUSES = {"online", "break"}
+
 COMPLETED_TODAY_TICKET_DETAIL = (
     "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
 )
@@ -951,8 +953,11 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         target_window = db.query(Window).filter(Window.id == data.window_id).first()
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
-        if target_window.status != "online":
-            raise HTTPException(status_code=400, detail="Выбранное рабочее место сейчас не online")
+        if target_window.status not in REDIRECTABLE_WINDOW_STATUSES:
+            raise HTTPException(
+                status_code=400,
+                detail="Выбранное рабочее место сейчас недоступно для перенаправления",
+            )
 
         service = (
             db.query(Service)
