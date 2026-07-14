@@ -1222,8 +1222,24 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ${kpi_avg_waiting:raw}::numeric AS \"KPI ожидание\", ${kpi_avg_serving:raw}::numeric AS \"KPI обслуживание\", ${kpi_avg_total:raw}::numeric AS \"KPI общее\";",
-          "refId": "KPI"
+          "rawSql": "SELECT ${kpi_avg_waiting:raw}::numeric AS \"KPI\";",
+          "refId": "KPI_WAIT"
+        },
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ${kpi_avg_serving:raw}::numeric AS \"KPI\";",
+          "refId": "KPI_SERVICE"
+        },
+        {
+          "dataset": "postgres",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ${kpi_avg_total:raw}::numeric AS \"KPI\";",
+          "refId": "KPI_TOTAL"
         }
       ],
       "title": "",
@@ -1236,10 +1252,10 @@
               "id": "byName",
               "options": "Ср. ожид. (мин)"
             },
-            "configRefId": "KPI",
+            "configRefId": "KPI_WAIT",
             "mappings": [
               {
-                "fieldName": "KPI ожидание",
+                "fieldName": "KPI",
                 "handlerKey": "threshold1"
               }
             ]
@@ -1252,10 +1268,10 @@
               "id": "byName",
               "options": "Ср. обслуж. (мин)"
             },
-            "configRefId": "KPI",
+            "configRefId": "KPI_SERVICE",
             "mappings": [
               {
-                "fieldName": "KPI обслуживание",
+                "fieldName": "KPI",
                 "handlerKey": "threshold1"
               }
             ]
@@ -1268,10 +1284,10 @@
               "id": "byName",
               "options": "Ср. общее (мин)"
             },
-            "configRefId": "KPI",
+            "configRefId": "KPI_TOTAL",
             "mappings": [
               {
-                "fieldName": "KPI общее",
+                "fieldName": "KPI",
                 "handlerKey": "threshold1"
               }
             ]
