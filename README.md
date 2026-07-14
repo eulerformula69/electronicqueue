@@ -89,6 +89,22 @@ deploy/restore_db.sh     восстановление PostgreSQL из дампа
 deploy/exclude_from_update.txt локальные исключения для обновления
 ```
 
+## Обновление дашборда Grafana
+
+После экспорта дашборда из Grafana нормализуйте JSON перед добавлением в Git:
+
+```bash
+python scripts/normalizeGrafanaDashboard.py \
+    ~/Downloads/export.json \
+    data/statistics.json
+
+git diff -- data/statistics.json
+```
+
+Для перезаписи входного файла второй путь можно не указывать. В репозиторий должен
+попадать только нормализованный `data/statistics.json`: инструмент удаляет локальные
+идентификаторы экспорта и привязывает PostgreSQL к стабильному `queue-postgres`.
+
 После установки updater также находится в рабочем проекте:
 
 ```bash

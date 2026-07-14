@@ -155,6 +155,8 @@ rsync -a --delete \
 install -m 0644 "${SOURCE_DIR}/requirements.txt" "${APP_DIR}/requirements.txt"
 install -m 0750 "${SOURCE_DIR}/scripts/manageAdmins.py" "${APP_DIR}/scripts/manageAdmins.py"
 install -m 0750 "${SOURCE_DIR}/scripts/closeDay.py" "${APP_DIR}/scripts/closeDay.py"
+install -m 0644 "${SOURCE_DIR}/scripts/grafana_dashboard.py" "${APP_DIR}/scripts/grafana_dashboard.py"
+install -m 0750 "${SOURCE_DIR}/scripts/normalizeGrafanaDashboard.py" "${APP_DIR}/scripts/normalizeGrafanaDashboard.py"
 install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"
 install -m 0640 "${SOURCE_DIR}/deploy/exclude_from_update.txt" "${APP_DIR}/deploy/exclude_from_update.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
@@ -429,43 +431,9 @@ if [[ ! -f "${DASHBOARD_SOURCE}" ]]; then
 fi
 [[ -n "${DASHBOARD_SOURCE}" && -f "${DASHBOARD_SOURCE}" ]] \
     || fail "не найден JSON-дашборд Grafana в папке проекта"
-python3 - "${DASHBOARD_SOURCE}" /var/lib/grafana/dashboards/queue-statistics.json <<'PY'
-import json
-import sys
-
-source, destination = sys.argv[1:]
-with open(source, encoding="utf-8") as file:
-    dashboard = json.load(file)
-
-old_datasource_uids = {"cffzz1xb8ay9sa", "bfjh7wvbqibcwd"}
-
-
-def replace_datasource_uid(value):
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key == "uid" and item in old_datasource_uids:
-                value[key] = "queue-postgres"
-            else:
-                replace_datasource_uid(item)
-    elif isinstance(value, list):
-        for item in value:
-            replace_datasource_uid(item)
-
-
-replace_datasource_uid(dashboard)
-for variable in dashboard.get("templating", {}).get("list", []):
-    query = variable.get("query")
-    if variable.get("type") == "query" and isinstance(query, dict):
-        sql = query.get("rawSql") or query.get("query") or variable.get("definition")
-        if isinstance(sql, str) and sql.strip():
-            variable["query"] = sql.strip()
-            variable["definition"] = sql.strip()
-dashboard["id"] = None
-dashboard["uid"] = "queue-statistics"
-dashboard["title"] = "Статистика очереди"
-with open(destination, "w", encoding="utf-8") as file:
-    json.dump(dashboard, file, ensure_ascii=False, indent=2)
-PY
+python3 "${APP_DIR}/scripts/normalizeGrafanaDashboard.py" \
+    "${DASHBOARD_SOURCE}" /var/lib/grafana/dashboards/queue-statistics.json \
+    || fail "не удалось нормализовать JSON-дашборд Grafana"
 chown -R grafana:grafana /var/lib/grafana/dashboards
 
 install -d -m 0755 /etc/systemd/system/grafana-server.service.d
