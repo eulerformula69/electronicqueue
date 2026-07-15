@@ -32,6 +32,20 @@ def test_board_profiles_normalize_screen_values_and_enable_popup_only_for_screen
     assert 'new URLSearchParams(window.location.search).get("screen")' in source
 
 
+def test_media_screen_uses_standard_board_with_media_profile():
+    page = _read("queue/board.html")
+    profiles = _read("queue/js/board-profiles.js")
+    legacy_page = _read("queue/board-media-lite3.html")
+
+    assert '<video id="media-video" autoplay playsinline></video>' in page
+    assert 'media: {' in profiles
+    assert 'layout: "media"' in profiles
+    assert 'calledPageSize: 5' in profiles
+    assert 'waitingPageSize: 5' in profiles
+    assert 'params.set("screen", "media")' in legacy_page
+    assert "board-lite.js" not in legacy_page
+
+
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
     source = _read("queue/js/board.js")
 
