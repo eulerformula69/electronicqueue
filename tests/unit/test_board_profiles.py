@@ -42,8 +42,19 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'layout: "media"' in profiles
     assert 'calledPageSize: 5' in profiles
     assert 'waitingPageSize: 5' in profiles
+    assert 'showLabels: false' in profiles
+    assert 'shouldShowLabels()' in profiles
     assert 'params.set("screen", "media")' in legacy_page
     assert "board-lite.js" not in legacy_page
+
+
+def test_media_profile_hides_ticket_and_operator_labels_in_cards():
+    board = _read("queue/js/board.js")
+
+    assert "!window.BoardProfiles.shouldShowLabels()" in board
+    assert "left: number" in board
+    assert "right: windowName" in board
+    assert "const ticketText" in board
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():

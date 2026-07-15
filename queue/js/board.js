@@ -299,6 +299,14 @@ function splitDisplayText(ticket) {
     const number = String(ticket.number ?? ticket.ticket_number ?? "");
     const windowName = String(ticket.window_name ?? "");
 
+    if (window.BoardProfiles && !window.BoardProfiles.shouldShowLabels()) {
+        return {
+            left: number,
+            middle: "→",
+            right: windowName
+        };
+    }
+
     const fallback = {
         left: `${getTicketLabel()} ${number}`,
         middle: "→",
@@ -425,9 +433,13 @@ function renderWaitingPage(waitingBoard, currentTickets) {
             card.classList.add("waiting-card-deferred");
         }
 
+        const ticketText = window.BoardProfiles && !window.BoardProfiles.shouldShowLabels()
+            ? escapeHtml(number)
+            : `${escapeHtml(getTicketLabel())} ${escapeHtml(number)}`;
+
         card.innerHTML = `
             <div class="line waiting-line">
-                <span class="ticket">${escapeHtml(getTicketLabel())} ${escapeHtml(number)}</span>
+                <span class="ticket">${ticketText}</span>
             </div>
             ${deferredNote}
         `;

@@ -3,6 +3,7 @@
         default: {
             callPopup: false,
             callHighlight: true,
+            showLabels: true,
             layout: "default",
             calledPageSize: 10,
             waitingPageSize: 5,
@@ -11,6 +12,7 @@
         "2": {
             callPopup: true,
             callHighlight: false,
+            showLabels: true,
             layout: "default",
             calledPageSize: 10,
             waitingPageSize: 5,
@@ -19,6 +21,7 @@
         media: {
             callPopup: false,
             callHighlight: true,
+            showLabels: false,
             layout: "media",
             calledPageSize: 5,
             waitingPageSize: 5,
@@ -154,6 +157,9 @@
         normalizeBoardProfile,
         shouldHighlightCall() {
             return getCurrentProfile().callHighlight !== false;
+        },
+        shouldShowLabels() {
+            return getCurrentProfile().showLabels !== false;
         },
     };
 })();
