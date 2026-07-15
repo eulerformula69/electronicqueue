@@ -12,6 +12,11 @@
 <h1 id="title">Табло очереди Приемной комиссии</h1>
 <div id="clock-container" class="clock-container"></div>
 
+<main class="board-layout">
+<div class="media-panel" aria-label="Медиаплеер">
+    <video id="media-video" autoplay playsinline></video>
+</div>
+
 <div class="board-wrapper board-wrapper-with-waiting">
     <section class="board-section board-section-waiting">
         <div class="board-section-header">
@@ -31,6 +36,7 @@
         <div id="called-page-dots" class="board-page-dots"></div>
     </section>
 </div>
+</main>
 
 <div class="status-indicator" id="ws-status">WS: connecting...</div>
 
@@ -38,6 +44,8 @@
 <script src="/queue/js/tts.js"></script>
 <script src="/queue/js/board-ticker.js"></script>
 <script src="/queue/js/board-profiles.js"></script>
+<script src="/queue/js/media-lite.js?v=board-profile-1"></script>
+<script src="/queue/js/board-lite2.js?v=board-profile-1"></script>
 <script src="/queue/js/board.js"></script>
 
 </body>

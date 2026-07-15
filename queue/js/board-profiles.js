@@ -3,10 +3,26 @@
         default: {
             callPopup: false,
             callHighlight: true,
+            layout: "default",
+            calledPageSize: 10,
+            waitingPageSize: 5,
+            pageIntervalMs: 5000,
         },
         "2": {
             callPopup: true,
             callHighlight: false,
+            layout: "default",
+            calledPageSize: 10,
+            waitingPageSize: 5,
+            pageIntervalMs: 5000,
+        },
+        media: {
+            callPopup: false,
+            callHighlight: true,
+            layout: "media",
+            calledPageSize: 5,
+            waitingPageSize: 5,
+            pageIntervalMs: 5000,
         },
     };
 
@@ -33,6 +49,19 @@
         };
 
         return activeProfile;
+    }
+
+    function applyCurrentProfile() {
+        const profile = getCurrentProfile();
+
+        document.body.dataset.boardProfile = profile.name;
+        document.body.classList.toggle("board-media-page", profile.layout === "media");
+        window.BOARD_CONFIG = {
+            calledPageSize: profile.calledPageSize,
+            waitingPageSize: profile.waitingPageSize,
+            pageIntervalMs: profile.pageIntervalMs,
+        };
+        window.BOARD_DISABLE_FORCED_RELOAD = true;
     }
 
     function setOptionalText(element, value) {
@@ -115,6 +144,8 @@
             popupTimer = null;
         }, POPUP_DURATION_MS);
     }
+
+    applyCurrentProfile();
 
     window.BoardProfiles = {
         BOARD_PROFILES,
