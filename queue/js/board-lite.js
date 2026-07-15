@@ -75,6 +75,7 @@
             number: number,
             ticket_number: ticket.ticket_number || number,
             window_name: windowName,
+            status: ticket.status || "",
             display_text: ticket.display_text || "",
             tts_text: ticket.tts_text || ""
         };
@@ -228,6 +229,8 @@
         var i;
         var t;
         var number;
+        var isDeferred;
+        var deferredNote;
 
         if (!waitingBoard) return;
 
@@ -241,12 +244,17 @@
         for (i = 0; i < currentTickets.length; i++) {
             t = normalizeTicket(currentTickets[i]);
             number = getTicketNumber(t);
+            isDeferred = t.status === "deferred";
+            deferredNote = isDeferred
+                ? '  <div class="waiting-deferred-note">Отложен оператором' + (t.window_name ? ' · ' + escapeHtml(t.window_name) : '') + '</div>'
+                : '';
 
             html += ""
-                + '<div class="waiting-card">'
+                + '<div class="waiting-card' + (isDeferred ? ' waiting-card-deferred' : '') + '">'
                 + '  <div class="line waiting-line">'
                 + '    <span class="ticket">' + escapeHtml(number) + '</span>'
                 + '  </div>'
+                + deferredNote
                 + '</div>';
         }
 

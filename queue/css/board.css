@@ -546,6 +546,11 @@ body.board-page.board-media-lite3-page .board-section-called .arrow{
     font-size: clamp(24px, 2.2vw, 38px);
 }
 
+body.board-page.board-media-lite3-page .waiting-deferred-note{
+    margin-top: 5px;
+    font-size: clamp(13px, 1vw, 18px);
+}
+
 @media (max-width: 1500px) {
     body.board-page.board-media-lite3-page .board-media-lite3-layout{
         grid-template-columns: minmax(0, 1fr) clamp(520px, 40vw, 620px);
