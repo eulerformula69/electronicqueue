@@ -13,9 +13,11 @@ def _read(path: str) -> str:
 
 def test_board_html_loads_profiles_before_board_script():
     source = _read("queue/board.html")
+    bootstrap = _read("queue/js/board-bootstrap.js")
 
-    assert '<script src="/queue/js/board-profiles.js"></script>' in source
-    assert source.index("/queue/js/board-profiles.js") < source.index("/queue/js/board.js")
+    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-2"></script>' in source
+    assert 'loadScript("/queue/js/board-profiles.js")' in bootstrap
+    assert bootstrap.index('/queue/js/board-profiles.js') < bootstrap.index('/queue/js/board.js')
 
 
 def test_board_profiles_normalize_screen_values_and_enable_popup_only_for_screen_2():
@@ -35,6 +37,7 @@ def test_board_profiles_normalize_screen_values_and_enable_popup_only_for_screen
 def test_media_screen_uses_standard_board_with_media_profile():
     page = _read("queue/board.html")
     profiles = _read("queue/js/board-profiles.js")
+    bootstrap = _read("queue/js/board-bootstrap.js")
     legacy_page = _read("queue/board-media-lite3.html")
 
     assert '<video id="media-video" autoplay playsinline></video>' in page
@@ -44,17 +47,24 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'waitingPageSize: 5' in profiles
     assert 'showLabels: false' in profiles
     assert 'shouldShowLabels()' in profiles
+    assert 'screen === "media"' in bootstrap
+    assert 'showLabels: false' in bootstrap
+    assert 'loadScript("/queue/js/board-lite.js?v=board-profile-2")' in bootstrap
+    assert 'loadScript("/queue/js/board.js")' in bootstrap
     assert 'params.set("screen", "media")' in legacy_page
     assert "board-lite.js" not in legacy_page
 
 
 def test_media_profile_hides_ticket_and_operator_labels_in_cards():
     board = _read("queue/js/board.js")
+    lite_board = _read("queue/js/board-lite.js")
 
     assert "!window.BoardProfiles.shouldShowLabels()" in board
     assert "left: number" in board
     assert "right: windowName" in board
     assert "const ticketText" in board
+    assert "var SHOW_LABELS" in lite_board
+    assert "window.BOARD_CONFIG.showLabels !== false" in lite_board
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():

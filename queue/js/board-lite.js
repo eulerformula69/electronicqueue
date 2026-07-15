@@ -6,6 +6,7 @@
     var CALLED_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.calledPageSize) || 7;
     var WAITING_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.waitingPageSize) || 7;
     var PAGE_INTERVAL_MS = (window.BOARD_CONFIG && window.BOARD_CONFIG.pageIntervalMs) || 5000;
+    var SHOW_LABELS = !window.BOARD_CONFIG || window.BOARD_CONFIG.showLabels !== false;
     var RECONNECT_MS = 3000;
     var CLEAN_PROCESSED_MS = 5 * 60 * 1000;
 
@@ -209,12 +210,19 @@
             number = getTicketNumber(t);
             windowName = getWindowName(t);
 
+            var ticketContent = SHOW_LABELS
+                ? '<span>БИЛЕТ</span><span>' + escapeHtml(number) + '</span>'
+                : '<span>' + escapeHtml(number) + '</span>';
+            var windowContent = SHOW_LABELS
+                ? '<span>ОПЕРАТОР</span><span>' + escapeHtml(windowName) + '</span>'
+                : '<span>' + escapeHtml(windowName) + '</span>';
+
             html += ""
                 + '<div class="card' + (highlightedIds[id] ? ' calling' : '') + '" data-ticket-id="' + escapeHtml(id) + '">'
                 + '  <div class="line">'
-                + '    <div class="ticket"><span>БИЛЕТ</span><span>' + escapeHtml(number) + '</span></div>'
+                + '    <div class="ticket">' + ticketContent + '</div>'
                 + '    <div class="arrow">→</div>'
-                + '    <div class="window"><span>ОПЕРАТОР</span><span>' + escapeHtml(windowName) + '</span></div>'
+                + '    <div class="window">' + windowContent + '</div>'
                 + '  </div>'
                 + '</div>';
         }

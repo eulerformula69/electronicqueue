@@ -9,7 +9,7 @@
     var repaintTick = 0;
     var screenWakeLock = null;
 
-    if (!document.body || document.body.dataset.boardProfile !== "media") return;
+    if (!document.getElementById("media-video")) return;
 
     function ensureHeartbeatElement() {
         var el = document.getElementById("lg-lite2-heartbeat");
