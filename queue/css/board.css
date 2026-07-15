@@ -348,6 +348,15 @@ body.board-page .waiting-card .ticket{
     color: #2d89ef;
 }
 
+body.board-page .waiting-deferred-note{
+    margin-top: 7px;
+    color: #6c757d;
+    font-size: clamp(15px, 1.15vw, 21px);
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+}
+
 
 body.board-page .waiting-service{
     display: none;

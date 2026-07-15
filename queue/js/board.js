@@ -416,10 +416,20 @@ function renderWaitingPage(waitingBoard, currentTickets) {
         card.className = "waiting-card";
 
         const number = t.number ?? t.ticket_number ?? "";
+        const isDeferred = t.status === "deferred";
+        const deferredNote = isDeferred
+            ? `<div class="waiting-deferred-note">Отложен оператором${t.window_name ? ` · ${escapeHtml(t.window_name)}` : ""}</div>`
+            : "";
+
+        if (isDeferred) {
+            card.classList.add("waiting-card-deferred");
+        }
+
         card.innerHTML = `
             <div class="line waiting-line">
                 <span class="ticket">${escapeHtml(getTicketLabel())} ${escapeHtml(number)}</span>
             </div>
+            ${deferredNote}
         `;
 
         waitingBoard.appendChild(card);

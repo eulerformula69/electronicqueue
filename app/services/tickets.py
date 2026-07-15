@@ -281,21 +281,23 @@ def get_waiting_tickets_for_board():
             else_=2,
         )
         tickets = (
-            db.query(Ticket, Service)
+            db.query(Ticket, Service, Window)
             .join(Service, Ticket.service_id == Service.id)
+            .outerjoin(Window, Ticket.window_id == Window.id)
             .filter(Ticket.status.in_(("waiting", "deferred")))
             .order_by(status_order.asc(), queue_order_expr().asc())
             .all()
         )
 
         result = []
-        for ticket, service in tickets:
+        for ticket, service, window in tickets:
             result.append({
                 "id": ticket.id,
                 "number": ticket.number,
                 "service_id": ticket.service_id,
                 "service_name": service.name,
                 "window_id": ticket.window_id,
+                "window_name": window.name if window else None,
                 "target_window_id": ticket.target_window_id,
                 "status": ticket.status,
                 "created_at": ticket.created_at.isoformat() if ticket.created_at else None

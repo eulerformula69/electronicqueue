@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from operator import eq, ge, lt
 
-from app.models import Service, Ticket
+from app.models import Service, Ticket, Window
 from app.routers.tickets import (
     build_operator_ticket_detail_payload,
     get_served_operator_tickets,
@@ -111,6 +111,9 @@ class BoardTicketQuery:
     def join(self, *args, **kwargs):
         return self
 
+    def outerjoin(self, *args, **kwargs):
+        return self
+
     def filter(self, *conditions):
         rows = self._rows
         for condition in conditions:
@@ -120,8 +123,8 @@ class BoardTicketQuery:
 
             if op.__name__ == "in_op":
                 rows = [
-                    (ticket, service)
-                    for ticket, service in rows
+                    (ticket, service, window)
+                    for ticket, service, window in rows
                     if getattr(ticket, field) in value
                 ]
             else:
@@ -150,7 +153,7 @@ class BoardTicketDb:
         self.closed = False
 
     def query(self, *models):
-        assert models == (Ticket, Service)
+        assert models == (Ticket, Service, Window)
         return BoardTicketQuery(self._rows)
 
     def close(self):
@@ -176,6 +179,7 @@ def test_deferred_tickets_are_in_board_waiting_payload_after_waiting(monkeypatch
         status="deferred",
         created_at=now - timedelta(minutes=30),
     )
+    deferred.window_id = 7
     waiting = make_board_ticket(
         202,
         status="waiting",
@@ -186,7 +190,12 @@ def test_deferred_tickets_are_in_board_waiting_payload_after_waiting(monkeypatch
         status="called",
         created_at=now - timedelta(minutes=40),
     )
-    db = BoardTicketDb([(deferred, service), (waiting, service), (called, service)])
+    window = Window(id=7, name="Window 7")
+    db = BoardTicketDb([
+        (deferred, service, window),
+        (waiting, service, None),
+        (called, service, None),
+    ])
 
     monkeypatch.setattr(ticket_services, "SessionLocal", lambda: db)
 
@@ -194,4 +203,6 @@ def test_deferred_tickets_are_in_board_waiting_payload_after_waiting(monkeypatch
 
     assert [ticket["number"] for ticket in payload] == [202, 201]
     assert [ticket["status"] for ticket in payload] == ["waiting", "deferred"]
+    assert payload[0]["window_name"] is None
+    assert payload[1]["window_name"] == "Window 7"
     assert db.closed is True
