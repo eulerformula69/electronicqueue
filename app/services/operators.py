@@ -1,14 +1,14 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.config import OPERATOR_SESSION_AUTO_CLEANUP_ENABLED, SESSION_TIMEOUT_SECONDS
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
 from app.models import (
-    AVAILABLE_WINDOW_STATUSES, AdminSession, Operator,
+    AdminSession, Operator,
     OperatorServiceNotification, OperatorStatusPeriod, Service, Ticket,
     UserSession, Window, WindowService, record_operator_status,
 )
@@ -36,9 +36,24 @@ def update_services_status_for_window(db: Session, window_id: int):
         row[0]
         for row in db.query(WindowService.service_id)
         .join(Window, WindowService.window_id == Window.id)
+        .join(Service, WindowService.service_id == Service.id)
         .filter(
             WindowService.service_id.in_(service_ids),
-            Window.status.in_(AVAILABLE_WINDOW_STATUSES)
+            or_(
+                Window.status == "online",
+                and_(
+                    Window.status == "break",
+                    or_(
+                        Service.operator_choice_enabled == 0,
+                        Service.operator_choice_allow_break == 1,
+                    ),
+                ),
+                and_(
+                    Window.status == "offline",
+                    Service.operator_choice_enabled == 1,
+                    Service.operator_choice_allow_offline == 1,
+                ),
+            ),
         )
         .distinct()
         .all()

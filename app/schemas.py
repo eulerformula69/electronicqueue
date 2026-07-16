@@ -51,12 +51,16 @@ class PingRequest(BaseModel):
 class ServiceCreate(BaseModel):
     name: str
     operator_choice_enabled: bool = False
+    operator_choice_allow_break: bool = True
+    operator_choice_allow_offline: bool = False
     visible_on_terminal: bool = True
     service_group_id: int | None = None
 
 
 class ServiceOperatorChoiceUpdate(BaseModel):
     operator_choice_enabled: bool
+    operator_choice_allow_break: bool = True
+    operator_choice_allow_offline: bool = False
 
 
 class ServiceGroupCreate(BaseModel):
@@ -236,6 +240,8 @@ class SystemSettingsUpdate(BaseModel):
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
+    redirect_allow_break: bool = True
+    redirect_allow_offline: bool = False
     queue_mode: str
     call_message_template: str
     board_ticket_template: str
@@ -258,6 +264,8 @@ class SystemSettingsResponse(BaseModel):
     default_operator_status: str
     active_ticket_on_operator_logout: str
     hide_services_without_online_operators: bool
+    redirect_allow_break: bool
+    redirect_allow_offline: bool
     queue_mode: str
     call_message_template: str
     board_ticket_template: str
@@ -277,6 +285,8 @@ class PublicSettingsResponse(BaseModel):
     ticket_notice_duration_unprinted_seconds: int
     ticket_notice_printed_text: str
     ticket_notice_unprinted_text: str
+    redirect_allow_break: bool
+    redirect_allow_offline: bool
     board_ticket_template: str
     board_ticker_text: str
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)

@@ -9,6 +9,15 @@ from app.routers import tickets as tickets_router
 from app.schemas import RedirectToWindowRequest
 
 
+@pytest.fixture(autouse=True)
+def redirect_settings(monkeypatch):
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda db: {"redirect_allow_break": True, "redirect_allow_offline": False},
+    )
+
+
 class FakeQuery:
     def __init__(self, items):
         self._items = list(items)
@@ -162,6 +171,42 @@ def test_redirect_to_window_rejects_offline_window(monkeypatch):
     assert db.added == []
     assert db.committed is False
     assert db.closed is True
+
+
+def test_redirect_to_window_allows_offline_window_when_enabled(monkeypatch):
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    target_window = Window(id=7, name="Window 7", status="offline")
+    selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
+    operator = Operator(id=2, window_id=5)
+    db = FakeDb(
+        tickets=[source_ticket],
+        windows=[target_window],
+        services=[selected_service],
+        window_services=[WindowService(window_id=7, service_id=3)],
+    )
+
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda db: {"redirect_allow_break": True, "redirect_allow_offline": True},
+    )
+
+    async def noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(tickets_router.manager, "broadcast", noop)
+    monkeypatch.setattr(tickets_router, "broadcast_board", noop)
+
+    result = asyncio.run(
+        tickets_router.redirect_ticket_to_window(
+            RedirectToWindowRequest(ticket_id=10, window_id=7, new_service_id=3),
+            operator=operator,
+        )
+    )
+
+    assert result["ticket"].target_window_id == 7
+    assert db.committed is True
 
 
 def test_redirect_to_window_rejects_inactive_service(monkeypatch):

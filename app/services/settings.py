@@ -209,6 +209,8 @@ def get_system_settings_dict(db: Session) -> dict:
         "hide_services_without_online_operators": _str_to_bool(
             settings.hide_services_without_online_operators, default=True
         ),
+        "redirect_allow_break": _str_to_bool(settings.redirect_allow_break, default=True),
+        "redirect_allow_offline": _str_to_bool(settings.redirect_allow_offline, default=False),
         "queue_mode": settings.queue_mode or "priority_fifo",
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",

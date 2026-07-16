@@ -56,7 +56,9 @@ const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;
 let serviceNotificationSettings = new Map();
 let operatorSettings = {
     auto_call_enabled: false,
-    auto_call_delay_seconds: 60
+    auto_call_delay_seconds: 60,
+    redirect_allow_break: true,
+    redirect_allow_offline: false
 };
 let recallCooldown = false;
 const CLIENT_OPERATIONS_ON_BREAK_MESSAGE = "Нельзя выполнять операции с клиентом во время перерыва";
@@ -213,7 +215,9 @@ async function loadOperatorReasonSettings() {
             auto_call_enabled: (details.auto_call_enabled ?? settings.auto_call_enabled) === true,
             auto_call_delay_seconds: normalizeAutoCallDelay(
                 details.auto_call_delay_seconds ?? settings.auto_call_delay_seconds
-            )
+            ),
+            redirect_allow_break: settings.redirect_allow_break === true,
+            redirect_allow_offline: settings.redirect_allow_offline === true
         };
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
@@ -957,7 +961,19 @@ function getRedirectWindow(windowId) {
 }
 
 function isRedirectWindowAvailable(windowItem) {
-    return Boolean(windowItem && ["online", "break"].includes(windowItem.status));
+    if (!windowItem) return false;
+    if (windowItem.status === "online") return true;
+    if (windowItem.status === "break") return operatorSettings.redirect_allow_break;
+    if (windowItem.status === "offline") return operatorSettings.redirect_allow_offline;
+    return false;
+}
+
+function getOperatorStatusLabel(status) {
+    return {
+        online: "🟢 Онлайн",
+        break: "🟡 На перерыве — временно недоступен",
+        offline: "⚪ Офлайн — ожидание может быть долгим"
+    }[status] || status;
 }
 
 function redirectWindowSupportsService(windowItem, serviceId) {
@@ -1223,7 +1239,7 @@ function createRedirectWindowList() {
         services.textContent = serviceNames;
 
         const status = document.createElement("em");
-        status.textContent = windowItem.status;
+        status.textContent = getOperatorStatusLabel(windowItem.status);
 
         button.appendChild(title);
         button.appendChild(services);
@@ -1306,6 +1322,14 @@ async function confirmRedirectFromModal() {
 
     if (!canConfirmRedirect()) {
         alert("Выберите услугу и подходящего получателя");
+        return;
+    }
+
+    const selectedWindow = getRedirectWindow(redirectState.windowId);
+    if (
+        selectedWindow?.status === "offline" &&
+        !window.confirm("Оператор сейчас офлайн. Талон останется закреплён за ним до его возвращения. Продолжить?")
+    ) {
         return;
     }
 

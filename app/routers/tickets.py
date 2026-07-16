@@ -230,12 +230,19 @@ async def create_ticket(
 
         # 2. Валидация доступности окон
         if settings.get("hide_services_without_online_operators"):
+            available_statuses = set(AVAILABLE_WINDOW_STATUSES)
+            if service.operator_choice_enabled:
+                available_statuses = {"online"}
+                if service.operator_choice_allow_break:
+                    available_statuses.add("break")
+                if service.operator_choice_allow_offline:
+                    available_statuses.add("offline")
             active_windows = (
                 db.query(Window)
                 .join(WindowService, Window.id == WindowService.window_id)
                 .filter(
                     WindowService.service_id == service.id,
-                    Window.status.in_(AVAILABLE_WINDOW_STATUSES)
+                    Window.status.in_(available_statuses)
                 ).first()
             )
             if not active_windows:
@@ -250,13 +257,19 @@ async def create_ticket(
             if not ticket.window_id:
                 raise HTTPException(status_code=400, detail="Выберите оператора")
 
+            allowed_statuses = ["online"]
+            if service.operator_choice_allow_break:
+                allowed_statuses.append("break")
+            if service.operator_choice_allow_offline:
+                allowed_statuses.append("offline")
+
             selected_window = (
                 db.query(Window)
                 .join(WindowService, Window.id == WindowService.window_id)
                 .filter(
                     Window.id == ticket.window_id,
                     WindowService.service_id == service.id,
-                    Window.status.in_(AVAILABLE_WINDOW_STATUSES)
+                    Window.status.in_(allowed_statuses)
                 )
                 .first()
             )
@@ -953,7 +966,13 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         target_window = db.query(Window).filter(Window.id == data.window_id).first()
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
-        if target_window.status not in AVAILABLE_WINDOW_STATUSES:
+        settings = get_system_settings_dict(db)
+        allowed_statuses = ["online"]
+        if settings["redirect_allow_break"]:
+            allowed_statuses.append("break")
+        if settings["redirect_allow_offline"]:
+            allowed_statuses.append("offline")
+        if target_window.status not in allowed_statuses:
             raise HTTPException(
                 status_code=400,
                 detail="Выбранное рабочее место сейчас недоступно для перенаправления",

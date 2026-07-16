@@ -389,6 +389,7 @@ function closeOperatorChoiceModal() {
     if (overlay) overlay.style.display = "none";
     window.pendingOperatorChoice = null;
     window.selectedOperatorWindowId = null;
+    window.selectedOperatorStatus = null;
 }
 
 async function chooseOperator(serviceId, serviceName) {
@@ -409,6 +410,7 @@ async function chooseOperator(serviceId, serviceName) {
 
     window.pendingOperatorChoice = { serviceId, serviceName };
     window.selectedOperatorWindowId = null;
+    window.selectedOperatorStatus = null;
     serviceEl.textContent = serviceName;
     errorEl.textContent = "";
     list.innerHTML = "";
@@ -446,7 +448,17 @@ operators.forEach(operator => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "operator-choice-card";
-    card.textContent = `${operator.operator_name} — ${operator.window_name}`;
+    const statusLabels = {
+        online: "🟢 Онлайн",
+        break: "🟡 На перерыве — временно недоступен",
+        offline: "⚪ Офлайн — ожидание может быть долгим"
+    };
+    const title = document.createElement("strong");
+    title.textContent = `${operator.operator_name} — ${operator.window_name}`;
+    const status = document.createElement("span");
+    status.className = `operator-choice-status status-${operator.status}`;
+    status.textContent = statusLabels[operator.status] || operator.status;
+    card.append(title, status);
 
     card.onclick = () => {
         list.querySelectorAll(".operator-choice-card").forEach(el => {
@@ -456,6 +468,7 @@ operators.forEach(operator => {
         card.classList.add("selected");
         confirmBtn.disabled = false;
         window.selectedOperatorWindowId = operator.window_id;
+        window.selectedOperatorStatus = operator.status;
     };
 
     list.appendChild(card);
@@ -478,6 +491,13 @@ function confirmOperatorChoice() {
     const windowId = window.selectedOperatorWindowId;
     if (!windowId) {
         errorEl.textContent = "Выберите оператора";
+        return;
+    }
+
+    if (
+        window.selectedOperatorStatus === "offline" &&
+        !window.confirm("Оператор сейчас офлайн. Талон останется закреплён за ним до его возвращения. Продолжить?")
+    ) {
         return;
     }
 

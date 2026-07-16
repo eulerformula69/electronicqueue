@@ -155,7 +155,9 @@ def test_operator_redirect_uses_single_modal_button():
     assert "createRedirectWindowSection" not in js
     assert "DEFAULT_REDIRECT_RECIPIENT_LABEL" in js
     assert 'service.status !== "active"' in js
-    assert '["online", "break"].includes(windowItem.status)' in js
+    assert 'windowItem.status === "break"' in js
+    assert 'operatorSettings.redirect_allow_offline' in js
+    assert 'selectedWindow?.status === "offline"' in js
     assert "if (!isRedirectWindowAvailable(windowItem)) return false;" in js
     assert "redirectWindowSupportsService(windowItem, redirectState.serviceId)" in js
     assert "? \"/tickets/redirect-to-window\"" in js

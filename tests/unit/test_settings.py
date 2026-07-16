@@ -84,6 +84,12 @@ def test_auto_call_settings_are_in_settings_schemas():
         assert "auto_call_delay_seconds" in _schema_fields(schema)
 
 
+def test_redirect_status_settings_are_exposed_to_operator_ui():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "redirect_allow_break" in _schema_fields(schema)
+        assert "redirect_allow_offline" in _schema_fields(schema)
+
+
 def test_system_settings_dict_includes_board_ticker_text():
     engine = create_engine("sqlite:///:memory:")
     SystemSettings.__table__.create(engine)

@@ -58,7 +58,9 @@ def migrate_operator_choice_schema(engine):
     """Add operator-choice columns to databases created by older releases."""
     ddl = """
     ALTER TABLE services
-        ADD COLUMN IF NOT EXISTS operator_choice_enabled integer NOT NULL DEFAULT 0;
+        ADD COLUMN IF NOT EXISTS operator_choice_enabled integer NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS operator_choice_allow_break integer NOT NULL DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS operator_choice_allow_offline integer NOT NULL DEFAULT 0;
 
     UPDATE services
     SET operator_choice_enabled = 0
@@ -66,7 +68,15 @@ def migrate_operator_choice_schema(engine):
 
     ALTER TABLE services
         ALTER COLUMN operator_choice_enabled SET DEFAULT 0,
-        ALTER COLUMN operator_choice_enabled SET NOT NULL;
+        ALTER COLUMN operator_choice_enabled SET NOT NULL,
+        ALTER COLUMN operator_choice_allow_break SET DEFAULT 1,
+        ALTER COLUMN operator_choice_allow_break SET NOT NULL,
+        ALTER COLUMN operator_choice_allow_offline SET DEFAULT 0,
+        ALTER COLUMN operator_choice_allow_offline SET NOT NULL;
+
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS redirect_allow_break varchar DEFAULT 'true',
+        ADD COLUMN IF NOT EXISTS redirect_allow_offline varchar DEFAULT 'false';
 
     ALTER TABLE tickets
         ADD COLUMN IF NOT EXISTS target_window_id integer REFERENCES windows(id);

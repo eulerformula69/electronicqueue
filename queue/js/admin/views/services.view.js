@@ -138,6 +138,10 @@ function openServiceDrawer(service = null) {
             ${isEdit ? ctx.ui.field("Статус", ctx.ui.select("status", statusOptions, service.status)) : ""}
             ${ctx.ui.field("Показывать на терминале", ctx.ui.switchField("visible_on_terminal", service?.visible_on_terminal ?? true))}
             ${ctx.ui.field("Выбор оператора", ctx.ui.switchField("operator_choice_enabled", service?.operator_choice_enabled ?? false))}
+            <div data-operator-choice-options>
+                ${ctx.ui.field("Разрешить выбирать оператора на перерыве", ctx.ui.switchField("operator_choice_allow_break", service?.operator_choice_allow_break ?? true))}
+                ${ctx.ui.field("Разрешить выбирать оператора офлайн", ctx.ui.switchField("operator_choice_allow_offline", service?.operator_choice_allow_offline ?? false))}
+            </div>
         </form>
     `, {
         footer: `
@@ -148,6 +152,13 @@ function openServiceDrawer(service = null) {
     });
 
     document.getElementById("admin-drawer").onclick = handleDrawerClick;
+    const choiceToggle = document.querySelector('[name="operator_choice_enabled"]');
+    const choiceOptions = document.querySelector("[data-operator-choice-options]");
+    const syncChoiceOptions = () => {
+        if (choiceOptions) choiceOptions.hidden = !choiceToggle?.checked;
+    };
+    choiceToggle?.addEventListener("change", syncChoiceOptions);
+    syncChoiceOptions();
 }
 
 async function handleDrawerClick(event) {
@@ -171,14 +182,27 @@ async function saveService(id) {
     if (!id) {
         await ctx.api.json("/services", {
             method: "POST",
-            body: {name, operator_choice_enabled: Boolean(data.operator_choice_enabled), service_group_id}
+            body: {
+                name,
+                operator_choice_enabled: Boolean(data.operator_choice_enabled),
+                operator_choice_allow_break: Boolean(data.operator_choice_allow_break),
+                operator_choice_allow_offline: Boolean(data.operator_choice_allow_offline),
+                service_group_id
+            }
         });
     } else {
         await ctx.api.json(`/services/${id}`, {method: "PATCH", body: {name}});
         await ctx.api.json(`/services/${id}/group`, {method: "PATCH", body: {service_group_id}});
         await ctx.api.json(`/services/${id}/status`, {method: "PATCH", body: {status: data.status}});
         await ctx.api.json(`/services/${id}/terminal-visibility`, {method: "PATCH", body: {visible_on_terminal: Boolean(data.visible_on_terminal)}});
-        await ctx.api.json(`/services/${id}/operator-choice`, {method: "PATCH", body: {operator_choice_enabled: Boolean(data.operator_choice_enabled)}});
+        await ctx.api.json(`/services/${id}/operator-choice`, {
+            method: "PATCH",
+            body: {
+                operator_choice_enabled: Boolean(data.operator_choice_enabled),
+                operator_choice_allow_break: Boolean(data.operator_choice_allow_break),
+                operator_choice_allow_offline: Boolean(data.operator_choice_allow_offline)
+            }
+        });
     }
 
     ctx.closeDrawer();

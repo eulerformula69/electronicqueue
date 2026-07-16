@@ -24,6 +24,12 @@ class Service(Base):
     operator_choice_enabled = Column(
         Integer, nullable=False, default=0, server_default=text("0")
     )
+    operator_choice_allow_break = Column(
+        Integer, nullable=False, default=1, server_default=text("1")
+    )
+    operator_choice_allow_offline = Column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
     visible_on_terminal = Column(
     Integer, nullable=False, default=1, server_default=text("1")
     )
@@ -232,6 +238,8 @@ class SystemSettings(Base):
     default_operator_status = Column(String, default="online")
     active_ticket_on_operator_logout = Column(String, default="return_to_queue")
     hide_services_without_online_operators = Column(String, default="true")
+    redirect_allow_break = Column(String, default="true")
+    redirect_allow_offline = Column(String, default="false")
     queue_mode = Column(String, default="priority_fifo")
 
     call_message_template = Column(

@@ -35,6 +35,8 @@ function render() {
                     {value: "return_to_queue", label: "Вернуть обратно в очередь"},
                     {value: "keep_with_operator", label: "Оставить за оператором"}
                 ], settings.active_ticket_on_operator_logout))}
+                ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
+                ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
                 ${ctx.ui.field("Режим очереди", ctx.ui.select("queue_mode", [
                     {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
                     {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
@@ -165,6 +167,8 @@ async function save() {
         default_operator_status: data.default_operator_status,
         active_ticket_on_operator_logout: data.active_ticket_on_operator_logout,
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
+        redirect_allow_break: Boolean(data.redirect_allow_break),
+        redirect_allow_offline: Boolean(data.redirect_allow_offline),
         queue_mode: data.queue_mode,
         auto_call_enabled: settings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),

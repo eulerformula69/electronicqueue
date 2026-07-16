@@ -364,6 +364,16 @@ body.terminal-page .operator-choice-card{
     padding: 18px 22px !important;
     box-sizing: border-box !important;
     cursor: pointer !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+body.terminal-page .operator-choice-status{
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+}
+body.terminal-page .operator-choice-card.selected .operator-choice-status{
+    color: #fff !important;
 }
 body.terminal-page .operator-choice-card.selected{
     background: var(--primary) !important;

@@ -360,6 +360,8 @@ async def update_admin_settings(
         settings.hide_services_without_online_operators = _bool_to_str(
             data.hide_services_without_online_operators
         )
+        settings.redirect_allow_break = _bool_to_str(data.redirect_allow_break)
+        settings.redirect_allow_offline = _bool_to_str(data.redirect_allow_offline)
         record_queue_mode(db, data.queue_mode)
         settings.queue_mode = data.queue_mode
         settings.call_message_template = data.call_message_template
@@ -414,6 +416,8 @@ async def get_public_settings():
             "ticket_notice_duration_unprinted_seconds": settings["ticket_notice_duration_unprinted_seconds"],
             "ticket_notice_printed_text": settings["ticket_notice_printed_text"],
             "ticket_notice_unprinted_text": settings["ticket_notice_unprinted_text"],
+            "redirect_allow_break": settings["redirect_allow_break"],
+            "redirect_allow_offline": settings["redirect_allow_offline"],
             "board_ticket_template": settings["board_ticket_template"],
             "board_ticker_text": settings["board_ticker_text"],
             "auto_call_enabled": settings["auto_call_enabled"],

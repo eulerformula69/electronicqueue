@@ -17,7 +17,7 @@ from fastapi import (
 )
 from fastapi.params import Path
 from fastapi.responses import FileResponse
-from sqlalchemy import and_, asc, func, literal, text
+from sqlalchemy import and_, asc, func, literal, or_, text
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -50,6 +50,7 @@ from app.schemas import (
 )
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict
+from app.services.operators import update_services_status_for_window
 
 router = APIRouter()
 
@@ -67,7 +68,21 @@ def _visible_services_query(db: Session, include_hidden: bool):
                 .join(Window, WindowService.window_id == Window.id)
                 .filter(
                     WindowService.service_id == Service.id,
-                    Window.status.in_(AVAILABLE_WINDOW_STATUSES),
+                    or_(
+                        Window.status == "online",
+                        and_(
+                            Window.status == "break",
+                            or_(
+                                Service.operator_choice_enabled == 0,
+                                Service.operator_choice_allow_break == 1,
+                            ),
+                        ),
+                        and_(
+                            Window.status == "offline",
+                            Service.operator_choice_enabled == 1,
+                            Service.operator_choice_allow_offline == 1,
+                        ),
+                    ),
                 )
                 .exists()
             )
@@ -85,6 +100,8 @@ def _service_payload(service: Service):
         "is_archived": service.is_archived,
         "last_window_id": service.last_window_id,
         "operator_choice_enabled": service.operator_choice_enabled,
+        "operator_choice_allow_break": getattr(service, "operator_choice_allow_break", 1),
+        "operator_choice_allow_offline": getattr(service, "operator_choice_allow_offline", 0),
         "visible_on_terminal": service.visible_on_terminal,
     }
 
@@ -129,6 +146,8 @@ async def create_service(service: ServiceCreate, admin: Admin = Depends(verify_a
             display_order=next_order,
             service_group_id=service.service_group_id,
             operator_choice_enabled=1 if service.operator_choice_enabled else 0,
+            operator_choice_allow_break=1 if service.operator_choice_allow_break else 0,
+            operator_choice_allow_offline=1 if service.operator_choice_allow_offline else 0,
             visible_on_terminal=1 if service.visible_on_terminal else 0
 
         )
@@ -492,13 +511,25 @@ async def update_service_operator_choice(
             raise HTTPException(status_code=404, detail="Service not found")
 
         service.operator_choice_enabled = 1 if data.operator_choice_enabled else 0
+        service.operator_choice_allow_break = 1 if data.operator_choice_allow_break else 0
+        service.operator_choice_allow_offline = 1 if data.operator_choice_allow_offline else 0
+        window_ids = [
+            row[0]
+            for row in db.query(WindowService.window_id)
+            .filter(WindowService.service_id == service.id)
+            .all()
+        ]
+        for window_id in window_ids:
+            update_services_status_for_window(db, window_id)
         db.commit()
         db.refresh(service)
         await manager.broadcast({"type": "services_updated"})
 
         return {
             "id": service.id,
-            "operator_choice_enabled": service.operator_choice_enabled
+            "operator_choice_enabled": service.operator_choice_enabled,
+            "operator_choice_allow_break": service.operator_choice_allow_break,
+            "operator_choice_allow_offline": service.operator_choice_allow_offline,
         }
     finally:
         db.close()
@@ -519,13 +550,19 @@ def list_service_operators(
         if not service:
             raise HTTPException(status_code=404, detail="Услуга не найдена")
 
+        allowed_statuses = ["online"]
+        if service.operator_choice_allow_break:
+            allowed_statuses.append("break")
+        if service.operator_choice_allow_offline:
+            allowed_statuses.append("offline")
+
         rows = (
             db.query(Operator, Window)
             .join(Window, Operator.window_id == Window.id)
             .join(WindowService, Window.id == WindowService.window_id)
             .filter(
                 WindowService.service_id == service_id,
-                Window.status.in_(AVAILABLE_WINDOW_STATUSES)
+                Window.status.in_(allowed_statuses)
             )
             .order_by(Operator.name.asc())
             .all()
@@ -536,7 +573,8 @@ def list_service_operators(
                 "operator_id": operator.id,
                 "operator_name": operator.name,
                 "window_id": window.id,
-                "window_name": window.name
+                "window_name": window.name,
+                "status": window.status,
             }
             for operator, window in rows
         ]
