@@ -123,6 +123,20 @@ def test_operator_auto_call_resumes_when_operator_goes_online():
     assert "На паузе: оператор не в статусе Online" not in source
 
 
+def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
+    source = read_text("queue/js/operator.js")
+    settings_section = source.split("async function loadOperatorReasonSettings", 1)[1]
+    settings_section = settings_section.split("function withOtherComment", 1)[0]
+
+    assert "let autoCallSettingsLoaded = false;" in source
+    assert "const wasAutoCallEnabled = operatorSettings.auto_call_enabled;" in settings_section
+    assert "autoCallSettingsLoaded &&" in settings_section
+    assert "!wasAutoCallEnabled &&" in settings_section
+    assert "operatorSettings.auto_call_enabled" in settings_section
+    assert "autoCallWasJustEnabled || hadActiveAutoCallTimer" in settings_section
+    assert "scheduleAutoCallAfterWorkspaceFreed();" in settings_section
+
+
 def test_operator_redirect_loads_services_hidden_on_terminal():
     source = read_text("queue/js/operator.js")
 

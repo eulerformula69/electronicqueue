@@ -60,6 +60,7 @@ let operatorSettings = {
     redirect_allow_break: true,
     redirect_allow_offline: false
 };
+let autoCallSettingsLoaded = false;
 let recallCooldown = false;
 const CLIENT_OPERATIONS_ON_BREAK_MESSAGE = "Нельзя выполнять операции с клиентом во время перерыва";
 
@@ -210,6 +211,7 @@ async function loadOperatorReasonSettings() {
         const settings = await settingsRes.json();
         const details = detailsRes.ok ? await detailsRes.json() : {};
         const hadActiveAutoCallTimer = Boolean(autoCallTimer);
+        const wasAutoCallEnabled = operatorSettings.auto_call_enabled;
         operatorSettings = {
             ...operatorSettings,
             auto_call_enabled: (details.auto_call_enabled ?? settings.auto_call_enabled) === true,
@@ -222,12 +224,18 @@ async function loadOperatorReasonSettings() {
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
         }
+        const autoCallWasJustEnabled = (
+            autoCallSettingsLoaded &&
+            !wasAutoCallEnabled &&
+            operatorSettings.auto_call_enabled
+        );
+        autoCallSettingsLoaded = true;
         syncAutoCallVisibility();
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
             stopAutoCall("Отключена администратором");
-        } else if (hadActiveAutoCallTimer) {
-            startAutoCallAfterFinish();
+        } else if (autoCallWasJustEnabled || hadActiveAutoCallTimer) {
+            scheduleAutoCallAfterWorkspaceFreed();
         }
     } catch (e) {
         console.debug("Operator reason settings load error:", e);
