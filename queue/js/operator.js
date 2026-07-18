@@ -1982,6 +1982,19 @@ function normalizeAutoCallDelay(value) {
     return Math.max(0, Math.min(600, delay));
 }
 
+function getAutoCallStatusDisplay() {
+    return document.getElementById("auto-call-status");
+}
+
+function getAutoCallHintDisplay() {
+    return document.getElementById("auto-call-hint");
+}
+
+function syncAutoCallVisibility() {
+    const block = document.getElementById("auto-call-info-block");
+    if (block) block.style.display = operatorSettings.auto_call_enabled ? "" : "none";
+}
+
 function isOperatorOnline() {
     return currentWindowStatus === "online";
 }
@@ -2006,13 +2019,40 @@ function hasCurrentTicket() {
 }
 
 function updateAutoCallStatus(message, options = {}) {
+    syncAutoCallVisibility();
+    const statusDisplay = getAutoCallStatusDisplay();
+    const hintDisplay = getAutoCallHintDisplay();
+
     if (typeof message === "string") {
         autoCallState = options.state || "";
+        if (statusDisplay) {
+            statusDisplay.textContent = message;
+            statusDisplay.dataset.state = autoCallState;
+        }
+        if (hintDisplay) hintDisplay.textContent = options.hint || "";
         refreshOperatorUiState();
         return;
     }
 
     autoCallState = operatorSettings.auto_call_enabled ? "enabled" : "disabled";
+    if (statusDisplay) {
+        if (operatorSettings.auto_call_enabled && !isOperatorOnline()) {
+            autoCallState = "paused";
+            statusDisplay.textContent = getAutoCallPausedMessage();
+            statusDisplay.dataset.state = "paused";
+            if (hintDisplay) hintDisplay.textContent = "";
+        } else if (operatorSettings.auto_call_enabled) {
+            statusDisplay.textContent = "Автоочередь включена";
+            statusDisplay.dataset.state = "enabled";
+            if (hintDisplay) {
+                hintDisplay.textContent = "Отсчёт начнётся после завершения текущего клиента.";
+            }
+        } else {
+            statusDisplay.textContent = "Отключена администратором";
+            statusDisplay.dataset.state = "disabled";
+            if (hintDisplay) hintDisplay.textContent = "";
+        }
+    }
     refreshOperatorUiState();
 }
 

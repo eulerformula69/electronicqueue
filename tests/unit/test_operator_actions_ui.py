@@ -75,6 +75,8 @@ def test_operator_actions_keep_existing_ticket_endpoints():
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
+    display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
+    display_zone = display_zone.split('<section class="glass-card">', 1)[0]
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
     assert "localStorage.getItem('autoCallActive')" not in source
@@ -88,7 +90,9 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
     assert "loadQueue({ checkNewTickets: false })" in source
     assert "Очередь пуста" in source
-    assert "auto-call-info-block" not in html
+    assert "auto-call-info-block" in display_zone
+    assert "auto-call-countdown" not in display_zone
+    assert "auto-call-actions" not in display_zone
 
 
 def test_operator_auto_call_schedules_after_workspace_freeing_actions():
@@ -310,12 +314,15 @@ def test_operator_mutations_share_double_click_guard():
         assert f'endOperatorRequest("{key}")' in source
 
 
-def test_operator_page_does_not_render_auto_call_block():
+def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
 
-    assert "auto-call-info-block" not in html
+    assert "auto-call-info-block" in html
+    assert "auto-call-status" in html
+    assert "auto-call-hint" in html
     assert "auto-call-countdown" not in html
+    assert "auto-call-actions" not in html
     assert "showAutoCallDeclinePopup" not in source
     assert "/operator/auto-call-declines" not in source
 
