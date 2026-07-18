@@ -42,7 +42,7 @@ function render() {
                 ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}
                 ${ctx.ui.field("Сообщение об отменённом талоне на табло, секунд", ctx.ui.input("cancelled_ticket_board_display_seconds", settings.cancelled_ticket_board_display_seconds ?? 60, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
-                ${ctx.ui.field("Текст системного сообщения об отмене", ctx.ui.input("cancelled_ticket_board_message_template", settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.", "maxlength=\"500\""))}
+                ${ctx.ui.field("Текст системного сообщения об отмене (<number>, <window>)", ctx.ui.input("cancelled_ticket_board_message_template", settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.", "maxlength=\"500\""))}
                 <div class="admin-field">
                     <span>Причины отмены</span>
                     <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>

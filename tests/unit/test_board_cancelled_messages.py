@@ -11,7 +11,8 @@ def read_text(path):
 def test_board_state_contains_temporary_cancelled_messages():
     source = read_text("app/services/tickets.py")
     assert '"cancelled": get_recent_cancelled_tickets_for_board()' in source
-    assert 'Ticket.cancel_reason.in_(("no_show", "Клиент не явился"))' in source
+    assert "Ticket.cancel_reason.in_" not in source
+    assert 'Ticket.status == "cancelled"' in source
     assert '"expires_at"' in source
     assert 'settings["cancelled_ticket_board_message_template"]' in source
 

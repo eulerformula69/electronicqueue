@@ -261,7 +261,7 @@ class SystemSettingsUpdate(BaseModel):
     auto_call_balance_min_free_operators: int = Field(default=2, ge=2, le=100)
     cancelled_ticket_board_display_seconds: int = Field(default=60, ge=0, le=3600)
     cancelled_ticket_board_message_template: str = Field(
-        default="⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.",
+        default="⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.",
         min_length=1,
         max_length=500,
     )

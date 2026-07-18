@@ -509,7 +509,14 @@ def migrate_auto_call_balance_and_board_cancel_schema(engine):
         ADD COLUMN IF NOT EXISTS auto_call_balance_min_free_operators integer DEFAULT 2,
         ADD COLUMN IF NOT EXISTS cancelled_ticket_board_display_seconds integer DEFAULT 60,
         ADD COLUMN IF NOT EXISTS cancelled_ticket_board_message_template varchar(500)
-            DEFAULT '⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.';
+            DEFAULT '⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.';
+
+    UPDATE system_settings
+    SET cancelled_ticket_board_message_template =
+        '⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.'
+    WHERE cancelled_ticket_board_message_template IS NULL
+       OR cancelled_ticket_board_message_template =
+        '⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.';
     """
     with engine.begin() as conn:
         conn.execute(text(ddl))

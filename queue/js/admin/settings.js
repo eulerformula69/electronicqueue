@@ -132,7 +132,7 @@ export async function loadExtraSettings() {
                 <label class="settings-field-row"><span class="settings-label">Максимум талонов для балансировки:</span><input id="setting-auto-call-balance-threshold" class="settings-input" type="number" min="1" max="100" value="${settings.auto_call_balance_queue_threshold ?? 3}"></label>
                 <label class="settings-field-row"><span class="settings-label">Минимум свободных операторов:</span><input id="setting-auto-call-balance-min-operators" class="settings-input" type="number" min="2" max="100" value="${settings.auto_call_balance_min_free_operators ?? 2}"></label>
                 <label class="settings-field-row"><span class="settings-label">Отмена на табло, секунд:</span><input id="setting-cancelled-board-seconds" class="settings-input" type="number" min="0" max="3600" value="${settings.cancelled_ticket_board_display_seconds ?? 60}"></label>
-                <label class="settings-field-row"><span class="settings-label">Текст отмены на табло:</span><input id="setting-cancelled-board-template" class="settings-input settings-input-wide" maxlength="500" value="${escapeHtml(settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.")}"></label>
+                <label class="settings-field-row"><span class="settings-label">Текст отмены на табло:</span><input id="setting-cancelled-board-template" class="settings-input settings-input-wide" maxlength="500" value="${escapeHtml(settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.")}"></label>
             </section>
 			
 		<section class="settings-section">

@@ -447,7 +447,6 @@ def get_recent_cancelled_tickets_for_board():
             .filter(
                 Ticket.status == "cancelled",
                 Ticket.finished_at >= cutoff,
-                Ticket.cancel_reason.in_(("no_show", "Клиент не явился")),
             )
             .order_by(Ticket.finished_at.desc())
             .all()

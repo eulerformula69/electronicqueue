@@ -263,5 +263,5 @@ class SystemSettings(Base):
     cancelled_ticket_board_display_seconds = Column(Integer, default=60)
     cancelled_ticket_board_message_template = Column(
         String(500),
-        default="⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.",
+        default="⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.",
     )

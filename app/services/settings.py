@@ -14,7 +14,7 @@ DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
 MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
 MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
 DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE = (
-    "⚠ Талон <number>: вызов отменён — клиент не подошёл. "
+    "⚠ Талон <number>: вызов отменён оператором окна <window>. "
     "Вернулись? Сообщите номер оператору."
 )
 
