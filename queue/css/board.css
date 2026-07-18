@@ -66,7 +66,7 @@ body.board-page .board-ticker__text--system{
     font-weight: 800;
 }
 body.board-page .board-ticker__countdown{
-    color: #fff1a8;
+    color: inherit;
     font-variant-numeric: tabular-nums;
 }
 body.board-page .board-ticker__text::after{
