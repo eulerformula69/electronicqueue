@@ -107,6 +107,13 @@ body.operator-page .current-client-panel{
     justify-content: center;
     min-height: 0;
 }
+
+body.operator-page .service-timer {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
 body.operator-page .ticket-label{
     font-size: 1.2rem;
     color: var(--text-muted);

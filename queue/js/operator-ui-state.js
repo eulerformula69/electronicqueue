@@ -23,6 +23,8 @@ function refreshOperatorUiState() {
     document.querySelectorAll("[data-current-ticket-action]").forEach(button => {
         button.disabled = !online || !hasTicket || busy || (
             button.id === "recall-btn" && recallCooldown
+        ) || (
+            button.id === "finish-btn" && isCalledTicketWaitActive()
         );
     });
     document.querySelectorAll(".queue-resume-btn").forEach(button => {

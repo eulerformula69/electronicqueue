@@ -84,6 +84,14 @@ def test_auto_call_settings_are_in_settings_schemas():
         assert "auto_call_delay_seconds" in _schema_fields(schema)
 
 
+def test_called_ticket_min_wait_is_in_settings_schemas_with_default():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "called_ticket_min_wait_seconds" in _schema_fields(schema)
+
+    field = _schema_fields(SystemSettingsUpdate)["called_ticket_min_wait_seconds"]
+    assert field.default == 180
+
+
 def test_redirect_status_settings_are_exposed_to_operator_ui():
     for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
         assert "redirect_allow_break" in _schema_fields(schema)
@@ -160,6 +168,7 @@ def test_system_settings_dict_includes_auto_call_settings():
 
         assert result["auto_call_enabled"] is True
         assert result["auto_call_delay_seconds"] == 30
+        assert result["called_ticket_min_wait_seconds"] == 180
     finally:
         db.close()
 

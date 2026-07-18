@@ -255,3 +255,4 @@ class SystemSettings(Base):
     defer_reason_options = Column(String(4000), default="")
     auto_call_enabled = Column(String, default="false")
     auto_call_delay_seconds = Column(Integer, default=60)
+    called_ticket_min_wait_seconds = Column(Integer, default=180)

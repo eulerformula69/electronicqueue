@@ -1,4 +1,5 @@
 import asyncio
+import math
 from datetime import datetime, timedelta
 
 from sqlalchemy import case, func
@@ -12,6 +13,20 @@ from app.services.settings import get_system_settings_dict
 RETURN_TO_QUEUE_DELAY_MINUTES = 15
 AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES = 30
 AUTO_CANCEL_RETURNED_TICKETS_INTERVAL_SECONDS = 60
+
+
+def called_ticket_wait_remaining_seconds(
+    ticket: Ticket,
+    min_wait_seconds: int,
+    *,
+    now: datetime | None = None,
+) -> int:
+    """Return the server-authoritative wait before finishing a called ticket."""
+    if not ticket.called_at:
+        return 0
+    current_time = now or datetime.now()
+    available_at = ticket.called_at + timedelta(seconds=max(0, min_wait_seconds))
+    return max(0, math.ceil((available_at - current_time).total_seconds()))
 
 
 def queue_order_expr():

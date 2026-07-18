@@ -475,6 +475,20 @@ def migrate_operator_auto_call_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_called_ticket_min_wait_schema(engine):
+    """Add the minimum wait before a called ticket can be finished."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS called_ticket_min_wait_seconds integer DEFAULT 180;
+
+    UPDATE system_settings
+    SET called_ticket_min_wait_seconds = COALESCE(called_ticket_min_wait_seconds, 180);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

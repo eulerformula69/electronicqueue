@@ -10,6 +10,9 @@ MAX_TICKET_PRINT_SCALE_PERCENT = 150
 DEFAULT_AUTO_CALL_DELAY_SECONDS = 60
 MIN_AUTO_CALL_DELAY_SECONDS = 0
 MAX_AUTO_CALL_DELAY_SECONDS = 600
+DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
+MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
+MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
 
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
@@ -55,6 +58,15 @@ def _normalize_auto_call_delay_seconds(value: int | None) -> int:
     return max(
         MIN_AUTO_CALL_DELAY_SECONDS,
         min(MAX_AUTO_CALL_DELAY_SECONDS, int(value)),
+    )
+
+
+def _normalize_called_ticket_min_wait_seconds(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS
+    return max(
+        MIN_CALLED_TICKET_MIN_WAIT_SECONDS,
+        min(MAX_CALLED_TICKET_MIN_WAIT_SECONDS, int(value)),
     )
 
 
@@ -220,5 +232,8 @@ def get_system_settings_dict(db: Session) -> dict:
         "auto_call_enabled": _str_to_bool(settings.auto_call_enabled, default=False),
         "auto_call_delay_seconds": _normalize_auto_call_delay_seconds(
             settings.auto_call_delay_seconds
+        ),
+        "called_ticket_min_wait_seconds": _normalize_called_ticket_min_wait_seconds(
+            settings.called_ticket_min_wait_seconds
         ),
     }

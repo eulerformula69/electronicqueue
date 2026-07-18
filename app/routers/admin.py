@@ -384,6 +384,7 @@ async def update_admin_settings(
         )
         settings.auto_call_enabled = _bool_to_str(data.auto_call_enabled)
         settings.auto_call_delay_seconds = data.auto_call_delay_seconds
+        settings.called_ticket_min_wait_seconds = data.called_ticket_min_wait_seconds
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]
@@ -417,6 +418,7 @@ async def get_public_settings():
             "board_ticker_text": settings["board_ticker_text"],
             "auto_call_enabled": settings["auto_call_enabled"],
             "auto_call_delay_seconds": settings["auto_call_delay_seconds"],
+            "called_ticket_min_wait_seconds": settings["called_ticket_min_wait_seconds"],
             "cancel_reason_options": [
                 item for item in settings["cancel_reason_options"]
                 if item["enabled"]

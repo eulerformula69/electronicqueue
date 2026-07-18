@@ -121,7 +121,12 @@ export async function loadExtraSettings() {
                     <select id="setting-active-ticket-on-logout" class="settings-select settings-select-wide">
                         <option value="return_to_queue" ${settings.active_ticket_on_operator_logout === "return_to_queue" ? "selected" : ""}>Вернуть обратно в очередь</option>
                         <option value="keep_with_operator" ${settings.active_ticket_on_operator_logout === "keep_with_operator" ? "selected" : ""}>Оставить за оператором</option>
-					</select>
+                    </select>
+                </label>
+
+                <label class="settings-field-row">
+                    <span class="settings-label">Минимальное ожидание после вызова, секунд:</span>
+                    <input id="setting-called-ticket-min-wait" class="settings-input" type="number" min="0" max="3600" step="1" value="${settings.called_ticket_min_wait_seconds ?? 180}">
                 </label>
             </section>
 			
@@ -205,6 +210,7 @@ export async function saveExtraSettings() {
 		hide_services_without_online_operators: document.getElementById("setting-unavailable-services-mode").value === "hide",
         auto_call_enabled: currentSettings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(currentSettings.auto_call_delay_seconds ?? 60),
+        called_ticket_min_wait_seconds: Number(document.getElementById("setting-called-ticket-min-wait").value),
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
@@ -223,6 +229,14 @@ export async function saveExtraSettings() {
         payload.ticket_notice_duration_unprinted_seconds > 300
     ) {
         alert("Время показа номера должно быть целым числом от 1 до 300 секунд");
+        return;
+    }
+    if (
+        !Number.isInteger(payload.called_ticket_min_wait_seconds) ||
+        payload.called_ticket_min_wait_seconds < 0 ||
+        payload.called_ticket_min_wait_seconds > 3600
+    ) {
+        alert("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд");
         return;
     }
 

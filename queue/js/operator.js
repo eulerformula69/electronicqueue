@@ -58,6 +58,7 @@ let serviceNotificationSettings = new Map();
 let operatorSettings = {
     auto_call_enabled: false,
     auto_call_delay_seconds: 60,
+    called_ticket_min_wait_seconds: 180,
     redirect_allow_break: true,
     redirect_allow_offline: false
 };
@@ -220,12 +221,16 @@ async function loadOperatorReasonSettings() {
             auto_call_delay_seconds: normalizeAutoCallDelay(
                 details.auto_call_delay_seconds ?? settings.auto_call_delay_seconds
             ),
+            called_ticket_min_wait_seconds: normalizeCalledTicketMinWait(
+                settings.called_ticket_min_wait_seconds
+            ),
             redirect_allow_break: settings.redirect_allow_break === true,
             redirect_allow_offline: settings.redirect_allow_offline === true
         };
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
         }
+        syncCalledTicketTimers();
         const autoCallWasJustEnabled = (
             autoCallSettingsLoaded &&
             !wasAutoCallEnabled &&
@@ -268,14 +273,15 @@ function setCurrentTicket(ticket) {
     currentTicketReturnedToQueueCount = Number.isFinite(returnedToQueueCount)
         ? returnedToQueueCount
         : null;
+    currentTicketCalledAt = parseTicketCalledAt(ticket);
     if (!isSameTicket) {
-        currentTicketCalledAt = parseTicketCalledAt(ticket) || new Date();
         currentTicketRecallCount = 0;
     }
     if (operatorSettings.auto_call_enabled) {
         stopAutoCall("Рабочее место занято текущим талоном");
     }
     refreshOperatorUiState();
+    syncCalledTicketTimers();
 }
 
 function clearCurrentTicket() {
@@ -285,6 +291,7 @@ function clearCurrentTicket() {
     currentTicketRecallCount = 0;
     currentTicketReturnedToQueueCount = null;
     refreshOperatorUiState();
+    syncCalledTicketTimers();
 }
 
 function showOperatorPopup({ title, message, actions }) {

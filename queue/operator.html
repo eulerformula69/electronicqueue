@@ -140,6 +140,9 @@
             <div class="ticket-label">ТЕКУЩИЙ КЛИЕНТ</div>
             <div id="current" class="ticket-number">--</div>
 		    <div id="current-service" class="current-service">—</div>
+            <div id="service-timer" class="service-timer" aria-live="off">
+                Обслуживание: <span id="service-timer-value">00:00</span>
+            </div>
         </div>
         
 			
@@ -185,6 +188,7 @@
 <script src="/queue/js/config.js"></script>
 <script src="/queue/js/operator-queue-sections.js"></script>
 <script src="/queue/js/operator-ui-state.js"></script>
+<script src="/queue/js/operator-ticket-timers.js"></script>
 <script src="/queue/js/operator.js"></script>
 <script src="/queue/js/operator-changelog.js"></script>
 

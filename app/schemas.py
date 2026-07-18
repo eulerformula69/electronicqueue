@@ -254,6 +254,7 @@ class SystemSettingsUpdate(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool = False
     auto_call_delay_seconds: int = Field(default=60, ge=0, le=600)
+    called_ticket_min_wait_seconds: int = Field(default=180, ge=0, le=3600)
 
 
 class SystemSettingsResponse(BaseModel):
@@ -277,6 +278,7 @@ class SystemSettingsResponse(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool
     auto_call_delay_seconds: int
+    called_ticket_min_wait_seconds: int
 
 
 class PublicSettingsResponse(BaseModel):
@@ -295,3 +297,4 @@ class PublicSettingsResponse(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool
     auto_call_delay_seconds: int
+    called_ticket_min_wait_seconds: int

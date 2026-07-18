@@ -43,6 +43,7 @@ from app.schemas import (
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict, normalize_ticket_reason
 from app.services.tickets import (
+    called_ticket_wait_remaining_seconds,
     broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_deferred_ticket,
@@ -363,6 +364,22 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     if not ticket:
         db.close()
         return {"detail": "Нет текущего клиента"}
+
+    settings = get_system_settings_dict(db)
+    min_wait_seconds = settings["called_ticket_min_wait_seconds"]
+    remaining_seconds = called_ticket_wait_remaining_seconds(
+        ticket,
+        min_wait_seconds,
+    )
+    if remaining_seconds:
+        db.close()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Завершение будет доступно через "
+                f"{remaining_seconds} сек. после вызова клиента"
+            ),
+        )
 
     # Завершаем тикет
     ticket.status = "finished"
