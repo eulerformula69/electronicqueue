@@ -205,6 +205,7 @@ setInterval(() => {
 let currentTicketId = null;
 let currentTicketStatus = null;
 let currentTicketCalledAt = null;
+let currentTicketLastRecalledAt = null;
 let currentTicketRecallCount = 0;
 let currentTicketReturnedToQueueCount = null;
 let allServices = [];
@@ -280,6 +281,13 @@ function parseTicketCalledAt(ticket) {
     return Number.isNaN(calledAt.getTime()) ? null : calledAt;
 }
 
+function parseTicketLastRecalledAt(ticket) {
+    if (!ticket || !ticket.last_recalled_at) return null;
+
+    const recalledAt = new Date(ticket.last_recalled_at);
+    return Number.isNaN(recalledAt.getTime()) ? null : recalledAt;
+}
+
 function setCurrentTicket(ticket) {
     const isSameTicket = currentTicketId === ticket.id;
     const returnedToQueueCount = Number(ticket.returned_to_queue_count);
@@ -290,6 +298,7 @@ function setCurrentTicket(ticket) {
         ? returnedToQueueCount
         : null;
     currentTicketCalledAt = parseTicketCalledAt(ticket);
+    currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket);
     if (!isSameTicket) {
         currentTicketRecallCount = 0;
     }
@@ -298,16 +307,19 @@ function setCurrentTicket(ticket) {
     }
     refreshOperatorUiState();
     syncCalledTicketTimers();
+    syncRecallCooldown();
 }
 
 function clearCurrentTicket() {
     currentTicketId = null;
     currentTicketStatus = null;
     currentTicketCalledAt = null;
+    currentTicketLastRecalledAt = null;
     currentTicketRecallCount = 0;
     currentTicketReturnedToQueueCount = null;
     refreshOperatorUiState();
     syncCalledTicketTimers();
+    syncRecallCooldown();
 }
 
 function showOperatorPopup({ title, message, actions }) {
@@ -1622,8 +1634,6 @@ if (sessionStorage.getItem("refresh")) {
     sessionStorage.removeItem("refresh");
 }
 
-const RECALL_CD_TIME = 10000; // 10 секунд ограничения
-
 async function recallCurrent(options = {}) {
     if (!ensureClientOperationsAllowed()) return;
     if (recallCooldown) return;
@@ -1635,40 +1645,22 @@ async function recallCurrent(options = {}) {
             headers: { "session-id": sessionId }
         });
 
+        const result = await res.json();
         if (res.ok) {
             if (options.trackRepeat !== false && currentTicketId) {
                 currentTicketRecallCount += 1;
             }
-            startRecallTimer();
+            currentTicketLastRecalledAt = parseTicketLastRecalledAt(result);
+            syncRecallCooldown();
         } else {
-            const err = await res.json();
-            showToast(err.detail || "Ошибка вызова", "danger");
+            showToast(result.detail || "Ошибка вызова", "danger");
+            syncRecallCooldown();
         }
     } catch (e) {
         console.error(e);
     } finally {
         endOperatorRequest("recall");
     }
-}
-
-function startRecallTimer() {
-    const btn = document.getElementById("recall-btn");
-    recallCooldown = true;
-    btn.disabled = true;
-    
-    let secondsLeft = RECALL_CD_TIME / 1000;
-    const originalText = "ПОВТОРИТЬ ВЫЗОВ";
-    
-    const interval = setInterval(() => {
-        secondsLeft--;
-        btn.textContent = `Повтор через ${secondsLeft}с`;
-        if (secondsLeft <= 0) {
-            clearInterval(interval);
-            recallCooldown = false;
-            btn.textContent = originalText;
-            refreshOperatorUiState();
-        }
-    }, 1000);
 }
 
 let cancelInterval = null; 

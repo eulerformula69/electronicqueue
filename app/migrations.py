@@ -318,6 +318,17 @@ def migrate_ticket_defer_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_recall_schema(engine):
+    """Persist the latest repeat-call time for server-authoritative cooldowns."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS last_recalled_at timestamp;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

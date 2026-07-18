@@ -2,7 +2,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from app.models import Ticket
-from app.services.tickets import called_ticket_wait_remaining_seconds
+from app.services.tickets import (
+    called_ticket_wait_remaining_seconds,
+    recall_cooldown_remaining_seconds,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +53,31 @@ def test_finish_button_uses_wait_state_but_other_actions_do_not():
     assert 'button.id === "finish-btn" && isCalledTicketWaitActive()' in state_source
     assert '"current-ticket-action-inactive"' in state_source
     assert ".current-ticket-action-inactive" in css
+
+
+def test_recall_cooldown_uses_latest_server_timestamp():
+    now = datetime(2026, 7, 18, 12, 0, 10)
+    ticket = Ticket(
+        called_at=now - timedelta(seconds=30),
+        last_recalled_at=now - timedelta(seconds=4),
+    )
+
+    assert recall_cooldown_remaining_seconds(ticket, now=now) == 6
+    assert recall_cooldown_remaining_seconds(
+        ticket,
+        now=now + timedelta(seconds=6),
+    ) == 0
+
+
+def test_recall_cooldown_restores_from_server_state_after_reload():
+    operator_source = read_text("queue/js/operator.js")
+    timer_source = read_text("queue/js/operator-ticket-timers.js")
+    state_source = read_text("queue/js/operator-ui-state.js")
+
+    assert "currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket)" in operator_source
+    assert "recallCooldownRemainingSeconds" in timer_source
+    assert "syncRecallCooldown();" in operator_source
+    assert "waitingBeforeRecall" in state_source
 
 
 def test_admin_can_configure_called_ticket_min_wait():

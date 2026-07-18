@@ -1,4 +1,6 @@
 let calledTicketTimerInterval = null;
+let recallCooldownInterval = null;
+const RECALL_COOLDOWN_SECONDS = 10;
 
 function normalizeCalledTicketMinWait(value) {
     const seconds = Number(value);
@@ -65,5 +67,43 @@ function syncCalledTicketTimers() {
     updateCalledTicketTimers();
     if (currentTicketId && currentTicketCalledAt) {
         calledTicketTimerInterval = setInterval(updateCalledTicketTimers, 1000);
+    }
+}
+
+function recallCooldownRemainingSeconds(nowMs = Date.now()) {
+    if (!currentTicketId) return 0;
+    const callTimes = [currentTicketCalledAt, currentTicketLastRecalledAt]
+        .filter(Boolean)
+        .map(value => value.getTime());
+    const latestCallAtMs = callTimes.length ? Math.max(...callTimes) : null;
+    if (latestCallAtMs === null) return 0;
+    const availableAt = latestCallAtMs + RECALL_COOLDOWN_SECONDS * 1000;
+    return Math.max(0, Math.ceil((availableAt - nowMs) / 1000));
+}
+
+function updateRecallCooldown() {
+    const button = document.getElementById("recall-btn");
+    const remaining = recallCooldownRemainingSeconds();
+    recallCooldown = remaining > 0;
+    if (button) {
+        button.textContent = recallCooldown
+            ? `Повтор через ${remaining}с`
+            : "ПОВТОРИТЬ ВЫЗОВ";
+    }
+    refreshOperatorUiState();
+    if (!recallCooldown && recallCooldownInterval) {
+        clearInterval(recallCooldownInterval);
+        recallCooldownInterval = null;
+    }
+}
+
+function syncRecallCooldown() {
+    if (recallCooldownInterval) {
+        clearInterval(recallCooldownInterval);
+        recallCooldownInterval = null;
+    }
+    updateRecallCooldown();
+    if (recallCooldown) {
+        recallCooldownInterval = setInterval(updateRecallCooldown, 250);
     }
 }

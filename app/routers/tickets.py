@@ -47,6 +47,7 @@ from app.services.tickets import (
     broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_deferred_ticket,
+    recall_cooldown_remaining_seconds,
     return_ticket_to_queue,
 )
 from app.services.operators import resolve_operator_auto_call_enabled
@@ -425,6 +426,8 @@ async def call_next_ticket(
             "id": ticket.id,
             "number": ticket.number,
             "status": ticket.status,
+            "called_at": ticket.called_at,
+            "last_recalled_at": ticket.last_recalled_at,
             "service_name": ticket.service.name if ticket.service else "Услуга не найдена"
         }
     finally:
@@ -487,6 +490,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
+        ticket.last_recalled_at = None
         ticket.finished_at = None
         ticket.defer_reason = None
         ticket.deferred_at = None
@@ -1046,6 +1050,14 @@ async def recall_ticket(operator: Operator = Depends(verify_session)):
         if not ticket:
             raise HTTPException(status_code=404, detail="Нет активного клиента для повторного вызова")
 
+        now = datetime.now()
+        remaining_seconds = recall_cooldown_remaining_seconds(ticket, now=now)
+        if remaining_seconds:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Повторный вызов будет доступен через {remaining_seconds} сек.",
+            )
+
         window = db.query(Window).filter(Window.id == operator.window_id).first()
         if not window:
             raise HTTPException(status_code=404, detail="Окно не найдено")
@@ -1064,6 +1076,9 @@ async def recall_ticket(operator: Operator = Depends(verify_session)):
             window.name
         )
 
+        ticket.last_recalled_at = now
+        db.commit()
+
         await manager.broadcast({
             "type": "recall_ticket",
             "ticket_id": ticket.id,
@@ -1073,7 +1088,11 @@ async def recall_ticket(operator: Operator = Depends(verify_session)):
             "tts_text": tts_text
         })
 
-        return {"status": "success", "message": f"Повторный вызов клиента {ticket.number}"}
+        return {
+            "status": "success",
+            "message": f"Повторный вызов клиента {ticket.number}",
+            "last_recalled_at": ticket.last_recalled_at,
+        }
     finally:
         db.close()
 

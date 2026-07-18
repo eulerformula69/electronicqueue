@@ -13,6 +13,7 @@ from app.services.settings import get_system_settings_dict
 RETURN_TO_QUEUE_DELAY_MINUTES = 15
 AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES = 30
 AUTO_CANCEL_RETURNED_TICKETS_INTERVAL_SECONDS = 60
+RECALL_COOLDOWN_SECONDS = 10
 
 
 def called_ticket_wait_remaining_seconds(
@@ -27,6 +28,21 @@ def called_ticket_wait_remaining_seconds(
     current_time = now or datetime.now()
     available_at = ticket.called_at + timedelta(seconds=max(0, min_wait_seconds))
     return max(0, math.ceil((available_at - current_time).total_seconds()))
+
+
+def recall_cooldown_remaining_seconds(
+    ticket: Ticket,
+    *,
+    now: datetime | None = None,
+) -> int:
+    call_times = [
+        value for value in (ticket.called_at, ticket.last_recalled_at)
+        if value is not None
+    ]
+    if not call_times:
+        return 0
+    available_at = max(call_times) + timedelta(seconds=RECALL_COOLDOWN_SECONDS)
+    return max(0, math.ceil((available_at - (now or datetime.now())).total_seconds()))
 
 
 def queue_order_expr():
@@ -92,6 +108,7 @@ def claim_next_ticket(
     ticket.window_id = operator.window_id
     ticket.target_window_id = None
     ticket.called_at = called_at or datetime.now()
+    ticket.last_recalled_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None
@@ -156,6 +173,7 @@ def resume_deferred_ticket(
     ticket.window_id = window_id
     ticket.target_window_id = None
     ticket.called_at = called_at
+    ticket.last_recalled_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None

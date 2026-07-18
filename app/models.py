@@ -79,6 +79,7 @@ class Ticket(Base):
     deferred_at = Column(TIMESTAMP, nullable=True)
     cancel_reason = Column(String(255), nullable=True)
     called_at = Column(TIMESTAMP, nullable=True)
+    last_recalled_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 
     service = relationship("Service")

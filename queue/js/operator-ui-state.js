@@ -24,12 +24,13 @@ function refreshOperatorUiState() {
         const waitingBeforeFinish = (
             button.id === "finish-btn" && isCalledTicketWaitActive()
         );
+        const waitingBeforeRecall = button.id === "recall-btn" && recallCooldown;
         button.disabled = !online || !hasTicket || busy || (
-            button.id === "recall-btn" && recallCooldown
+            waitingBeforeRecall
         ) || waitingBeforeFinish;
         button.classList.toggle(
             "current-ticket-action-inactive",
-            waitingBeforeFinish
+            waitingBeforeFinish || waitingBeforeRecall
         );
     });
     document.querySelectorAll(".queue-resume-btn").forEach(button => {

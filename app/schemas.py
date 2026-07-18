@@ -122,6 +122,7 @@ class TicketRead(BaseModel):
     deferred_at: datetime | None = None
     cancel_reason: str | None = None
     called_at: datetime | None = None
+    last_recalled_at: datetime | None = None
     finished_at: datetime | None = None
 
     class Config:
