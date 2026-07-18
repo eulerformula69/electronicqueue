@@ -13,6 +13,7 @@ def test_board_state_contains_temporary_cancelled_messages():
     assert '"cancelled": get_recent_cancelled_tickets_for_board()' in source
     assert 'Ticket.cancel_reason.in_(("no_show", "Клиент не явился"))' in source
     assert '"expires_at"' in source
+    assert 'settings["cancelled_ticket_board_message_template"]' in source
 
 
 def test_all_standard_board_profiles_merge_system_and_user_ticker_messages():
@@ -20,8 +21,10 @@ def test_all_standard_board_profiles_merge_system_and_user_ticker_messages():
     board = read_text("queue/js/board.js")
     lite = read_text("queue/js/board-lite.js")
 
-    assert "tickerMessages.concat(systemMessages" in ticker
+    assert "tickerMessages.map" in ticker
+    assert ").concat(systemMessages.map" in ticker
     assert "window.setBoardSystemMessages" in ticker
     assert "setTimeout" in ticker
     assert "setBoardSystemMessages" in board
     assert "setBoardSystemMessages" in lite
+    assert "board-ticker__text--system" in ticker

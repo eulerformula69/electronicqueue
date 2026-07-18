@@ -98,6 +98,7 @@ def test_balance_and_cancelled_board_settings_are_exposed():
         "auto_call_balance_queue_threshold",
         "auto_call_balance_min_free_operators",
         "cancelled_ticket_board_display_seconds",
+        "cancelled_ticket_board_message_template",
     )
     for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
         for field in fields:

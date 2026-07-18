@@ -389,6 +389,7 @@ async def update_admin_settings(
         settings.auto_call_balance_queue_threshold = data.auto_call_balance_queue_threshold
         settings.auto_call_balance_min_free_operators = data.auto_call_balance_min_free_operators
         settings.cancelled_ticket_board_display_seconds = data.cancelled_ticket_board_display_seconds
+        settings.cancelled_ticket_board_message_template = data.cancelled_ticket_board_message_template
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]
@@ -427,6 +428,7 @@ async def get_public_settings():
             "auto_call_balance_queue_threshold": settings["auto_call_balance_queue_threshold"],
             "auto_call_balance_min_free_operators": settings["auto_call_balance_min_free_operators"],
             "cancelled_ticket_board_display_seconds": settings["cancelled_ticket_board_display_seconds"],
+            "cancelled_ticket_board_message_template": settings["cancelled_ticket_board_message_template"],
             "cancel_reason_options": [
                 item for item in settings["cancel_reason_options"]
                 if item["enabled"]

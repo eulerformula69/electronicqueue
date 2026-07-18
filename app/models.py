@@ -261,3 +261,7 @@ class SystemSettings(Base):
     auto_call_balance_queue_threshold = Column(Integer, default=3)
     auto_call_balance_min_free_operators = Column(Integer, default=2)
     cancelled_ticket_board_display_seconds = Column(Integer, default=60)
+    cancelled_ticket_board_message_template = Column(
+        String(500),
+        default="⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.",
+    )

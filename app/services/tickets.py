@@ -458,10 +458,10 @@ def get_recent_cancelled_tickets_for_board():
             "expires_at": (
                 ticket.finished_at + timedelta(seconds=display_seconds)
             ).isoformat(),
-            "message": (
-                f"Талон {ticket.number}: вызов отменён оператором окна "
-                f"{window.name if window else '—'}, так как клиент не подошёл. "
-                "Если вы вернулись, обратитесь к оператору и сообщите номер талона."
+            "message": render_ticket_template(
+                settings["cancelled_ticket_board_message_template"],
+                ticket.number,
+                window.name if window else "—",
             ),
         } for ticket, window in rows]
     finally:

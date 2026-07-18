@@ -25,10 +25,12 @@
         return ticker;
     }
 
-    function createTextItem(text, isSegmentEnd, hidden) {
+    function createTextItem(message, isSegmentEnd, hidden) {
         var item = document.createElement("span");
-        item.className = "board-ticker__text" + (isSegmentEnd ? " board-ticker__text--segment-end" : "");
-        item.textContent = text;
+        item.className = "board-ticker__text"
+            + (message.system ? " board-ticker__text--system" : "")
+            + (isSegmentEnd ? " board-ticker__text--segment-end" : "");
+        item.textContent = message.text;
         if (hidden) item.setAttribute("aria-hidden", "true");
         return item;
     }
@@ -64,8 +66,10 @@
                 Math.max(0, Math.min.apply(null, nextExpiries) - now) + 50
             );
         }
-        var messages = tickerMessages.concat(systemMessages.map(function (item) {
-            return item.text;
+        var messages = tickerMessages.map(function (text) {
+            return {text: text, system: false};
+        }).concat(systemMessages.map(function (item) {
+            return {text: item.text, system: true};
         }));
         var ticker = ensureTicker();
         var track = ticker.getElementsByClassName("board-ticker__track")[0];

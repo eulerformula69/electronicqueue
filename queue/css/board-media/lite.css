@@ -383,6 +383,10 @@ body.board-media-page.lite-version .board-ticker__text {
     font-weight: 800;
     white-space: nowrap;
 }
+body.board-media-page.lite-version .board-ticker__text--system {
+    color: #ffd54a;
+    font-weight: 800;
+}
 
 body.board-media-page.lite-version .board-ticker__text::after {
     content: "|";

@@ -13,6 +13,10 @@ MAX_AUTO_CALL_DELAY_SECONDS = 600
 DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
 MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
 MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
+DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE = (
+    "⚠ Талон <number>: вызов отменён — клиент не подошёл. "
+    "Вернулись? Сообщите номер оператору."
+)
 
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
@@ -251,5 +255,9 @@ def get_system_settings_dict(db: Session) -> dict:
                 if settings.cancelled_ticket_board_display_seconds is not None
                 else 60
             ))
+        ),
+        "cancelled_ticket_board_message_template": (
+            settings.cancelled_ticket_board_message_template
+            or DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE
         ),
     }

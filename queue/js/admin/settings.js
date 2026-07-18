@@ -132,6 +132,7 @@ export async function loadExtraSettings() {
                 <label class="settings-field-row"><span class="settings-label">Максимум талонов для балансировки:</span><input id="setting-auto-call-balance-threshold" class="settings-input" type="number" min="1" max="100" value="${settings.auto_call_balance_queue_threshold ?? 3}"></label>
                 <label class="settings-field-row"><span class="settings-label">Минимум свободных операторов:</span><input id="setting-auto-call-balance-min-operators" class="settings-input" type="number" min="2" max="100" value="${settings.auto_call_balance_min_free_operators ?? 2}"></label>
                 <label class="settings-field-row"><span class="settings-label">Отмена на табло, секунд:</span><input id="setting-cancelled-board-seconds" class="settings-input" type="number" min="0" max="3600" value="${settings.cancelled_ticket_board_display_seconds ?? 60}"></label>
+                <label class="settings-field-row"><span class="settings-label">Текст отмены на табло:</span><input id="setting-cancelled-board-template" class="settings-input settings-input-wide" maxlength="500" value="${escapeHtml(settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.")}"></label>
             </section>
 			
 		<section class="settings-section">
@@ -219,6 +220,7 @@ export async function saveExtraSettings() {
         auto_call_balance_queue_threshold: Number(document.getElementById("setting-auto-call-balance-threshold").value),
         auto_call_balance_min_free_operators: Number(document.getElementById("setting-auto-call-balance-min-operators").value),
         cancelled_ticket_board_display_seconds: Number(document.getElementById("setting-cancelled-board-seconds").value),
+        cancelled_ticket_board_message_template: document.getElementById("setting-cancelled-board-template").value.trim(),
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),
