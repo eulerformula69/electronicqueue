@@ -89,6 +89,7 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "startAutoCallAfterFinish();" in source
     assert "runAutoCallNow" in source
     assert "await callNext({ autoCall: true });" in source
+    assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
     assert "loadQueue({ checkNewTickets: false })" in source
     assert "Очередь пуста" in source
     assert "auto-call-info-block" in display_zone

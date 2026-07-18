@@ -20,6 +20,18 @@ from app.services.tickets import (
 )
 
 
+def resolve_operator_auto_call_enabled(
+    operator: Operator,
+    global_enabled: bool,
+) -> bool:
+    mode = getattr(operator, "auto_call_mode", None) or "default"
+    if mode == "enabled":
+        return True
+    if mode == "disabled":
+        return False
+    return bool(global_enabled)
+
+
 def update_services_status_for_window(db: Session, window_id: int):
     service_ids = [
         row[0]

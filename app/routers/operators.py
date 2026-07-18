@@ -41,7 +41,9 @@ from app.schemas import (
     OperatorServiceNotificationUpdate, WindowOperatorUpdate,
 )
 from app.security import get_password_hash, verify_password
-from app.services.operators import get_operator_state
+from app.services.operators import (
+    get_operator_state, resolve_operator_auto_call_enabled,
+)
 from app.services.settings import get_system_settings_dict
 
 router = APIRouter()
@@ -54,15 +56,6 @@ def normalize_auto_call_mode(value) -> str:
     if mode not in AUTO_CALL_MODES:
         raise HTTPException(status_code=400, detail="Некорректный режим автовызова")
     return mode
-
-
-def resolve_operator_auto_call_enabled(operator: Operator, global_enabled: bool) -> bool:
-    mode = getattr(operator, "auto_call_mode", None) or "default"
-    if mode == "enabled":
-        return True
-    if mode == "disabled":
-        return False
-    return bool(global_enabled)
 
 
 def build_service_notification_payload(service_id, service_name, priority, enabled):

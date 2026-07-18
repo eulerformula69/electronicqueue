@@ -18,6 +18,84 @@ def queue_order_expr():
     return func.coalesce(Ticket.queue_entered_at, Ticket.created_at)
 
 
+def _lock_next_ticket(query):
+    """Lock one eligible ticket without waiting for another caller's choice."""
+    return query.with_for_update(skip_locked=True, of=Ticket).first()
+
+
+def claim_next_ticket(
+    db: Session,
+    *,
+    operator: Operator,
+    queue_mode: str,
+    require_online: bool = False,
+    called_at: datetime | None = None,
+) -> tuple[Ticket | None, bool]:
+    """Select and assign the next ticket inside the caller's transaction."""
+    window = (
+        db.query(Window)
+        .filter(Window.id == operator.window_id)
+        .with_for_update()
+        .first()
+    )
+    if not window:
+        return None, False
+    if require_online and window.status != "online":
+        return None, False
+
+    current = db.query(Ticket).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "called",
+    ).first()
+    if current:
+        return current, False
+
+    ticket = _lock_next_ticket(
+        db.query(Ticket)
+        .filter(
+            Ticket.status == "waiting",
+            Ticket.target_window_id == operator.window_id,
+        )
+        .order_by(queue_order_expr().asc())
+    )
+    if not ticket and queue_mode == "dynamic_operator_distribution":
+        ticket = _lock_next_ticket(
+            db.query(Ticket)
+            .filter(
+                Ticket.status == "waiting",
+                Ticket.window_id == operator.window_id,
+                Ticket.target_window_id.is_(None),
+            )
+            .order_by(queue_order_expr().asc())
+        )
+    elif not ticket:
+        ticket = _lock_next_ticket(
+            db.query(Ticket)
+            .join(WindowService, Ticket.service_id == WindowService.service_id)
+            .filter(
+                WindowService.window_id == operator.window_id,
+                Ticket.status == "waiting",
+                Ticket.target_window_id.is_(None),
+            )
+            .order_by(WindowService.priority.asc(), queue_order_expr().asc())
+        )
+    if not ticket:
+        return None, False
+
+    ticket.status = "called"
+    ticket.completion_reason = None
+    ticket.operator_id = operator.id
+    ticket.window_id = operator.window_id
+    ticket.target_window_id = None
+    ticket.called_at = called_at or datetime.now()
+    ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
+    ticket.cancel_reason = None
+    db.flush()
+    return ticket, True
+
+
 def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     returned_at = now or datetime.now()
     was_returned_before = (ticket.returned_to_queue_count or 0) > 0

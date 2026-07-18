@@ -767,8 +767,8 @@ async function callNext(options = {}) {
             headers: {
                 "Content-Type": "application/json",
                 "session-id": sessionId
-            }
-			
+            },
+            body: JSON.stringify({ auto_call: options.autoCall === true })
         });
 
         const ticket = await res.json();

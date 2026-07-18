@@ -36,17 +36,19 @@ from app.models import (
     AVAILABLE_WINDOW_STATUSES, Operator, Service, Ticket, Window, WindowService,
 )
 from app.schemas import (
-    CallSpecificRequest, CancelTicketRequest, DeferTicketRequest, RedirectRequest,
+    CallNextRequest, CallSpecificRequest, CancelTicketRequest, DeferTicketRequest,
+    RedirectRequest,
     RedirectToWindowRequest, TicketCreate, TicketReprintResponse,
 )
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict, normalize_ticket_reason
 from app.services.tickets import (
-    assign_ticket_to_least_loaded_window, broadcast_board,
+    assign_ticket_to_least_loaded_window, broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_deferred_ticket,
     return_ticket_to_queue,
 )
+from app.services.operators import resolve_operator_auto_call_enabled
 
 router = APIRouter()
 
@@ -383,7 +385,10 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
 
 
 @router.post("/tickets/next", tags=["Tickets"])
-async def call_next_ticket(operator: Operator = Depends(verify_session)):
+async def call_next_ticket(
+    data: CallNextRequest | None = Body(default=None),
+    operator: Operator = Depends(verify_session),
+):
     db = SessionLocal()
     try:
         if not operator.window_id:
@@ -391,68 +396,30 @@ async def call_next_ticket(operator: Operator = Depends(verify_session)):
 
         ensure_client_operations_allowed(db, operator)
 
-        current = db.query(Ticket).filter(
-            Ticket.window_id == operator.window_id,
-            Ticket.status == "called"
-        ).first()
-
-        if current:
-            return {"detail": f"Сначала завершите клиента: {current.number}"}
-
         settings = get_system_settings_dict(db)
+        is_auto_call = bool(data and data.auto_call)
+        if is_auto_call:
+            window = db.query(Window).filter(Window.id == operator.window_id).first()
+            if not window or window.status != "online":
+                return {"detail": "Автовызов доступен только в статусе Online"}
+            if not resolve_operator_auto_call_enabled(
+                operator,
+                settings["auto_call_enabled"],
+            ):
+                return {"detail": "Автовызов отключён"}
 
-        # Сначала всегда вызываем билеты, явно перенаправленные на это окно.
-        ticket = (
-            db.query(Ticket)
-            .filter(
-                Ticket.status == "waiting",
-                Ticket.target_window_id == operator.window_id,
-            )
-            .order_by(queue_order_expr().asc())
-            .first()
+        ticket, claimed = claim_next_ticket(
+            db,
+            operator=operator,
+            queue_mode=settings.get("queue_mode", "priority_fifo"),
+            require_online=is_auto_call,
         )
 
-        if not ticket:
-            if settings.get("queue_mode") == "dynamic_operator_distribution":
-                ticket = (
-                    db.query(Ticket)
-                    .filter(
-                        Ticket.status == "waiting",
-                        Ticket.window_id == operator.window_id,
-                        Ticket.target_window_id.is_(None),
-                    )
-                    .order_by(queue_order_expr().asc())
-                    .first()
-                )
-            else:
-                ticket = (
-                    db.query(Ticket)
-                    .join(WindowService, Ticket.service_id == WindowService.service_id)
-                    .filter(
-                        WindowService.window_id == operator.window_id,
-                        Ticket.status == "waiting",
-                        Ticket.target_window_id.is_(None),
-                    )
-                    .order_by(
-                        WindowService.priority.asc(),
-                        queue_order_expr().asc()
-                    )
-                    .first()
-                )
+        if ticket and not claimed:
+            return {"detail": f"Сначала завершите клиента: {ticket.number}"}
 
         if not ticket:
             return {"detail": "Нет ожидающих билетов"}
-
-        ticket.status = "called"
-        ticket.completion_reason = None
-        ticket.operator_id = operator.id
-        ticket.window_id = operator.window_id
-        ticket.target_window_id = None
-        ticket.called_at = datetime.now()
-        ticket.finished_at = None
-        ticket.defer_reason = None
-        ticket.deferred_at = None
-        ticket.cancel_reason = None
 
         db.commit()
         db.refresh(ticket)
