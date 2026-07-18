@@ -322,7 +322,7 @@ def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls
 
     assert "auto-call-info-block" in html
     assert "auto-call-status" in html
-    assert "auto-call-hint" in html
+    assert "auto-call-hint" not in html
     assert "auto-call-countdown" not in html
     assert "auto-call-actions" not in html
     assert "showAutoCallDeclinePopup" not in source
@@ -335,5 +335,8 @@ def test_auto_call_uses_distinct_break_and_offline_reasons():
     assert 'return isOperatorOnBreak() ? "Перерыв" : "Оператор офлайн";' in source
     assert "Рабочее место занято текущим талоном" in source
     assert "Очередь пуста" in source
-    assert "Отключена администратором" in source
+    assert "Отключён администратором" in source
+    assert 'statusDisplay.textContent = "Включён";' in source
+    assert "Автоочередь" not in source
+    assert "Отсчёт начнётся после завершения текущего клиента" not in source
     assert "normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds)" in source

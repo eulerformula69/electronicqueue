@@ -239,7 +239,7 @@ async function loadOperatorReasonSettings() {
         autoCallSettingsLoaded = true;
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
-            stopAutoCall("Отключена администратором");
+            stopAutoCall("Отключён администратором");
         } else if (autoCallWasJustEnabled || hadActiveAutoCallTimer) {
             scheduleAutoCallAfterWorkspaceFreed();
         }
@@ -1998,10 +1998,6 @@ function getAutoCallStatusDisplay() {
     return document.getElementById("auto-call-status");
 }
 
-function getAutoCallHintDisplay() {
-    return document.getElementById("auto-call-hint");
-}
-
 function syncAutoCallVisibility() {
     const block = document.getElementById("auto-call-info-block");
     if (block) block.style.display = operatorSettings.auto_call_enabled ? "" : "none";
@@ -2033,7 +2029,6 @@ function hasCurrentTicket() {
 function updateAutoCallStatus(message, options = {}) {
     syncAutoCallVisibility();
     const statusDisplay = getAutoCallStatusDisplay();
-    const hintDisplay = getAutoCallHintDisplay();
 
     if (typeof message === "string") {
         autoCallState = options.state || "";
@@ -2041,7 +2036,6 @@ function updateAutoCallStatus(message, options = {}) {
             statusDisplay.textContent = message;
             statusDisplay.dataset.state = autoCallState;
         }
-        if (hintDisplay) hintDisplay.textContent = options.hint || "";
         refreshOperatorUiState();
         return;
     }
@@ -2052,17 +2046,12 @@ function updateAutoCallStatus(message, options = {}) {
             autoCallState = "paused";
             statusDisplay.textContent = getAutoCallPausedMessage();
             statusDisplay.dataset.state = "paused";
-            if (hintDisplay) hintDisplay.textContent = "";
         } else if (operatorSettings.auto_call_enabled) {
-            statusDisplay.textContent = "Автоочередь включена";
+            statusDisplay.textContent = "Включён";
             statusDisplay.dataset.state = "enabled";
-            if (hintDisplay) {
-                hintDisplay.textContent = "Отсчёт начнётся после завершения текущего клиента.";
-            }
         } else {
-            statusDisplay.textContent = "Отключена администратором";
+            statusDisplay.textContent = "Отключён администратором";
             statusDisplay.dataset.state = "disabled";
-            if (hintDisplay) hintDisplay.textContent = "";
         }
     }
     refreshOperatorUiState();
@@ -2076,7 +2065,7 @@ function stopAutoCall(message) {
     secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
     if (message !== undefined) {
         let state = "";
-        if (message.includes("Отключена")) state = "disabled";
+        if (message.includes("Отключён")) state = "disabled";
         if (
             message.includes("паузе") || message.includes("Ожидание") ||
             message.includes("Перерыв") || message.includes("офлайн")
@@ -2090,7 +2079,7 @@ function startAutoCallAfterFinish() {
     stopAutoCall();
 
     if (!operatorSettings.auto_call_enabled) {
-        updateAutoCallStatus("Отключена администратором", {state: "disabled"});
+        updateAutoCallStatus("Отключён администратором", {state: "disabled"});
         return;
     }
 
@@ -2138,7 +2127,7 @@ function scheduleAutoCallAfterWorkspaceFreed() {
 
 async function runAutoCallNow() {
     if (!operatorSettings.auto_call_enabled) {
-        stopAutoCall("Отключена администратором");
+        stopAutoCall("Отключён администратором");
         return;
     }
 

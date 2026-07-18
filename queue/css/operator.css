@@ -767,16 +767,6 @@ body.operator-page .auto-call-info-block .auto-call-status-text[data-state="empt
 body.operator-page .auto-call-info-block .auto-call-status-text[data-state="disabled"]{
     color: var(--text-muted);
 }
-body.operator-page .auto-call-hint{
-    display: block;
-    font-size: 0.82rem;
-    line-height: 1.35;
-    color: var(--text-muted);
-    overflow-wrap: anywhere;
-}
-body.operator-page .auto-call-hint:empty{
-    display: none;
-}
 body.operator-page .service-row{
     display: flex;
     align-items: center;
