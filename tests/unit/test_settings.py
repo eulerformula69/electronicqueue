@@ -92,6 +92,18 @@ def test_called_ticket_min_wait_is_in_settings_schemas_with_default():
     assert field.default == 180
 
 
+def test_balance_and_cancelled_board_settings_are_exposed():
+    fields = (
+        "auto_call_balance_enabled",
+        "auto_call_balance_queue_threshold",
+        "auto_call_balance_min_free_operators",
+        "cancelled_ticket_board_display_seconds",
+    )
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        for field in fields:
+            assert field in _schema_fields(schema)
+
+
 def test_redirect_status_settings_are_exposed_to_operator_ui():
     for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
         assert "redirect_allow_break" in _schema_fields(schema)

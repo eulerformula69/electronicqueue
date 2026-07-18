@@ -87,6 +87,9 @@ function getTicketId(ticket) {
 function normalizeBoardState(data) {
     // Новый формат от backend: { type: "board_state", called: [], waiting: [] }
     if (data && (data.type === "board_state" || Array.isArray(data.called) || Array.isArray(data.waiting))) {
+        if (typeof window.setBoardSystemMessages === "function") {
+            window.setBoardSystemMessages(Array.isArray(data.cancelled) ? data.cancelled : []);
+        }
         return {
             called: Array.isArray(data.called) ? data.called : (Array.isArray(data.tickets) ? data.tickets : []),
             waiting: Array.isArray(data.waiting) ? data.waiting : []

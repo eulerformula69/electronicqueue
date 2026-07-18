@@ -128,6 +128,10 @@ export async function loadExtraSettings() {
                     <span class="settings-label">Минимальное ожидание после вызова, секунд:</span>
                     <input id="setting-called-ticket-min-wait" class="settings-input" type="number" min="0" max="3600" step="1" value="${settings.called_ticket_min_wait_seconds ?? 180}">
                 </label>
+                <label class="settings-field-row"><span class="settings-label">Балансировка автовызова:</span><input id="setting-auto-call-balance-enabled" type="checkbox" ${settings.auto_call_balance_enabled !== false ? "checked" : ""}></label>
+                <label class="settings-field-row"><span class="settings-label">Максимум талонов для балансировки:</span><input id="setting-auto-call-balance-threshold" class="settings-input" type="number" min="1" max="100" value="${settings.auto_call_balance_queue_threshold ?? 3}"></label>
+                <label class="settings-field-row"><span class="settings-label">Минимум свободных операторов:</span><input id="setting-auto-call-balance-min-operators" class="settings-input" type="number" min="2" max="100" value="${settings.auto_call_balance_min_free_operators ?? 2}"></label>
+                <label class="settings-field-row"><span class="settings-label">Отмена на табло, секунд:</span><input id="setting-cancelled-board-seconds" class="settings-input" type="number" min="0" max="3600" value="${settings.cancelled_ticket_board_display_seconds ?? 60}"></label>
             </section>
 			
 		<section class="settings-section">
@@ -211,6 +215,10 @@ export async function saveExtraSettings() {
         auto_call_enabled: currentSettings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(currentSettings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(document.getElementById("setting-called-ticket-min-wait").value),
+        auto_call_balance_enabled: document.getElementById("setting-auto-call-balance-enabled").checked,
+        auto_call_balance_queue_threshold: Number(document.getElementById("setting-auto-call-balance-threshold").value),
+        auto_call_balance_min_free_operators: Number(document.getElementById("setting-auto-call-balance-min-operators").value),
+        cancelled_ticket_board_display_seconds: Number(document.getElementById("setting-cancelled-board-seconds").value),
 
 		call_message_template: document.getElementById("setting-call-message-template").value.trim(),
 		board_ticket_template: document.getElementById("setting-board-ticket-template").value.trim(),

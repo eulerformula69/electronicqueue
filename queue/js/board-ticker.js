@@ -1,5 +1,7 @@
 (function () {
     var tickerMessages = [];
+    var systemMessages = [];
+    var expiryTimer = null;
     var resizeTimer = null;
     var resizeListenerAttached = false;
 
@@ -49,7 +51,22 @@
     }
 
     function renderTickerMessages() {
-        var messages = tickerMessages;
+        var now = Date.now();
+        systemMessages = systemMessages.filter(function (item) {
+            return !item.expiresAt || item.expiresAt > now;
+        });
+        if (expiryTimer) clearTimeout(expiryTimer);
+        var nextExpiries = systemMessages.map(function (item) { return item.expiresAt; })
+            .filter(function (value) { return value && value > now; });
+        if (nextExpiries.length) {
+            expiryTimer = setTimeout(
+                renderTickerMessages,
+                Math.max(0, Math.min.apply(null, nextExpiries) - now) + 50
+            );
+        }
+        var messages = tickerMessages.concat(systemMessages.map(function (item) {
+            return item.text;
+        }));
         var ticker = ensureTicker();
         var track = ticker.getElementsByClassName("board-ticker__track")[0];
         var tickerWidth;
@@ -93,5 +110,16 @@
             window.addEventListener("resize", scheduleRender);
             resizeListenerAttached = true;
         }
+    };
+
+    window.setBoardSystemMessages = function (items) {
+        if (expiryTimer) clearTimeout(expiryTimer);
+        systemMessages = (Array.isArray(items) ? items : []).map(function (item) {
+            return {
+                text: String(item.message || "").trim(),
+                expiresAt: item.expires_at ? new Date(item.expires_at).getTime() : null
+            };
+        }).filter(function (item) { return item.text; });
+        renderTickerMessages();
     };
 })();

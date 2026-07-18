@@ -38,6 +38,10 @@ function render() {
                 ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
                 ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
                 ${ctx.ui.field("Минимальное ожидание после вызова, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
+                ${ctx.ui.field("Балансировка автовызова при низкой нагрузке", ctx.ui.switchField("auto_call_balance_enabled", settings.auto_call_balance_enabled ?? true))}
+                ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
+                ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}
+                ${ctx.ui.field("Сообщение об отменённом талоне на табло, секунд", ctx.ui.input("cancelled_ticket_board_display_seconds", settings.cancelled_ticket_board_display_seconds ?? 60, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
                 <div class="admin-field">
                     <span>Причины отмены</span>
                     <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>
@@ -169,6 +173,10 @@ async function save() {
         auto_call_enabled: settings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(data.called_ticket_min_wait_seconds),
+        auto_call_balance_enabled: Boolean(data.auto_call_balance_enabled),
+        auto_call_balance_queue_threshold: Number(data.auto_call_balance_queue_threshold),
+        auto_call_balance_min_free_operators: Number(data.auto_call_balance_min_free_operators),
+        cancelled_ticket_board_display_seconds: Number(data.cancelled_ticket_board_display_seconds),
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
         board_ticker_text: data.board_ticker_text.trim(),

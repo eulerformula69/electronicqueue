@@ -2,12 +2,14 @@ import asyncio
 import math
 from datetime import datetime, timedelta
 
-from sqlalchemy import case, func
+from sqlalchemy import case, func, text
 from sqlalchemy.orm import Session
 
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
-from app.models import Operator, Service, Ticket, Window, WindowService
+from app.models import (
+    Operator, OperatorStatusPeriod, Service, Ticket, Window, WindowService,
+)
 from app.services.settings import get_system_settings_dict
 
 RETURN_TO_QUEUE_DELAY_MINUTES = 15
@@ -54,14 +56,99 @@ def _lock_next_ticket(query):
     return query.with_for_update(skip_locked=True, of=Ticket).first()
 
 
+def _operator_auto_call_enabled(operator: Operator, global_enabled: bool) -> bool:
+    mode = getattr(operator, "auto_call_mode", None) or "default"
+    if mode == "enabled":
+        return True
+    if mode == "disabled":
+        return False
+    return global_enabled
+
+
+def select_low_load_winner_id(ranking: list[tuple]) -> int | None:
+    return min(ranking)[3] if ranking else None
+
+
+def low_load_auto_call_winner(
+    db: Session,
+    *,
+    ticket: Ticket,
+    settings: dict,
+    now: datetime | None = None,
+) -> int | None:
+    """Choose a stable eligible operator from transactional database state."""
+    if not settings.get("auto_call_balance_enabled", True):
+        return None
+    queue_size = db.query(Ticket).filter(Ticket.status == "waiting").count()
+    if queue_size > settings["auto_call_balance_queue_threshold"]:
+        return None
+
+    candidates = (
+        db.query(Operator)
+        .join(Window, Operator.window_id == Window.id)
+        .join(WindowService, WindowService.window_id == Window.id)
+        .join(Service, Service.id == WindowService.service_id)
+        .filter(
+            Window.status == "online",
+            WindowService.service_id == ticket.service_id,
+            Service.is_archived == 0,
+            Service.status == "active",
+        )
+        .all()
+    )
+    current_operator_ids = {
+        row[0] for row in db.query(Ticket.operator_id)
+        .filter(Ticket.status == "called", Ticket.operator_id.isnot(None))
+        .all()
+    }
+    candidates = [
+        candidate for candidate in candidates
+        if candidate.id not in current_operator_ids
+        and _operator_auto_call_enabled(candidate, settings["auto_call_enabled"])
+    ]
+    if len(candidates) < settings["auto_call_balance_min_free_operators"]:
+        return None
+
+    current_time = now or datetime.now()
+    today_start = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    ranking = []
+    for candidate in candidates:
+        completed_count = db.query(Ticket).filter(
+            Ticket.operator_id == candidate.id,
+            Ticket.status == "finished",
+            Ticket.completion_reason.in_(("completed", "redirected")),
+            Ticket.finished_at >= today_start,
+        ).count()
+        last_finished_at = db.query(func.max(Ticket.finished_at)).filter(
+            Ticket.operator_id == candidate.id,
+            Ticket.status == "finished",
+            Ticket.finished_at >= today_start,
+        ).scalar()
+        online_started_at = db.query(func.min(OperatorStatusPeriod.started_at)).filter(
+            OperatorStatusPeriod.operator_id == candidate.id,
+            OperatorStatusPeriod.status == "online",
+            OperatorStatusPeriod.ended_at.is_(None),
+        ).scalar()
+        ranking.append((
+            completed_count,
+            last_finished_at or datetime.min,
+            online_started_at or datetime.min,
+            candidate.id,
+        ))
+    return select_low_load_winner_id(ranking)
+
+
 def claim_next_ticket(
     db: Session,
     *,
     operator: Operator,
     require_online: bool = False,
     called_at: datetime | None = None,
+    balance_settings: dict | None = None,
 ) -> tuple[Ticket | None, bool]:
     """Select and assign the next ticket inside the caller's transaction."""
+    if balance_settings:
+        db.execute(text("SELECT pg_advisory_xact_lock(71620411)"))
     window = (
         db.query(Window)
         .filter(Window.id == operator.window_id)
@@ -101,6 +188,16 @@ def claim_next_ticket(
         )
     if not ticket:
         return None, False
+
+    if balance_settings:
+        winner_id = low_load_auto_call_winner(
+            db,
+            ticket=ticket,
+            settings=balance_settings,
+            now=called_at,
+        )
+        if winner_id is not None and winner_id != operator.id:
+            return None, False
 
     ticket.status = "called"
     ticket.completion_reason = None
@@ -336,11 +433,47 @@ def get_waiting_tickets_for_board():
         db.close()
 
 
+def get_recent_cancelled_tickets_for_board():
+    db = SessionLocal()
+    try:
+        settings = get_system_settings_dict(db)
+        display_seconds = settings["cancelled_ticket_board_display_seconds"]
+        if display_seconds <= 0:
+            return []
+        cutoff = datetime.now() - timedelta(seconds=display_seconds)
+        rows = (
+            db.query(Ticket, Window)
+            .outerjoin(Window, Ticket.window_id == Window.id)
+            .filter(
+                Ticket.status == "cancelled",
+                Ticket.finished_at >= cutoff,
+                Ticket.cancel_reason.in_(("no_show", "Клиент не явился")),
+            )
+            .order_by(Ticket.finished_at.desc())
+            .all()
+        )
+        return [{
+            "id": ticket.id,
+            "number": ticket.number,
+            "expires_at": (
+                ticket.finished_at + timedelta(seconds=display_seconds)
+            ).isoformat(),
+            "message": (
+                f"Талон {ticket.number}: вызов отменён оператором окна "
+                f"{window.name if window else '—'}, так как клиент не подошёл. "
+                "Если вы вернулись, обратитесь к оператору и сообщите номер талона."
+            ),
+        } for ticket, window in rows]
+    finally:
+        db.close()
+
+
 def get_board_state():
     return {
         "type": "board_state",
         "called": get_called_tickets(),
-        "waiting": get_waiting_tickets_for_board()
+        "waiting": get_waiting_tickets_for_board(),
+        "cancelled": get_recent_cancelled_tickets_for_board(),
     }
 
 

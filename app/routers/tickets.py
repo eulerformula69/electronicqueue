@@ -403,6 +403,7 @@ async def call_next_ticket(
             db,
             operator=operator,
             require_online=is_auto_call,
+            balance_settings=settings if is_auto_call else None,
         )
 
         if ticket and not claimed:

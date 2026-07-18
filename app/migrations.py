@@ -500,6 +500,19 @@ def migrate_called_ticket_min_wait_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_auto_call_balance_and_board_cancel_schema(engine):
+    """Add low-load auto-call balancing and board cancellation settings."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS auto_call_balance_enabled varchar DEFAULT 'true',
+        ADD COLUMN IF NOT EXISTS auto_call_balance_queue_threshold integer DEFAULT 3,
+        ADD COLUMN IF NOT EXISTS auto_call_balance_min_free_operators integer DEFAULT 2,
+        ADD COLUMN IF NOT EXISTS cancelled_ticket_board_display_seconds integer DEFAULT 60;
+    """
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

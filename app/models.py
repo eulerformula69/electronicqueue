@@ -257,3 +257,7 @@ class SystemSettings(Base):
     auto_call_enabled = Column(String, default="false")
     auto_call_delay_seconds = Column(Integer, default=60)
     called_ticket_min_wait_seconds = Column(Integer, default=180)
+    auto_call_balance_enabled = Column(String, default="true")
+    auto_call_balance_queue_threshold = Column(Integer, default=3)
+    auto_call_balance_min_free_operators = Column(Integer, default=2)
+    cancelled_ticket_board_display_seconds = Column(Integer, default=60)

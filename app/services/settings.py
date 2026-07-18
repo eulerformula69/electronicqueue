@@ -236,4 +236,20 @@ def get_system_settings_dict(db: Session) -> dict:
         "called_ticket_min_wait_seconds": _normalize_called_ticket_min_wait_seconds(
             settings.called_ticket_min_wait_seconds
         ),
+        "auto_call_balance_enabled": _str_to_bool(
+            settings.auto_call_balance_enabled, default=True
+        ),
+        "auto_call_balance_queue_threshold": max(
+            1, min(100, int(settings.auto_call_balance_queue_threshold or 3))
+        ),
+        "auto_call_balance_min_free_operators": max(
+            2, min(100, int(settings.auto_call_balance_min_free_operators or 2))
+        ),
+        "cancelled_ticket_board_display_seconds": max(
+            0, min(3600, int(
+                settings.cancelled_ticket_board_display_seconds
+                if settings.cancelled_ticket_board_display_seconds is not None
+                else 60
+            ))
+        ),
     }
