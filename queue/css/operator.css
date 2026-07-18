@@ -540,6 +540,7 @@ body.operator-page button:disabled{
     cursor: not-allowed;
 }
 body.operator-page .current-ticket-actions-inactive [data-current-ticket-action],
+body.operator-page .current-ticket-action-inactive,
 body.operator-page .operator-work-disabled [data-call-action],
 body.operator-page .operator-work-disabled [data-current-ticket-action]{
     opacity: 0.38;

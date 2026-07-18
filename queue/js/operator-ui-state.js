@@ -21,10 +21,15 @@ function refreshOperatorUiState() {
         button.disabled = !online || hasTicket || busy;
     });
     document.querySelectorAll("[data-current-ticket-action]").forEach(button => {
+        const waitingBeforeFinish = (
+            button.id === "finish-btn" && isCalledTicketWaitActive()
+        );
         button.disabled = !online || !hasTicket || busy || (
             button.id === "recall-btn" && recallCooldown
-        ) || (
-            button.id === "finish-btn" && isCalledTicketWaitActive()
+        ) || waitingBeforeFinish;
+        button.classList.toggle(
+            "current-ticket-action-inactive",
+            waitingBeforeFinish
         );
     });
     document.querySelectorAll(".queue-resume-btn").forEach(button => {

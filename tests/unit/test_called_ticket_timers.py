@@ -43,8 +43,11 @@ def test_operator_restores_wait_and_service_timers_from_called_at():
 
 def test_finish_button_uses_wait_state_but_other_actions_do_not():
     state_source = read_text("queue/js/operator-ui-state.js")
+    css = read_text("queue/css/operator.css")
 
     assert 'button.id === "finish-btn" && isCalledTicketWaitActive()' in state_source
+    assert '"current-ticket-action-inactive"' in state_source
+    assert ".current-ticket-action-inactive" in css
 
 
 def test_admin_can_configure_called_ticket_min_wait():
