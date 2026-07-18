@@ -285,7 +285,6 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         board_updates.append(True)
 
     monkeypatch.setattr(admin_router, "SessionLocal", lambda: db)
-    monkeypatch.setattr(admin_router, "record_queue_mode", lambda db, mode: None)
     monkeypatch.setattr(admin_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(admin_router, "broadcast_board", fake_broadcast_board)
     monkeypatch.setattr(admin_router, "update_services_status_for_window", lambda db, window_id: None)
@@ -301,7 +300,6 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         default_operator_status="online",
         active_ticket_on_operator_logout="return_to_queue",
         hide_services_without_online_operators=True,
-        queue_mode="priority_fifo",
         call_message_template="Талон <number> окно <window>",
         board_ticket_template="Билет <number> окно <window>",
         board_ticker_text="",

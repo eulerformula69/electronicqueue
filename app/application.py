@@ -9,7 +9,7 @@ from app.config import BASE_DIR, CORS_ORIGINS
 from app.database import Base, engine
 from app.migrations import (
     init_ticket_numbering, migrate_operator_choice_schema,
-    migrate_operator_status_periods_schema, migrate_queue_mode_periods_schema,
+    migrate_operator_status_periods_schema,
     migrate_service_archive_schema, migrate_service_order_schema,
     migrate_board_ticker_settings_schema, migrate_ticket_notice_settings_schema,
     migrate_ticket_operator_schema, migrate_ticket_stages_schema,
@@ -58,7 +58,6 @@ async def startup():
     migrate_ticket_queue_entered_at_schema(engine)
     migrate_ticket_return_count_schema(engine)
     migrate_ticket_defer_schema(engine)
-    migrate_queue_mode_periods_schema(engine)
     migrate_ticket_notice_settings_schema(engine)
     migrate_board_ticker_settings_schema(engine)
     migrate_ticket_reason_settings_schema(engine)

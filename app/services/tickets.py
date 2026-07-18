@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from sqlalchemy import and_, asc, case, func, literal
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.connections import manager, operatorManager
@@ -27,7 +27,6 @@ def claim_next_ticket(
     db: Session,
     *,
     operator: Operator,
-    queue_mode: str,
     require_online: bool = False,
     called_at: datetime | None = None,
 ) -> tuple[Ticket | None, bool]:
@@ -58,17 +57,7 @@ def claim_next_ticket(
         )
         .order_by(queue_order_expr().asc())
     )
-    if not ticket and queue_mode == "dynamic_operator_distribution":
-        ticket = _lock_next_ticket(
-            db.query(Ticket)
-            .filter(
-                Ticket.status == "waiting",
-                Ticket.window_id == operator.window_id,
-                Ticket.target_window_id.is_(None),
-            )
-            .order_by(queue_order_expr().asc())
-        )
-    elif not ticket:
+    if not ticket:
         ticket = _lock_next_ticket(
             db.query(Ticket)
             .join(WindowService, Ticket.service_id == WindowService.service_id)
@@ -244,78 +233,6 @@ def create_window_redirect_ticket(
         called_at=None,
         finished_at=None,
     )
-
-
-def assign_ticket_to_least_loaded_window(db: Session, ticket: Ticket):
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-    candidates = (
-        db.query(
-            Window.id.label("window_id"),
-            func.count(Ticket.id).label("served_count")
-        )
-        .join(Operator, Operator.window_id == Window.id)
-        .join(WindowService, WindowService.window_id == Window.id)
-        .outerjoin(
-            Ticket,
-            and_(
-                Ticket.window_id == Window.id,
-                Ticket.status == "finished",
-                Ticket.finished_at >= today_start
-            )
-        )
-        .filter(
-            Window.status == "online",
-            WindowService.service_id == ticket.service_id
-        )
-        .group_by(Window.id)
-        .order_by(func.count(Ticket.id).asc(), Window.id.asc())
-        .first()
-    )
-
-    ticket.window_id = candidates.window_id if candidates else None
-
-
-async def reassign_waiting_tickets_from_window(db: Session, window_id: int):
-    settings = get_system_settings_dict(db)
-
-    if settings.get("queue_mode") != "dynamic_operator_distribution":
-        return
-
-    db.flush()
-
-    tickets = db.query(Ticket).filter(
-        Ticket.status == "waiting",
-        Ticket.window_id == window_id,
-        Ticket.target_window_id.is_(None)
-    ).all()
-
-    for ticket in tickets:
-        ticket.window_id = None
-        db.flush()
-        assign_ticket_to_least_loaded_window(db, ticket)
-
-    await manager.broadcast({
-        "type": "queue_updated"
-    })
-
-    db.commit()
-
-
-async def assign_unassigned_waiting_tickets(db: Session):
-    settings = get_system_settings_dict(db)
-
-    if settings.get("queue_mode") != "dynamic_operator_distribution":
-        return
-
-    tickets = db.query(Ticket).filter(
-        Ticket.status == "waiting",
-        Ticket.window_id.is_(None),
-        Ticket.target_window_id.is_(None),
-    ).order_by(queue_order_expr().asc()).all()
-
-    for ticket in tickets:
-        assign_ticket_to_least_loaded_window(db, ticket)
 
 
 def get_called_tickets():

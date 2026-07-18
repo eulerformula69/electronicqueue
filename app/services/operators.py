@@ -14,9 +14,7 @@ from app.models import (
 )
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
-    assign_ticket_to_least_loaded_window, broadcast_board,
-    queue_order_expr, reassign_waiting_tickets_from_window,
-    return_ticket_to_queue,
+    broadcast_board, queue_order_expr, return_ticket_to_queue,
 )
 
 
@@ -227,15 +225,7 @@ async def cleanup_sessions():
                                 if active_ticket:
                                     return_ticket_to_queue(active_ticket)
 
-                                    if (
-                                        settings.get("queue_mode") == "dynamic_operator_distribution"
-                                        and active_ticket.target_window_id is None
-                                    ):
-                                        assign_ticket_to_least_loaded_window(db, active_ticket)
-
                                     need_board_update = True
-
-                            await reassign_waiting_tickets_from_window(db, window.id)
 
                             update_services_status_for_window(db, window.id)
 

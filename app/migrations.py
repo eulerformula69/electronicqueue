@@ -374,44 +374,6 @@ def migrate_operator_status_periods_schema(engine):
         conn.execute(text(ddl))
 
 
-def migrate_queue_mode_periods_schema(engine):
-    """Create queue-mode history and seed its current period."""
-    ddl = """
-    CREATE TABLE IF NOT EXISTS queue_mode_periods (
-        id bigserial PRIMARY KEY,
-        queue_mode varchar(40) NOT NULL,
-        started_at timestamp without time zone NOT NULL
-            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk'),
-        ended_at timestamp without time zone,
-        current_period_key integer NOT NULL DEFAULT 1,
-        CONSTRAINT ck_queue_mode_periods_mode CHECK (
-            queue_mode IN ('priority_fifo', 'dynamic_operator_distribution')
-        ),
-        CONSTRAINT ck_queue_mode_periods_dates CHECK (
-            ended_at IS NULL OR ended_at >= started_at
-        )
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_queue_mode_current_period
-        ON queue_mode_periods (current_period_key)
-        WHERE ended_at IS NULL;
-    CREATE INDEX IF NOT EXISTS ix_queue_mode_periods_started_at
-        ON queue_mode_periods (started_at);
-
-    INSERT INTO queue_mode_periods (queue_mode)
-    SELECT COALESCE(
-        (SELECT queue_mode FROM system_settings WHERE id = 1),
-        'priority_fifo'
-    )
-    WHERE NOT EXISTS (
-        SELECT 1 FROM queue_mode_periods WHERE ended_at IS NULL
-    );
-    """
-
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-
 def migrate_ticket_notice_settings_schema(engine):
     """Add configurable terminal notice settings to existing installations."""
     ddl = """

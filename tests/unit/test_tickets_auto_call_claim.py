@@ -103,7 +103,6 @@ def claim(db, operator):
     return claim_next_ticket(
         db,
         operator=operator,
-        queue_mode="priority_fifo",
         require_online=True,
     )
 

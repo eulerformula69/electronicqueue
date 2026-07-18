@@ -99,7 +99,7 @@ PostgreSQL, Docker и Node.js **не нужны**.
 Проверка API end-to-end через `TestClient` + PostgreSQL:
 
 - `POST /login` → `POST /tickets/` → `POST /tickets/next` → `POST /tickets/finish`
-- режимы очереди `priority_fifo` и `dynamic_operator_distribution`
+- порядок очереди по приоритету услуг и FIFO
 - redirect, сессии, `closeDay`
 
 **Инфраструктура:** `tests/integration/`, `testcontainers[postgres]` или `TEST_DATABASE_URL`, фикстуры seed.

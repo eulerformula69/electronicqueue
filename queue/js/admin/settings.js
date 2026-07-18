@@ -126,19 +126,6 @@ export async function loadExtraSettings() {
             </section>
 			
 		<section class="settings-section">
-			<h4 class="settings-section-title">Очередь</h4>
-
-			<label class="settings-field-row">
-				<span class="settings-label">Режим очереди:</span>
-				<select id="setting-queue-mode" class="settings-select settings-select-wide">
-					<option value="priority_fifo" ${settings.queue_mode === "priority_fifo" ? "selected" : ""}>
-						Приоритет услуг + FIFO
-					</option>
-					<option value="dynamic_operator_distribution" ${settings.queue_mode === "dynamic_operator_distribution" ? "selected" : ""}>
-						Динамическое распределение по операторам
-					</option>
-				</select>
-			</label>
             <div class="settings-field-row">
                 <span class="settings-label">Причины отмены:</span>
                 <div id="setting-cancel-reason-options">
@@ -216,7 +203,6 @@ export async function saveExtraSettings() {
 		default_operator_status: document.getElementById("setting-default-operator-status").value,
 		active_ticket_on_operator_logout: document.getElementById("setting-active-ticket-on-logout").value,
 		hide_services_without_online_operators: document.getElementById("setting-unavailable-services-mode").value === "hide",
-		queue_mode: document.getElementById("setting-queue-mode").value,
         auto_call_enabled: currentSettings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(currentSettings.auto_call_delay_seconds ?? 60),
 

@@ -43,7 +43,7 @@ from app.schemas import (
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict, normalize_ticket_reason
 from app.services.tickets import (
-    assign_ticket_to_least_loaded_window, broadcast_board, claim_next_ticket,
+    broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_deferred_ticket,
     return_ticket_to_queue,
@@ -295,9 +295,6 @@ async def create_ticket(
         db.flush()
         db_ticket.root_ticket_id = db_ticket.id
 
-        if not target_window_id and settings.get("queue_mode") == "dynamic_operator_distribution":
-            assign_ticket_to_least_loaded_window(db, db_ticket)
-
         db.commit()
         db.refresh(db_ticket)
 
@@ -411,7 +408,6 @@ async def call_next_ticket(
         ticket, claimed = claim_next_ticket(
             db,
             operator=operator,
-            queue_mode=settings.get("queue_mode", "priority_fifo"),
             require_online=is_auto_call,
         )
 
@@ -612,12 +608,7 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
         if not ticket:
             raise HTTPException(status_code=404, detail="Нет активного билета для возврата в очередь")
 
-        settings = get_system_settings_dict(db)
-
         was_returned_before = return_ticket_to_queue(ticket)
-
-        if settings.get("queue_mode") == "dynamic_operator_distribution":
-            assign_ticket_to_least_loaded_window(db, ticket)
 
         db.commit()
         db.refresh(ticket)
@@ -741,7 +732,6 @@ def get_my_queue(
     operator: Operator = Depends(verify_session)
     ):
     db = SessionLocal()
-    settings = get_system_settings_dict(db)
     try:
         if not operator.window_id:
             return []
@@ -766,51 +756,30 @@ def get_my_queue(
             .order_by(queue_order_expr().asc())
         )
 
-        # 2) Обычные билеты ниже — по текущему режиму очереди.
-        if settings.get("queue_mode") == "dynamic_operator_distribution":
-            ordinary_query = (
-                db.query(
-                    Ticket.id,
-                    Ticket.number,
-                    Ticket.service_id,
-                    Ticket.created_at,
-                    Ticket.completion_reason,
-                    Ticket.target_window_id,
-                    Service.name.label("service_name"),
-                    literal(None).label("priority")
-                )
-                .join(Service, Service.id == Ticket.service_id)
-                .filter(
-                    Ticket.window_id == operator.window_id,
-                    Ticket.status == "waiting",
-                    Ticket.target_window_id.is_(None),
-                )
-                .order_by(queue_order_expr().asc())
+        # 2) Обычные билеты ниже — по приоритету услуг и FIFO.
+        ordinary_query = (
+            db.query(
+                Ticket.id,
+                Ticket.number,
+                Ticket.service_id,
+                Ticket.created_at,
+                Ticket.completion_reason,
+                Ticket.target_window_id,
+                Service.name.label("service_name"),
+                WindowService.priority.label("priority")
             )
-        else:
-            ordinary_query = (
-                db.query(
-                    Ticket.id,
-                    Ticket.number,
-                    Ticket.service_id,
-                    Ticket.created_at,
-                    Ticket.completion_reason,
-                    Ticket.target_window_id,
-                    Service.name.label("service_name"),
-                    WindowService.priority.label("priority")
-                )
-                .join(WindowService, Ticket.service_id == WindowService.service_id)
-                .join(Service, Service.id == Ticket.service_id)
-                .filter(
-                    WindowService.window_id == operator.window_id,
-                    Ticket.status == "waiting",
-                    Ticket.target_window_id.is_(None),
-                )
-                .order_by(
-                    WindowService.priority.asc(),
-                    queue_order_expr().asc()
-                )
+            .join(WindowService, Ticket.service_id == WindowService.service_id)
+            .join(Service, Service.id == Ticket.service_id)
+            .filter(
+                WindowService.window_id == operator.window_id,
+                Ticket.status == "waiting",
+                Ticket.target_window_id.is_(None),
             )
+            .order_by(
+                WindowService.priority.asc(),
+                queue_order_expr().asc()
+            )
+        )
 
         tickets = (redirected_query.all() + ordinary_query.all())[skip:skip + limit]
 
@@ -1060,9 +1029,6 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
         )
         db.add(redirected_ticket)
         db.flush()
-
-        if settings.get("queue_mode") == "dynamic_operator_distribution":
-            assign_ticket_to_least_loaded_window(db, redirected_ticket)
 
         db.commit()
         db.refresh(redirected_ticket)

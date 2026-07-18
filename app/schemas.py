@@ -246,7 +246,6 @@ class SystemSettingsUpdate(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool = True
     redirect_allow_offline: bool = False
-    queue_mode: str
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
@@ -270,7 +269,6 @@ class SystemSettingsResponse(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool
     redirect_allow_offline: bool
-    queue_mode: str
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str
