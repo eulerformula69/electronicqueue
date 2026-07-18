@@ -32,8 +32,13 @@ function isCalledTicketWaitActive() {
 
 function updateCalledTicketTimers() {
     const finishButton = document.getElementById("finish-btn");
+    const serviceTimerContainer = document.getElementById("service-timer");
     const serviceTimer = document.getElementById("service-timer-value");
     const hasServerStartTime = Boolean(currentTicketId && currentTicketCalledAt);
+
+    if (serviceTimerContainer) {
+        serviceTimerContainer.hidden = !hasServerStartTime;
+    }
 
     if (serviceTimer) {
         const elapsedSeconds = hasServerStartTime

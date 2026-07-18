@@ -736,6 +736,7 @@ async def resume_operator_deferred_ticket(
             "id": ticket.id,
             "number": ticket.number,
             "status": ticket.status,
+            "called_at": ticket.called_at,
             "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
         }
     finally:

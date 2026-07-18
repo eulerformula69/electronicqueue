@@ -38,6 +38,8 @@ def test_operator_restores_wait_and_service_timers_from_called_at():
     assert "currentTicketCalledAt.getTime()" in timer_source
     assert "setInterval(updateCalledTicketTimers, 1000)" in timer_source
     assert 'id="service-timer-value"' in html
+    assert 'id="service-timer" class="service-timer" aria-live="off" hidden' in html
+    assert "serviceTimerContainer.hidden = !hasServerStartTime" in timer_source
     assert "ЗАВЕРШИТЬ (ЧЕРЕЗ" in timer_source
 
 
@@ -57,3 +59,12 @@ def test_admin_can_configure_called_ticket_min_wait():
     for source in (modern_source, legacy_source):
         assert "called_ticket_min_wait_seconds" in source
         assert "3600" in source
+
+
+def test_resume_deferred_response_immediately_contains_new_called_at():
+    router_source = read_text("app/routers/tickets.py")
+    resume_endpoint = router_source.split(
+        'async def resume_operator_deferred_ticket', 1
+    )[1].split('@router.get("/tickets/my-queue"', 1)[0]
+
+    assert '"called_at": ticket.called_at' in resume_endpoint
