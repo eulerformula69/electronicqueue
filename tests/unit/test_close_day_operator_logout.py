@@ -66,7 +66,7 @@ async def test_close_day_notification_includes_deleted_operator_sessions(monkeyp
     }
 
 
-def test_close_day_session_expiration_redirects_operator_without_alert():
+def test_close_day_session_expiration_redirects_operator_without_browser_alert():
     websocket_source = (PROJECT_ROOT / "app/routers/websocket.py").read_text(
         encoding="utf-8"
     )
@@ -75,5 +75,7 @@ def test_close_day_session_expiration_redirects_operator_without_alert():
     )
 
     assert '"silent": True' in websocket_source
-    assert "if (!options.silent)" in operator_source
+    assert "if (options.silent)" in operator_source
+    assert "OperatorFeedback.acknowledge" in operator_source
+    assert "alert(" not in operator_source
     assert "handleExpiredSession(data.message, { silent: data.silent === true })" in operator_source

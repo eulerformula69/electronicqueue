@@ -11,18 +11,28 @@ let operatorSocket = null;
 // где события по WS по какой-то причине не доходят.
 let operatorPollingTimer = null;
 let operatorPollingInProgress = false;
+let sessionExpirationHandled = false;
 const SESSION_EXPIRED_MESSAGE = "Ваша сессия истекла. Войдите в систему снова.";
 
 function handleExpiredSession(message, options = {}) {
+    if (sessionExpirationHandled) return;
+    sessionExpirationHandled = true;
     const alertMessage = typeof message === "string" && message.trim()
         ? message
         : SESSION_EXPIRED_MESSAGE;
 
-    if (!options.silent) {
-        alert(alertMessage);
-    }
     sessionStorage.clear();
-    window.location.href = "/queue/login.html";
+    if (options.silent) {
+        window.location.href = "/queue/login.html";
+        return;
+    }
+    OperatorFeedback.acknowledge({
+        title: "Сессия завершена",
+        message: alertMessage,
+        buttonText: "Войти снова"
+    }).then(() => {
+        window.location.href = "/queue/login.html";
+    });
 }
 
 // ==================== Аудиооповещение о новом тикете ====================
@@ -248,13 +258,19 @@ async function loadOperatorReasonSettings() {
     }
 }
 
-function withOtherComment(reason) {
+async function withOtherComment(reason) {
     if (reason !== "Другое" && reason !== "other") {
         return reason;
     }
-    const comment = prompt("Комментарий к причине «Другое» (необязательно):");
-    const text = String(comment || "").trim();
-    return text ? `Другое: ${text}` : "Другое";
+    const comment = await OperatorFeedback.input({
+        title: "Комментарий к причине",
+        message: "Комментарий необязателен.",
+        label: "Причина «Другое»",
+        placeholder: "Введите комментарий",
+        submitText: "Продолжить"
+    });
+    if (comment === null) return null;
+    return comment ? `Другое: ${comment}` : "Другое";
 }
 
 function parseTicketCalledAt(ticket) {
@@ -295,43 +311,7 @@ function clearCurrentTicket() {
 }
 
 function showOperatorPopup({ title, message, actions }) {
-    const existing = document.querySelector(".operator-popup-overlay");
-    if (existing) existing.remove();
-
-    const overlay = document.createElement("div");
-    overlay.className = "operator-popup-overlay";
-
-    const popup = document.createElement("div");
-    popup.className = "operator-popup";
-    popup.setAttribute("role", "dialog");
-    popup.setAttribute("aria-modal", "true");
-
-    const titleElement = document.createElement("h2");
-    titleElement.textContent = title;
-
-    const messageElement = document.createElement("p");
-    messageElement.textContent = message;
-
-    const actionsElement = document.createElement("div");
-    actionsElement.className = "operator-popup-actions";
-
-    actions.forEach(action => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = action.className || "btn-outline";
-        button.textContent = action.text;
-        button.addEventListener("click", () => {
-            overlay.remove();
-            if (typeof action.onClick === "function") action.onClick();
-        });
-        actionsElement.appendChild(button);
-    });
-
-    popup.appendChild(titleElement);
-    popup.appendChild(messageElement);
-    popup.appendChild(actionsElement);
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
+    return OperatorFeedback.dialog({title, message, actions});
 }
 
 function toggleOperatorMoreMenu() {
@@ -841,23 +821,7 @@ async function callNext(options = {}) {
 }
 
 function showToast(message, type = "danger") {
-    const toast = document.getElementById("toast-notification");
-    toast.textContent = message;
-    // Меняем цвет в зависимости от ситуации
-    if (type === "warning") {
-        toast.style.background = "var(--warning)"; // Оранжевый для "Очередь пуста"
-    } else if (type === "success") {
-        toast.style.background = "var(--success)";
-    } else {
-        toast.style.background = "var(--danger)";  // Красный для ошибок работы
-    }
-    
-    toast.style.display = "block";  
-    // Очищаем предыдущий таймер, если он был, чтобы уведомление не мерцало
-    if (window.toastTimer) clearTimeout(window.toastTimer);    
-    window.toastTimer = setTimeout(() => {
-        toast.style.display = "none";
-    }, 3000);
+    OperatorFeedback.toast(message, type);
 }
 
 /* =========================
@@ -924,7 +888,7 @@ async function finishCurrent(options = {}) {
             scheduleAutoCallAfterWorkspaceFreed();
         } else {
             // Если сервер вернул ошибку (например, клиент уже был завершен)
-            alert(result.detail || "Ошибка при завершении");
+            showToast(result.detail || "Ошибка при завершении", "danger");
             
             // Если билета на сервере уже нет, синхронизируем локальное состояние
             if (res.status === 404 || res.status === 400) {
@@ -936,7 +900,7 @@ async function finishCurrent(options = {}) {
         loadQueue(); 
     } catch (e) {
         console.error(e);
-        alert("Ошибка при завершении обслуживания");
+        showToast("Ошибка при завершении обслуживания", "danger");
     } finally {
         endOperatorRequest("finish");
     }
@@ -969,7 +933,7 @@ async function loadAllWindows() {
         return allWindows;
     } catch (e) {
         console.error("Ошибка загрузки рабочих мест:", e);
-        alert(e.message || "Ошибка загрузки рабочих мест");
+        showToast(e.message || "Ошибка загрузки рабочих мест", "danger");
         return [];
     }
 }
@@ -1085,7 +1049,7 @@ function closeRedirectModal() {
 
 async function showRedirectModal() {
     if (!currentTicketId) {
-        alert("Нет текущего клиента");
+        showToast("Нет текущего клиента", "warning");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
@@ -1373,13 +1337,17 @@ async function confirmRedirectFromModal() {
     if (!ensureClientOperationsAllowed()) return;
 
     if (!canConfirmRedirect()) {
-        alert("Выберите услугу и подходящего получателя");
+        showToast("Выберите услугу и подходящего получателя", "warning");
         return;
     }
     const selectedWindow = getRedirectWindow(redirectState.windowId);
     if (
         selectedWindow?.status === "offline" &&
-        !window.confirm("Оператор сейчас офлайн. Талон останется закреплён за ним до его возвращения. Продолжить?")
+        !(await OperatorFeedback.confirm({
+            title: "Оператор офлайн",
+            message: "Талон останется закреплён за оператором до его возвращения.",
+            confirmText: "Перенаправить"
+        }))
     ) {
         return;
     }
@@ -1412,13 +1380,13 @@ async function confirmRedirectFromModal() {
         const result = await res.json().catch(() => ({}));
 
         if (!res.ok || result.detail) {
-            alert(result.detail || result.message || "Ошибка перенаправления");
+            showToast(result.detail || result.message || "Ошибка перенаправления", "danger");
             redirectState.isSubmitting = false;
             renderRedirectModal();
             return;
         }
 
-        alert(result.warning || result.message || "Билет перенаправлен");
+        showToast(result.warning || result.message || "Билет перенаправлен", result.warning ? "warning" : "success");
         clearCurrentTicket();
         currentNumber = null;
         currentServiceName = null;
@@ -1430,7 +1398,7 @@ async function confirmRedirectFromModal() {
         scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка перенаправления:", e);
-        alert("Ошибка соединения с сервером");
+        showToast("Ошибка соединения с сервером", "danger");
         redirectState.isSubmitting = false;
         renderRedirectModal();
     } finally {
@@ -1454,7 +1422,7 @@ async function changeWindowStatus(newStatus) {
     try {
         const sessionId = sessionStorage.getItem("session_id");
         if (!sessionId) {
-            alert("Сессия не найдена. Перезайдите.");
+            showToast("Сессия не найдена. Перезайдите.", "danger");
             window.location.href = "/queue/login.html";
             return;
         }
@@ -1465,7 +1433,7 @@ async function changeWindowStatus(newStatus) {
         });
 
         if (!resDetails.ok) {
-            alert("Не удалось получить данные оператора");
+            showToast("Не удалось получить данные оператора", "danger");
             return;
         }
 
@@ -1473,7 +1441,7 @@ async function changeWindowStatus(newStatus) {
 
         // Проверяем, привязано ли вообще окно
         if (!details.window_id) {
-            alert("За вами не закреплено активное рабочее место");
+            showToast("За вами не закреплено активное рабочее место", "warning");
             return;
         }
 
@@ -1498,7 +1466,7 @@ async function changeWindowStatus(newStatus) {
 
         if (!res.ok) {
             const err = await res.json();
-            alert(err.detail || "Ошибка при смене статуса");
+            showToast(err.detail || "Ошибка при смене статуса", "danger");
             return;
         }
 
@@ -1514,7 +1482,7 @@ async function changeWindowStatus(newStatus) {
 
     } catch (e) {
         console.error(e);
-        alert("Ошибка при смене статуса");
+        showToast("Ошибка при смене статуса", "danger");
     } finally {
         endOperatorRequest("window-status");
     }
@@ -1590,7 +1558,13 @@ async function loadCurrentTicket() {
 }
 
 async function logout() {
-    if (!confirm("Вы уверены, что хотите завершить работу?")) return;
+    const confirmed = await OperatorFeedback.confirm({
+        title: "Завершить работу?",
+        message: "Вы выйдете из рабочего места оператора.",
+        confirmText: "Выйти",
+        danger: true
+    });
+    if (!confirmed) return;
     stopAutoCall("");
 
     const sessionId = sessionStorage.getItem("session_id");
@@ -1668,7 +1642,7 @@ async function recallCurrent(options = {}) {
             startRecallTimer();
         } else {
             const err = await res.json();
-            alert(err.detail || "Ошибка вызова");
+            showToast(err.detail || "Ошибка вызова", "danger");
         }
     } catch (e) {
         console.error(e);
@@ -1706,7 +1680,7 @@ async function cancelCurrent(options = {}) {
 
     // есть ли вообще кого отменять?
     if (!currentTicketId) {
-        alert("Нет активного клиента для отмены.");
+        showToast("Нет активного клиента для отмены", "warning");
         return;
     }
 
@@ -1735,7 +1709,7 @@ async function cancelCurrent(options = {}) {
         if (res.ok) {
 
             const msg = data.ticket_number ? `Билет ${data.ticket_number} отменен` : "Билет успешно отменен";
-            alert(msg);
+            showToast(msg, "success");
 
             const currentElement = document.getElementById("current");
             if (currentElement) {
@@ -1749,7 +1723,7 @@ async function cancelCurrent(options = {}) {
             scheduleAutoCallAfterWorkspaceFreed();
             
         } else {
-            alert(data.detail || `Ошибка сервера: ${res.status}`);
+            showToast(data.detail || `Ошибка сервера: ${res.status}`, "danger");
             
             if (res.status === 404 || data.detail === "Нет активного билета для отмены") {
                 clearCurrentTicket();
@@ -1759,7 +1733,7 @@ async function cancelCurrent(options = {}) {
         }
     } catch (e) {
         console.error("Критическая ошибка в cancelCurrent:", e);
-        alert("Произошла ошибка при выполнении запроса.");
+        showToast("Произошла ошибка при выполнении запроса", "danger");
     } finally {
         endOperatorRequest("cancel");
     }
@@ -1775,7 +1749,12 @@ function showCancelReasonPopup() {
             ...OperatorQueueSections.cancelReasons.map(reason => ({
                 text: reason.label,
                 className: "btn-outline",
-                onClick: () => cancelCurrent({ reason: withOtherComment(reason.value) })
+                onClick: async () => {
+                    const selectedReason = await withOtherComment(reason.value);
+                    if (selectedReason !== null) {
+                        cancelCurrent({reason: selectedReason});
+                    }
+                }
             })),
             {
                 text: "Назад",
@@ -1787,7 +1766,7 @@ function showCancelReasonPopup() {
 
 function showDeferReasonPopup() {
     if (!currentTicketId) {
-        alert("Нет активного клиента для отложения.");
+        showToast("Нет активного клиента для отложения", "warning");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
@@ -1799,7 +1778,12 @@ function showDeferReasonPopup() {
             ...OperatorQueueSections.deferReasons.map(reason => ({
                 text: reason.label,
                 className: "btn-outline",
-                onClick: () => deferCurrentTicket(withOtherComment(reason.value))
+                onClick: async () => {
+                    const selectedReason = await withOtherComment(reason.value);
+                    if (selectedReason !== null) {
+                        deferCurrentTicket(selectedReason);
+                    }
+                }
             })),
             {
                 text: "Отмена",
@@ -1813,7 +1797,7 @@ async function deferCurrentTicket(reason) {
     if (!ensureClientOperationsAllowed()) return;
 
     if (!reason) {
-        alert("Выберите причину отложения.");
+        showToast("Выберите причину отложения", "warning");
         return;
     }
     if (!beginOperatorRequest("defer")) return;
@@ -1848,7 +1832,7 @@ async function deferCurrentTicket(reason) {
         scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка отложения билета:", e);
-        alert(e.message || "Не удалось отложить клиента");
+        showToast(e.message || "Не удалось отложить клиента", "danger");
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
         endOperatorRequest("defer");
@@ -1882,7 +1866,7 @@ async function resumeDeferredTicket(ticketId) {
         await loadQueue();
     } catch (e) {
         console.error("Ошибка возврата отложенного билета:", e);
-        alert(e.message || "Не удалось вернуть клиента в обслуживание");
+        showToast(e.message || "Не удалось вернуть клиента в обслуживание", "danger");
     } finally {
         endOperatorRequest("resume-deferred");
     }
@@ -1892,7 +1876,7 @@ async function returnCurrentToQueue() {
     closeOperatorMoreMenu();
 
     if (!currentTicketId) {
-        alert("Нет активного клиента для возврата в очередь.");
+        showToast("Нет активного клиента для возврата в очередь", "warning");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
@@ -1977,7 +1961,7 @@ async function confirmReturnCurrentToQueue() {
         scheduleAutoCallAfterWorkspaceFreed();
     } catch (e) {
         console.error("Ошибка возврата билета в очередь:", e);
-        alert(e.message || "Не удалось вернуть клиента в очередь");
+        showToast(e.message || "Не удалось вернуть клиента в очередь", "danger");
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
         endOperatorRequest("return-to-queue");
@@ -2169,12 +2153,21 @@ async function promptCallByNumber() {
     }
     if (!ensureClientOperationsAllowed()) return;
 
-    const numStr = prompt("Введите номер талона для вызова:");
-    if (!numStr) return; // Если нажали "Отмена" или ввели пустую строку
+    const numStr = await OperatorFeedback.input({
+        title: "Вызвать по номеру",
+        message: "Введите номер талона из доступной очереди.",
+        label: "Номер талона",
+        inputMode: "numeric",
+        submitText: "Вызвать",
+        validate: value => /^\d+$/.test(value)
+            ? ""
+            : "Введите корректный числовой номер"
+    });
+    if (numStr === null) return;
     
     const ticketNumber = parseInt(numStr.trim(), 10);
     if (isNaN(ticketNumber)) {
-        alert("Пожалуйста, введите корректный числовой номер.");
+        showToast("Введите корректный числовой номер", "warning");
         return;
     }
     if (!beginOperatorRequest("call-specific")) return;
@@ -2203,11 +2196,11 @@ async function promptCallByNumber() {
             loadQueue();
         } else {
             // Вывод ошибки от бэкенда
-            alert(data.detail || "Не удалось вызвать данный талон.");
+            showToast(data.detail || "Не удалось вызвать данный талон", "danger");
         }
     } catch (e) {
         console.error(e);
-        alert("Ошибка соединения с сервером");
+        showToast("Ошибка соединения с сервером", "danger");
     } finally {
         endOperatorRequest("call-specific");
     }

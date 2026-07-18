@@ -10,7 +10,7 @@
 
 <body class="operator-page">
 
-<div id="toast-notification" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; font-weight: 600;">
+<div id="toast-notification" data-type="danger" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2400; font-weight: 600;">
     Закончите с текущим клиентом!
 </div>
 
@@ -186,6 +186,7 @@
 
 <script src="/queue/js/config.js"></script>
 <script src="/queue/js/operator-queue-sections.js"></script>
+<script src="/queue/js/operator-feedback.js"></script>
 <script src="/queue/js/operator-ui-state.js"></script>
 <script src="/queue/js/operator-ticket-timers.js"></script>
 <script src="/queue/js/operator.js"></script>

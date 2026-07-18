@@ -8,6 +8,22 @@ def read_text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def test_operator_uses_shared_feedback_instead_of_browser_dialogs():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+    feedback = read_text("queue/js/operator-feedback.js")
+
+    assert '<script src="/queue/js/operator-feedback.js"></script>' in html
+    assert "OperatorFeedback.toast" in source
+    assert "OperatorFeedback.confirm" in source
+    assert "OperatorFeedback.input" in source
+    assert "OperatorFeedback.acknowledge" in source
+    assert "alert(" not in source
+    assert "window.confirm(" not in source
+    assert "prompt(" not in source
+    assert "global.OperatorFeedback" in feedback
+
+
 def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     source = read_text("queue/operator.html")
 
