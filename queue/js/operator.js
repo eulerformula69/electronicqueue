@@ -1346,9 +1346,14 @@ function createRedirectActions() {
 
     const confirmButton = document.createElement("button");
     confirmButton.type = "button";
-    confirmButton.className = "btn-primary redirect-confirm-button";
+    const confirmUnavailable = !canConfirmRedirect() || redirectState.isSubmitting;
+    confirmButton.className = [
+        "btn-primary",
+        "redirect-confirm-button",
+        confirmUnavailable ? "current-ticket-action-inactive" : ""
+    ].filter(Boolean).join(" ");
     confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";
-    confirmButton.disabled = !canConfirmRedirect() || redirectState.isSubmitting;
+    confirmButton.disabled = confirmUnavailable;
     confirmButton.addEventListener("click", confirmRedirectFromModal);
 
     actions.appendChild(cancelButton);

@@ -197,7 +197,9 @@ def test_operator_redirect_uses_single_modal_button():
     assert ": \"/tickets/redirect\"" in js
     assert "payload.window_id = Number(redirectState.windowId);" in js
     assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
-    assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
+    assert 'const confirmUnavailable = !canConfirmRedirect() || redirectState.isSubmitting;' in js
+    assert 'confirmUnavailable ? "current-ticket-action-inactive" : ""' in js
+    assert "confirmButton.disabled = confirmUnavailable;" in js
     assert "serviceList.replaceWith(nextServiceList)" in js
     assert "windowList.replaceWith(nextWindowList)" in js
     assert "width: min(950px, 100%)" in css
