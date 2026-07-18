@@ -9,18 +9,21 @@ from app.config import BASE_DIR, CORS_ORIGINS
 from app.database import Base, engine
 from app.migrations import (
     init_ticket_numbering, migrate_operator_choice_schema,
-    migrate_operator_status_periods_schema, migrate_queue_mode_periods_schema,
+    migrate_operator_status_periods_schema,
     migrate_service_archive_schema, migrate_service_order_schema,
     migrate_board_ticker_settings_schema, migrate_ticket_notice_settings_schema,
     migrate_ticket_operator_schema, migrate_ticket_stages_schema,
     migrate_ticket_queue_entered_at_schema,
     migrate_ticket_return_count_schema,
     migrate_ticket_defer_schema,
+    migrate_ticket_recall_schema,
     migrate_service_groups_schema,
     migrate_service_terminal_visibility_schema,
     migrate_operator_service_notifications_schema,
     migrate_ticket_reason_settings_schema, migrate_auto_call_settings_schema,
     migrate_operator_auto_call_schema,
+    migrate_called_ticket_min_wait_schema,
+    migrate_auto_call_balance_and_board_cancel_schema,
 )
 from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
@@ -58,12 +61,14 @@ async def startup():
     migrate_ticket_queue_entered_at_schema(engine)
     migrate_ticket_return_count_schema(engine)
     migrate_ticket_defer_schema(engine)
-    migrate_queue_mode_periods_schema(engine)
+    migrate_ticket_recall_schema(engine)
     migrate_ticket_notice_settings_schema(engine)
     migrate_board_ticker_settings_schema(engine)
     migrate_ticket_reason_settings_schema(engine)
     migrate_auto_call_settings_schema(engine)
     migrate_operator_auto_call_schema(engine)
+    migrate_called_ticket_min_wait_schema(engine)
+    migrate_auto_call_balance_and_board_cancel_schema(engine)
     init_ticket_numbering(engine)
     migrate_service_terminal_visibility_schema(engine)
     migrate_service_groups_schema(engine)

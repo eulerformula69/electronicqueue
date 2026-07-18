@@ -380,6 +380,9 @@
 
     function normalizeBoardState(data) {
         if (data && (data.type === "board_state" || Object.prototype.toString.call(data.called) === "[object Array]" || Object.prototype.toString.call(data.waiting) === "[object Array]")) {
+            if (typeof window.setBoardSystemMessages === "function") {
+                window.setBoardSystemMessages(Object.prototype.toString.call(data.cancelled) === "[object Array]" ? data.cancelled : []);
+            }
             return {
                 called: Object.prototype.toString.call(data.called) === "[object Array]" ? data.called : (Object.prototype.toString.call(data.tickets) === "[object Array]" ? data.tickets : []),
                 waiting: Object.prototype.toString.call(data.waiting) === "[object Array]" ? data.waiting : []

@@ -61,6 +61,14 @@ body.board-page .board-ticker__text{
     line-height: 48px;
     white-space: nowrap;
 }
+body.board-page .board-ticker__text--system{
+    color: #ffd54a;
+    font-weight: 800;
+}
+body.board-page .board-ticker__countdown{
+    color: inherit;
+    font-variant-numeric: tabular-nums;
+}
 body.board-page .board-ticker__text::after{
     content: "|";
     display: inline-block;

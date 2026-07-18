@@ -10,6 +10,13 @@ MAX_TICKET_PRINT_SCALE_PERCENT = 150
 DEFAULT_AUTO_CALL_DELAY_SECONDS = 60
 MIN_AUTO_CALL_DELAY_SECONDS = 0
 MAX_AUTO_CALL_DELAY_SECONDS = 600
+DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
+MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
+MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
+DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE = (
+    "⚠ Талон <number>: вызов отменён оператором окна <window>. "
+    "Вернулись? Сообщите номер оператору."
+)
 
 DEFAULT_TICKET_NOTICE_PRINTED_TEXT = "Ваш номер: <number>"
 DEFAULT_TICKET_NOTICE_UNPRINTED_TEXT = "Пожалуйста, запомните свой номер:\n<number>"
@@ -55,6 +62,15 @@ def _normalize_auto_call_delay_seconds(value: int | None) -> int:
     return max(
         MIN_AUTO_CALL_DELAY_SECONDS,
         min(MAX_AUTO_CALL_DELAY_SECONDS, int(value)),
+    )
+
+
+def _normalize_called_ticket_min_wait_seconds(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS
+    return max(
+        MIN_CALLED_TICKET_MIN_WAIT_SECONDS,
+        min(MAX_CALLED_TICKET_MIN_WAIT_SECONDS, int(value)),
     )
 
 
@@ -211,7 +227,6 @@ def get_system_settings_dict(db: Session) -> dict:
         ),
         "redirect_allow_break": _str_to_bool(settings.redirect_allow_break, default=True),
         "redirect_allow_offline": _str_to_bool(settings.redirect_allow_offline, default=False),
-        "queue_mode": settings.queue_mode or "priority_fifo",
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
         "board_ticker_text": build_board_ticker_text(board_ticker_messages),
@@ -221,5 +236,28 @@ def get_system_settings_dict(db: Session) -> dict:
         "auto_call_enabled": _str_to_bool(settings.auto_call_enabled, default=False),
         "auto_call_delay_seconds": _normalize_auto_call_delay_seconds(
             settings.auto_call_delay_seconds
+        ),
+        "called_ticket_min_wait_seconds": _normalize_called_ticket_min_wait_seconds(
+            settings.called_ticket_min_wait_seconds
+        ),
+        "auto_call_balance_enabled": _str_to_bool(
+            settings.auto_call_balance_enabled, default=True
+        ),
+        "auto_call_balance_queue_threshold": max(
+            1, min(100, int(settings.auto_call_balance_queue_threshold or 3))
+        ),
+        "auto_call_balance_min_free_operators": max(
+            2, min(100, int(settings.auto_call_balance_min_free_operators or 2))
+        ),
+        "cancelled_ticket_board_display_seconds": max(
+            0, min(3600, int(
+                settings.cancelled_ticket_board_display_seconds
+                if settings.cancelled_ticket_board_display_seconds is not None
+                else 60
+            ))
+        ),
+        "cancelled_ticket_board_message_template": (
+            settings.cancelled_ticket_board_message_template
+            or DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE
         ),
     }

@@ -10,7 +10,7 @@
 
 <body class="operator-page">
 
-<div id="toast-notification" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; font-weight: 600;">
+<div id="toast-notification" data-type="danger" style="display:none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: white; padding: 15px 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2400; font-weight: 600;">
     Закончите с текущим клиентом!
 </div>
 
@@ -140,23 +140,26 @@
             <div class="ticket-label">ТЕКУЩИЙ КЛИЕНТ</div>
             <div id="current" class="ticket-number">--</div>
 		    <div id="current-service" class="current-service">—</div>
+            <div id="service-timer" class="service-timer" aria-live="off" hidden>
+                Обслуживание: <span id="service-timer-value">00:00</span>
+            </div>
         </div>
         
 			
 	<div class="button-group primary-actions">
-		<button id="next-btn" class="btn-primary" onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
-		<button class="btn-danger" id="finish-btn" onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
+		<button id="next-btn" class="btn-primary" data-call-action onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
+		<button class="btn-danger" id="finish-btn" data-current-ticket-action onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
 	</div>
 
 	<div class="button-group secondary-actions secondary-critical-actions">
-		<button class="btn-outline" id="defer-ticket-btn" onclick="showDeferReasonPopup()">ОТЛОЖИТЬ</button>
-		<button class="btn-outline" id="cancel-btn" onclick="cancelCurrent()">ОТМЕНИТЬ</button>
+		<button class="btn-outline" id="defer-ticket-btn" data-current-ticket-action onclick="showDeferReasonPopup()">ОТЛОЖИТЬ</button>
+		<button class="btn-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent()">ОТМЕНИТЬ</button>
 	</div>
 
 	<div class="button-group secondary-actions tertiary-actions">
-		<button class="btn-outline" id="recall-btn" onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-		<button class="btn-outline" id="call-by-number-btn" type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
-		<button class="btn-outline" id="redirect-btn" onclick="showRedirectModal()">ПЕРЕНАПРАВИТЬ</button>
+		<button class="btn-outline" id="recall-btn" data-current-ticket-action onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
+		<button class="btn-outline" id="call-by-number-btn" data-call-action type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
+		<button class="btn-outline" id="redirect-btn" data-current-ticket-action onclick="showRedirectModal()">ПЕРЕНАПРАВИТЬ</button>
 		<!---<div class="operator-more-actions">
 			<button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
 			<div id="operator-more-menu" class="operator-more-menu">
@@ -168,7 +171,6 @@
     <div id="auto-call-info-block" class="auto-call-info-block" aria-live="polite" style="display:none;">
         <strong>Автовызов</strong>
         <span id="auto-call-status" class="auto-call-status-text">Загрузка...</span>
-        <small id="auto-call-hint" class="auto-call-hint"></small>
     </div>
 
     </section>
@@ -184,6 +186,9 @@
 
 <script src="/queue/js/config.js"></script>
 <script src="/queue/js/operator-queue-sections.js"></script>
+<script src="/queue/js/operator-feedback.js"></script>
+<script src="/queue/js/operator-ui-state.js"></script>
+<script src="/queue/js/operator-ticket-timers.js"></script>
 <script src="/queue/js/operator.js"></script>
 <script src="/queue/js/operator-changelog.js"></script>
 

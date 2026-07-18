@@ -8,6 +8,22 @@ def read_text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def test_operator_uses_shared_feedback_instead_of_browser_dialogs():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+    feedback = read_text("queue/js/operator-feedback.js")
+
+    assert '<script src="/queue/js/operator-feedback.js"></script>' in html
+    assert "OperatorFeedback.toast" in source
+    assert "OperatorFeedback.confirm" in source
+    assert "OperatorFeedback.input" in source
+    assert "OperatorFeedback.acknowledge" in source
+    assert "alert(" not in source
+    assert "window.confirm(" not in source
+    assert "prompt(" not in source
+    assert "global.OperatorFeedback" in feedback
+
+
 def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     source = read_text("queue/operator.html")
 
@@ -77,8 +93,6 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     source = read_text("queue/js/operator.js")
     display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
     display_zone = display_zone.split('<section class="glass-card">', 1)[0]
-    info_panel = html.split('<div id="operator-info"', 1)[1]
-
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
     assert "localStorage.getItem('autoCallActive')" not in source
@@ -89,10 +103,12 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "startAutoCallAfterFinish();" in source
     assert "runAutoCallNow" in source
     assert "await callNext({ autoCall: true });" in source
+    assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
     assert "loadQueue({ checkNewTickets: false })" in source
     assert "Очередь пуста" in source
     assert "auto-call-info-block" in display_zone
-    assert "auto-call-info-block" not in info_panel
+    assert "auto-call-countdown" not in display_zone
+    assert "auto-call-actions" not in display_zone
 
 
 def test_operator_auto_call_schedules_after_workspace_freeing_actions():
@@ -117,9 +133,42 @@ def test_operator_auto_call_resumes_when_operator_goes_online():
     change_status_section = source.split("async function changeWindowStatus", 1)[1]
     change_status_section = change_status_section.split("function updateStatusButtons", 1)[0]
 
-    assert 'stopAutoCall("На паузе")' in change_status_section
+    assert 'result.status === "break" ? "Перерыв" : "Оператор офлайн"' in change_status_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in change_status_section
     assert "На паузе: оператор не в статусе Online" not in source
+
+
+def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
+    source = read_text("queue/js/operator.js")
+    settings_section = source.split("async function loadOperatorReasonSettings", 1)[1]
+    settings_section = settings_section.split("function withOtherComment", 1)[0]
+
+    assert "let autoCallSettingsLoaded = false;" in source
+    assert "const wasAutoCallEnabled = operatorSettings.auto_call_enabled;" in settings_section
+    assert "autoCallSettingsLoaded &&" in settings_section
+    assert "!wasAutoCallEnabled &&" in settings_section
+    assert "operatorSettings.auto_call_enabled" in settings_section
+    assert "autoCallWasJustEnabled || hadActiveAutoCallTimer" in settings_section
+    assert "scheduleAutoCallAfterWorkspaceFreed();" in settings_section
+
+
+def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
+    source = read_text("queue/js/operator.js")
+    websocket_section = source.split("function initWebSocket", 1)[1]
+    websocket_section = websocket_section.split("function startOperatorPolling", 1)[0]
+    refresh_section = source.split("async function refreshQueueAndAutoCall", 1)[1]
+    refresh_section = refresh_section.split("function showToast", 1)[0]
+    start_section = source.split("function startAutoCallAfterFinish", 1)[1]
+    start_section = start_section.split("function scheduleAutoCallAfterWorkspaceFreed", 1)[0]
+
+    assert "let queueHasCallableTickets = null;" in source
+    assert "queueHasCallableTickets = Array.isArray(tickets) && tickets.length > 0;" in source
+    assert "refreshQueueAndAutoCall();" in websocket_section
+    assert 'stopAutoCall("Очередь пуста");' in refresh_section
+    assert 'autoCallState === "empty"' in refresh_section
+    assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
+    assert "if (queueHasCallableTickets === false)" in start_section
+    assert 'stopAutoCall("Очередь пуста");' in start_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
@@ -164,7 +213,9 @@ def test_operator_redirect_uses_single_modal_button():
     assert ": \"/tickets/redirect\"" in js
     assert "payload.window_id = Number(redirectState.windowId);" in js
     assert 'confirmButton.textContent = redirectState.isSubmitting ? "Перенаправляем..." : "Перенаправить";' in js
-    assert 'confirmButton.className = "btn-primary redirect-confirm-button";' in js
+    assert 'const confirmUnavailable = !canConfirmRedirect() || redirectState.isSubmitting;' in js
+    assert 'confirmUnavailable ? "current-ticket-action-inactive" : ""' in js
+    assert "confirmButton.disabled = confirmUnavailable;" in js
     assert "serviceList.replaceWith(nextServiceList)" in js
     assert "windowList.replaceWith(nextWindowList)" in js
     assert "width: min(950px, 100%)" in css
@@ -247,3 +298,61 @@ def test_operator_cancel_requires_reason_options():
     assert 'value: "Нет нужного документа"' in queue_sections_source
     assert 'value: "Другое"' in queue_sections_source
     assert "withOtherComment(reason.value)" in source
+
+
+def test_operator_ui_uses_one_state_refresh_for_action_availability():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator-ui-state.js")
+    css = read_text("queue/css/operator.css")
+
+    assert "function refreshOperatorUiState()" in source
+    assert '<script src="/queue/js/operator-ui-state.js"></script>' in html
+    assert 'document.querySelectorAll("[data-call-action]")' in source
+    assert 'document.querySelectorAll("[data-current-ticket-action]")' in source
+    assert "button.disabled = !online || hasTicket || busy" in source
+    assert "button.disabled = !online || !hasTicket || busy" in source
+    assert 'displayZone.classList.toggle("operator-work-disabled", !online)' in source
+    assert "data-call-action" in html
+    assert "data-current-ticket-action" in html
+    assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
+
+
+def test_operator_mutations_share_double_click_guard():
+    source = read_text("queue/js/operator.js")
+    ui_state = read_text("queue/js/operator-ui-state.js")
+
+    assert "const activeOperatorRequests = new Set();" in ui_state
+    assert "function beginOperatorRequest(key)" in ui_state
+    assert "if (activeOperatorRequests.size > 0) return false;" in ui_state
+    for key in (
+        "call-next", "call-specific", "finish", "cancel", "defer",
+        "redirect", "return-to-queue", "recall", "resume-deferred",
+    ):
+        assert f'beginOperatorRequest("{key}")' in source
+        assert f'endOperatorRequest("{key}")' in source
+
+
+def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+
+    assert "auto-call-info-block" in html
+    assert "auto-call-status" in html
+    assert "auto-call-hint" not in html
+    assert "auto-call-countdown" not in html
+    assert "auto-call-actions" not in html
+    assert "showAutoCallDeclinePopup" not in source
+    assert "/operator/auto-call-declines" not in source
+
+
+def test_auto_call_uses_distinct_break_and_offline_reasons():
+    source = read_text("queue/js/operator.js")
+
+    assert 'return isOperatorOnBreak() ? "Перерыв" : "Оператор офлайн";' in source
+    assert "Рабочее место занято текущим талоном" in source
+    assert "Очередь пуста" in source
+    assert "Отключён администратором" in source
+    assert 'statusDisplay.textContent = "Включён";' in source
+    assert "Автоочередь" not in source
+    assert "Отсчёт начнётся после завершения текущего клиента" not in source
+    assert "normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds)" in source

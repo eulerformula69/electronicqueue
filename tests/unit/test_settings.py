@@ -84,6 +84,27 @@ def test_auto_call_settings_are_in_settings_schemas():
         assert "auto_call_delay_seconds" in _schema_fields(schema)
 
 
+def test_called_ticket_min_wait_is_in_settings_schemas_with_default():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "called_ticket_min_wait_seconds" in _schema_fields(schema)
+
+    field = _schema_fields(SystemSettingsUpdate)["called_ticket_min_wait_seconds"]
+    assert field.default == 180
+
+
+def test_balance_and_cancelled_board_settings_are_exposed():
+    fields = (
+        "auto_call_balance_enabled",
+        "auto_call_balance_queue_threshold",
+        "auto_call_balance_min_free_operators",
+        "cancelled_ticket_board_display_seconds",
+        "cancelled_ticket_board_message_template",
+    )
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        for field in fields:
+            assert field in _schema_fields(schema)
+
+
 def test_redirect_status_settings_are_exposed_to_operator_ui():
     for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
         assert "redirect_allow_break" in _schema_fields(schema)
@@ -160,6 +181,7 @@ def test_system_settings_dict_includes_auto_call_settings():
 
         assert result["auto_call_enabled"] is True
         assert result["auto_call_delay_seconds"] == 30
+        assert result["called_ticket_min_wait_seconds"] == 180
     finally:
         db.close()
 
@@ -285,7 +307,6 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         board_updates.append(True)
 
     monkeypatch.setattr(admin_router, "SessionLocal", lambda: db)
-    monkeypatch.setattr(admin_router, "record_queue_mode", lambda db, mode: None)
     monkeypatch.setattr(admin_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(admin_router, "broadcast_board", fake_broadcast_board)
     monkeypatch.setattr(admin_router, "update_services_status_for_window", lambda db, window_id: None)
@@ -301,7 +322,6 @@ async def test_admin_settings_saves_ticket_reason_options(monkeypatch):
         default_operator_status="online",
         active_ticket_on_operator_logout="return_to_queue",
         hide_services_without_online_operators=True,
-        queue_mode="priority_fifo",
         call_message_template="Талон <number> окно <window>",
         board_ticket_template="Билет <number> окно <window>",
         board_ticker_text="",

@@ -140,6 +140,16 @@ def test_settings_view_renders_and_saves_auto_call_settings():
     assert "setting-auto-call-delay-seconds" in legacy_source
 
 
+def test_settings_views_do_not_expose_legacy_queue_modes():
+    for relative_path in (
+        "queue/js/admin/settings.js",
+        "queue/js/admin/views/settings.view.js",
+    ):
+        source = (ROOT / relative_path).read_text(encoding="utf-8")
+        assert "queue_mode" not in source
+        assert "dynamic_operator_distribution" not in source
+        assert "Режим очереди" not in source
+
 def test_services_view_uses_drag_order_without_click_sorting():
     source = _read("queue/js/admin/views/services.view.js")
 

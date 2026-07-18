@@ -30,7 +30,7 @@ from app.dependencies import (
     get_current_terminal, get_operator_by_session, verify_admin_session,
     verify_session,
 )
-from app.models import Admin, Window, record_queue_mode
+from app.models import Admin, Window
 from app.schemas import (
     OfficeMap, PlaylistUpdate, PublicSettingsResponse, SystemSettingsResponse,
     SystemSettingsUpdate,
@@ -324,9 +324,6 @@ async def update_admin_settings(
     if data.active_ticket_on_operator_logout not in {"return_to_queue", "keep_with_operator"}:
         raise HTTPException(status_code=400, detail="Некорректный active_ticket_on_operator_logout")
 
-    if data.queue_mode not in {"priority_fifo", "dynamic_operator_distribution"}:
-        raise HTTPException(status_code=400, detail="Некорректный queue_mode")
-
     if "<number>" not in data.ticket_notice_printed_text or "<number>" not in data.ticket_notice_unprinted_text:
         raise HTTPException(
             status_code=400,
@@ -362,8 +359,6 @@ async def update_admin_settings(
         )
         settings.redirect_allow_break = _bool_to_str(data.redirect_allow_break)
         settings.redirect_allow_offline = _bool_to_str(data.redirect_allow_offline)
-        record_queue_mode(db, data.queue_mode)
-        settings.queue_mode = data.queue_mode
         settings.call_message_template = data.call_message_template
         settings.board_ticket_template = data.board_ticket_template
         board_ticker_messages = normalize_board_ticker_messages(
@@ -389,6 +384,12 @@ async def update_admin_settings(
         )
         settings.auto_call_enabled = _bool_to_str(data.auto_call_enabled)
         settings.auto_call_delay_seconds = data.auto_call_delay_seconds
+        settings.called_ticket_min_wait_seconds = data.called_ticket_min_wait_seconds
+        settings.auto_call_balance_enabled = _bool_to_str(data.auto_call_balance_enabled)
+        settings.auto_call_balance_queue_threshold = data.auto_call_balance_queue_threshold
+        settings.auto_call_balance_min_free_operators = data.auto_call_balance_min_free_operators
+        settings.cancelled_ticket_board_display_seconds = data.cancelled_ticket_board_display_seconds
+        settings.cancelled_ticket_board_message_template = data.cancelled_ticket_board_message_template
         db.commit()
 
         all_window_ids = [row[0] for row in db.query(Window.id).all()]
@@ -422,6 +423,12 @@ async def get_public_settings():
             "board_ticker_text": settings["board_ticker_text"],
             "auto_call_enabled": settings["auto_call_enabled"],
             "auto_call_delay_seconds": settings["auto_call_delay_seconds"],
+            "called_ticket_min_wait_seconds": settings["called_ticket_min_wait_seconds"],
+            "auto_call_balance_enabled": settings["auto_call_balance_enabled"],
+            "auto_call_balance_queue_threshold": settings["auto_call_balance_queue_threshold"],
+            "auto_call_balance_min_free_operators": settings["auto_call_balance_min_free_operators"],
+            "cancelled_ticket_board_display_seconds": settings["cancelled_ticket_board_display_seconds"],
+            "cancelled_ticket_board_message_template": settings["cancelled_ticket_board_message_template"],
             "cancel_reason_options": [
                 item for item in settings["cancel_reason_options"]
                 if item["enabled"]

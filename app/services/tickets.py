@@ -1,21 +1,217 @@
 import asyncio
+import math
 from datetime import datetime, timedelta
 
-from sqlalchemy import and_, asc, case, func, literal
+from sqlalchemy import case, func, text
 from sqlalchemy.orm import Session
 
 from app.connections import manager, operatorManager
 from app.database import SessionLocal
-from app.models import Operator, Service, Ticket, Window, WindowService
+from app.models import (
+    Operator, OperatorStatusPeriod, Service, Ticket, Window, WindowService,
+)
 from app.services.settings import get_system_settings_dict
 
 RETURN_TO_QUEUE_DELAY_MINUTES = 15
 AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES = 30
 AUTO_CANCEL_RETURNED_TICKETS_INTERVAL_SECONDS = 60
+RECALL_COOLDOWN_SECONDS = 10
+
+
+def called_ticket_wait_remaining_seconds(
+    ticket: Ticket,
+    min_wait_seconds: int,
+    *,
+    now: datetime | None = None,
+) -> int:
+    """Return the server-authoritative wait before finishing a called ticket."""
+    if not ticket.called_at:
+        return 0
+    current_time = now or datetime.now()
+    available_at = ticket.called_at + timedelta(seconds=max(0, min_wait_seconds))
+    return max(0, math.ceil((available_at - current_time).total_seconds()))
+
+
+def recall_cooldown_remaining_seconds(
+    ticket: Ticket,
+    *,
+    now: datetime | None = None,
+) -> int:
+    call_times = [
+        value for value in (ticket.called_at, ticket.last_recalled_at)
+        if value is not None
+    ]
+    if not call_times:
+        return 0
+    available_at = max(call_times) + timedelta(seconds=RECALL_COOLDOWN_SECONDS)
+    return max(0, math.ceil((available_at - (now or datetime.now())).total_seconds()))
 
 
 def queue_order_expr():
     return func.coalesce(Ticket.queue_entered_at, Ticket.created_at)
+
+
+def _lock_next_ticket(query):
+    """Lock one eligible ticket without waiting for another caller's choice."""
+    return query.with_for_update(skip_locked=True, of=Ticket).first()
+
+
+def _operator_auto_call_enabled(operator: Operator, global_enabled: bool) -> bool:
+    mode = getattr(operator, "auto_call_mode", None) or "default"
+    if mode == "enabled":
+        return True
+    if mode == "disabled":
+        return False
+    return global_enabled
+
+
+def select_low_load_winner_id(ranking: list[tuple]) -> int | None:
+    return min(ranking)[3] if ranking else None
+
+
+def low_load_auto_call_winner(
+    db: Session,
+    *,
+    ticket: Ticket,
+    settings: dict,
+    now: datetime | None = None,
+) -> int | None:
+    """Choose a stable eligible operator from transactional database state."""
+    if not settings.get("auto_call_balance_enabled", True):
+        return None
+    queue_size = db.query(Ticket).filter(Ticket.status == "waiting").count()
+    if queue_size > settings["auto_call_balance_queue_threshold"]:
+        return None
+
+    candidates = (
+        db.query(Operator)
+        .join(Window, Operator.window_id == Window.id)
+        .join(WindowService, WindowService.window_id == Window.id)
+        .join(Service, Service.id == WindowService.service_id)
+        .filter(
+            Window.status == "online",
+            WindowService.service_id == ticket.service_id,
+            Service.is_archived == 0,
+            Service.status == "active",
+        )
+        .all()
+    )
+    current_operator_ids = {
+        row[0] for row in db.query(Ticket.operator_id)
+        .filter(Ticket.status == "called", Ticket.operator_id.isnot(None))
+        .all()
+    }
+    candidates = [
+        candidate for candidate in candidates
+        if candidate.id not in current_operator_ids
+        and _operator_auto_call_enabled(candidate, settings["auto_call_enabled"])
+    ]
+    if len(candidates) < settings["auto_call_balance_min_free_operators"]:
+        return None
+
+    current_time = now or datetime.now()
+    today_start = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    ranking = []
+    for candidate in candidates:
+        completed_count = db.query(Ticket).filter(
+            Ticket.operator_id == candidate.id,
+            Ticket.status == "finished",
+            Ticket.completion_reason.in_(("completed", "redirected")),
+            Ticket.finished_at >= today_start,
+        ).count()
+        last_finished_at = db.query(func.max(Ticket.finished_at)).filter(
+            Ticket.operator_id == candidate.id,
+            Ticket.status == "finished",
+            Ticket.finished_at >= today_start,
+        ).scalar()
+        online_started_at = db.query(func.min(OperatorStatusPeriod.started_at)).filter(
+            OperatorStatusPeriod.operator_id == candidate.id,
+            OperatorStatusPeriod.status == "online",
+            OperatorStatusPeriod.ended_at.is_(None),
+        ).scalar()
+        ranking.append((
+            completed_count,
+            last_finished_at or datetime.min,
+            online_started_at or datetime.min,
+            candidate.id,
+        ))
+    return select_low_load_winner_id(ranking)
+
+
+def claim_next_ticket(
+    db: Session,
+    *,
+    operator: Operator,
+    require_online: bool = False,
+    called_at: datetime | None = None,
+    balance_settings: dict | None = None,
+) -> tuple[Ticket | None, bool]:
+    """Select and assign the next ticket inside the caller's transaction."""
+    if balance_settings:
+        db.execute(text("SELECT pg_advisory_xact_lock(71620411)"))
+    window = (
+        db.query(Window)
+        .filter(Window.id == operator.window_id)
+        .with_for_update()
+        .first()
+    )
+    if not window:
+        return None, False
+    if require_online and window.status != "online":
+        return None, False
+
+    current = db.query(Ticket).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "called",
+    ).first()
+    if current:
+        return current, False
+
+    ticket = _lock_next_ticket(
+        db.query(Ticket)
+        .filter(
+            Ticket.status == "waiting",
+            Ticket.target_window_id == operator.window_id,
+        )
+        .order_by(queue_order_expr().asc())
+    )
+    if not ticket:
+        ticket = _lock_next_ticket(
+            db.query(Ticket)
+            .join(WindowService, Ticket.service_id == WindowService.service_id)
+            .filter(
+                WindowService.window_id == operator.window_id,
+                Ticket.status == "waiting",
+                Ticket.target_window_id.is_(None),
+            )
+            .order_by(WindowService.priority.asc(), queue_order_expr().asc())
+        )
+    if not ticket:
+        return None, False
+
+    if balance_settings:
+        winner_id = low_load_auto_call_winner(
+            db,
+            ticket=ticket,
+            settings=balance_settings,
+            now=called_at,
+        )
+        if winner_id is not None and winner_id != operator.id:
+            return None, False
+
+    ticket.status = "called"
+    ticket.completion_reason = None
+    ticket.operator_id = operator.id
+    ticket.window_id = operator.window_id
+    ticket.target_window_id = None
+    ticket.called_at = called_at or datetime.now()
+    ticket.last_recalled_at = None
+    ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
+    ticket.cancel_reason = None
+    db.flush()
+    return ticket, True
 
 
 def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
@@ -74,6 +270,7 @@ def resume_deferred_ticket(
     ticket.window_id = window_id
     ticket.target_window_id = None
     ticket.called_at = called_at
+    ticket.last_recalled_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None
@@ -168,78 +365,6 @@ def create_window_redirect_ticket(
     )
 
 
-def assign_ticket_to_least_loaded_window(db: Session, ticket: Ticket):
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-    candidates = (
-        db.query(
-            Window.id.label("window_id"),
-            func.count(Ticket.id).label("served_count")
-        )
-        .join(Operator, Operator.window_id == Window.id)
-        .join(WindowService, WindowService.window_id == Window.id)
-        .outerjoin(
-            Ticket,
-            and_(
-                Ticket.window_id == Window.id,
-                Ticket.status == "finished",
-                Ticket.finished_at >= today_start
-            )
-        )
-        .filter(
-            Window.status == "online",
-            WindowService.service_id == ticket.service_id
-        )
-        .group_by(Window.id)
-        .order_by(func.count(Ticket.id).asc(), Window.id.asc())
-        .first()
-    )
-
-    ticket.window_id = candidates.window_id if candidates else None
-
-
-async def reassign_waiting_tickets_from_window(db: Session, window_id: int):
-    settings = get_system_settings_dict(db)
-
-    if settings.get("queue_mode") != "dynamic_operator_distribution":
-        return
-
-    db.flush()
-
-    tickets = db.query(Ticket).filter(
-        Ticket.status == "waiting",
-        Ticket.window_id == window_id,
-        Ticket.target_window_id.is_(None)
-    ).all()
-
-    for ticket in tickets:
-        ticket.window_id = None
-        db.flush()
-        assign_ticket_to_least_loaded_window(db, ticket)
-
-    await manager.broadcast({
-        "type": "queue_updated"
-    })
-
-    db.commit()
-
-
-async def assign_unassigned_waiting_tickets(db: Session):
-    settings = get_system_settings_dict(db)
-
-    if settings.get("queue_mode") != "dynamic_operator_distribution":
-        return
-
-    tickets = db.query(Ticket).filter(
-        Ticket.status == "waiting",
-        Ticket.window_id.is_(None),
-        Ticket.target_window_id.is_(None),
-    ).order_by(queue_order_expr().asc()).all()
-
-    for ticket in tickets:
-        assign_ticket_to_least_loaded_window(db, ticket)
-
-
 def get_called_tickets():
     db = SessionLocal()
     try:
@@ -308,11 +433,46 @@ def get_waiting_tickets_for_board():
         db.close()
 
 
+def get_recent_cancelled_tickets_for_board():
+    db = SessionLocal()
+    try:
+        settings = get_system_settings_dict(db)
+        display_seconds = settings["cancelled_ticket_board_display_seconds"]
+        if display_seconds <= 0:
+            return []
+        cutoff = datetime.now() - timedelta(seconds=display_seconds)
+        rows = (
+            db.query(Ticket, Window)
+            .outerjoin(Window, Ticket.window_id == Window.id)
+            .filter(
+                Ticket.status == "cancelled",
+                Ticket.finished_at >= cutoff,
+            )
+            .order_by(Ticket.finished_at.desc())
+            .all()
+        )
+        return [{
+            "id": ticket.id,
+            "number": ticket.number,
+            "expires_at": (
+                ticket.finished_at + timedelta(seconds=display_seconds)
+            ).isoformat(),
+            "message": render_ticket_template(
+                settings["cancelled_ticket_board_message_template"],
+                ticket.number,
+                window.name if window else "—",
+            ),
+        } for ticket, window in rows]
+    finally:
+        db.close()
+
+
 def get_board_state():
     return {
         "type": "board_state",
         "called": get_called_tickets(),
-        "waiting": get_waiting_tickets_for_board()
+        "waiting": get_waiting_tickets_for_board(),
+        "cancelled": get_recent_cancelled_tickets_for_board(),
     }
 
 

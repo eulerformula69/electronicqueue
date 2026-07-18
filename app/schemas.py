@@ -36,6 +36,10 @@ class CallSpecificRequest(BaseModel):
     number: int
 
 
+class CallNextRequest(BaseModel):
+    auto_call: bool = False
+
+
 class DeferTicketRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=255)
 
@@ -118,6 +122,7 @@ class TicketRead(BaseModel):
     deferred_at: datetime | None = None
     cancel_reason: str | None = None
     called_at: datetime | None = None
+    last_recalled_at: datetime | None = None
     finished_at: datetime | None = None
 
     class Config:
@@ -242,7 +247,6 @@ class SystemSettingsUpdate(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool = True
     redirect_allow_offline: bool = False
-    queue_mode: str
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
@@ -251,6 +255,16 @@ class SystemSettingsUpdate(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool = False
     auto_call_delay_seconds: int = Field(default=60, ge=0, le=600)
+    called_ticket_min_wait_seconds: int = Field(default=180, ge=0, le=3600)
+    auto_call_balance_enabled: bool = True
+    auto_call_balance_queue_threshold: int = Field(default=3, ge=1, le=100)
+    auto_call_balance_min_free_operators: int = Field(default=2, ge=2, le=100)
+    cancelled_ticket_board_display_seconds: int = Field(default=60, ge=0, le=3600)
+    cancelled_ticket_board_message_template: str = Field(
+        default="⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.",
+        min_length=1,
+        max_length=500,
+    )
 
 
 class SystemSettingsResponse(BaseModel):
@@ -266,7 +280,6 @@ class SystemSettingsResponse(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool
     redirect_allow_offline: bool
-    queue_mode: str
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str
@@ -275,6 +288,12 @@ class SystemSettingsResponse(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool
     auto_call_delay_seconds: int
+    called_ticket_min_wait_seconds: int
+    auto_call_balance_enabled: bool
+    auto_call_balance_queue_threshold: int
+    auto_call_balance_min_free_operators: int
+    cancelled_ticket_board_display_seconds: int
+    cancelled_ticket_board_message_template: str
 
 
 class PublicSettingsResponse(BaseModel):
@@ -293,3 +312,9 @@ class PublicSettingsResponse(BaseModel):
     defer_reason_options: List[TicketReasonOption] = Field(default_factory=list)
     auto_call_enabled: bool
     auto_call_delay_seconds: int
+    called_ticket_min_wait_seconds: int
+    auto_call_balance_enabled: bool
+    auto_call_balance_queue_threshold: int
+    auto_call_balance_min_free_operators: int
+    cancelled_ticket_board_display_seconds: int
+    cancelled_ticket_board_message_template: str

@@ -37,10 +37,12 @@ function render() {
                 ], settings.active_ticket_on_operator_logout))}
                 ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
                 ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
-                ${ctx.ui.field("Режим очереди", ctx.ui.select("queue_mode", [
-                    {value: "priority_fifo", label: "Приоритет услуг + FIFO"},
-                    {value: "dynamic_operator_distribution", label: "Динамическое распределение"}
-                ], settings.queue_mode))}
+                ${ctx.ui.field("Минимальное ожидание после вызова, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
+                ${ctx.ui.field("Балансировка автовызова при низкой нагрузке", ctx.ui.switchField("auto_call_balance_enabled", settings.auto_call_balance_enabled ?? true))}
+                ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
+                ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}
+                ${ctx.ui.field("Сообщение об отменённом талоне на табло, секунд", ctx.ui.input("cancelled_ticket_board_display_seconds", settings.cancelled_ticket_board_display_seconds ?? 60, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
+                ${ctx.ui.field("Текст системного сообщения об отмене (<number>, <window>)", ctx.ui.input("cancelled_ticket_board_message_template", settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.", "maxlength=\"500\""))}
                 <div class="admin-field">
                     <span>Причины отмены</span>
                     <div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>
@@ -169,9 +171,14 @@ async function save() {
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
         redirect_allow_break: Boolean(data.redirect_allow_break),
         redirect_allow_offline: Boolean(data.redirect_allow_offline),
-        queue_mode: data.queue_mode,
         auto_call_enabled: settings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),
+        called_ticket_min_wait_seconds: Number(data.called_ticket_min_wait_seconds),
+        auto_call_balance_enabled: Boolean(data.auto_call_balance_enabled),
+        auto_call_balance_queue_threshold: Number(data.auto_call_balance_queue_threshold),
+        auto_call_balance_min_free_operators: Number(data.auto_call_balance_min_free_operators),
+        cancelled_ticket_board_display_seconds: Number(data.cancelled_ticket_board_display_seconds),
+        cancelled_ticket_board_message_template: data.cancelled_ticket_board_message_template.trim(),
         call_message_template: data.call_message_template.trim(),
         board_ticket_template: data.board_ticket_template.trim(),
         board_ticker_text: data.board_ticker_text.trim(),
@@ -188,6 +195,9 @@ async function save() {
     }
     if (!validAutoCallDelay(payload.auto_call_delay_seconds)) {
         return ctx.toast("Задержка автовызова должна быть целым числом от 0 до 600 секунд", "error");
+    }
+    if (!validCalledTicketMinWait(payload.called_ticket_min_wait_seconds)) {
+        return ctx.toast("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд", "error");
     }
     if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
         return ctx.toast("Тексты терминала должны содержать <number>", "error");
@@ -214,6 +224,10 @@ function validTicketPrintScale(value) {
 
 function validAutoCallDelay(value) {
     return Number.isInteger(value) && value >= 0 && value <= 600;
+}
+
+function validCalledTicketMinWait(value) {
+    return Number.isInteger(value) && value >= 0 && value <= 3600;
 }
 
 function collectBoardTickerMessages() {

@@ -107,6 +107,13 @@ body.operator-page .current-client-panel{
     justify-content: center;
     min-height: 0;
 }
+
+body.operator-page .service-timer {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
 body.operator-page .ticket-label{
     font-size: 1.2rem;
     color: var(--text-muted);
@@ -419,12 +426,21 @@ body.operator-page .operator-settings-wide-button{
 body.operator-page .operator-popup-overlay{
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: 2300;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
     background: rgba(15, 23, 42, 0.4);
+}
+body.operator-page #toast-notification[data-type="danger"]{
+    background: var(--danger);
+}
+body.operator-page #toast-notification[data-type="warning"]{
+    background: var(--warning);
+}
+body.operator-page #toast-notification[data-type="success"]{
+    background: var(--success);
 }
 body.operator-page .operator-popup{
     width: min(520px, 100%);
@@ -443,6 +459,34 @@ body.operator-page .operator-popup p{
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1.45;
+}
+body.operator-page .operator-popup-form{
+    display: grid;
+    gap: 6px;
+    margin-top: 18px;
+}
+body.operator-page .operator-popup-form label{
+    display: grid;
+    gap: 8px;
+    color: var(--text-main);
+    font-weight: 700;
+}
+body.operator-page .operator-popup-input{
+    box-sizing: border-box;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: var(--text-main);
+    font: inherit;
+}
+body.operator-page .operator-popup-input:focus{
+    border-color: var(--primary);
+    outline: 2px solid rgba(15, 76, 129, 0.14);
+}
+body.operator-page .operator-popup-error{
+    min-height: 1.2em;
+    color: var(--danger);
 }
 body.operator-page .operator-popup-actions{
     display: flex;
@@ -531,6 +575,13 @@ body.operator-page .btn-outline{
 body.operator-page .btn-outline:hover{ background: #f1f5f9; }
 body.operator-page button:disabled{
     cursor: not-allowed;
+}
+body.operator-page .current-ticket-actions-inactive [data-current-ticket-action],
+body.operator-page .current-ticket-action-inactive,
+body.operator-page .operator-work-disabled [data-call-action],
+body.operator-page .operator-work-disabled [data-current-ticket-action]{
+    opacity: 0.38;
+    filter: grayscale(0.8);
 }
 
 body.operator-page .icon-button {
@@ -752,16 +803,6 @@ body.operator-page .auto-call-info-block .auto-call-status-text[data-state="empt
 }
 body.operator-page .auto-call-info-block .auto-call-status-text[data-state="disabled"]{
     color: var(--text-muted);
-}
-body.operator-page .auto-call-hint{
-    display: block;
-    font-size: 0.82rem;
-    line-height: 1.35;
-    color: var(--text-muted);
-    overflow-wrap: anywhere;
-}
-body.operator-page .auto-call-hint:empty{
-    display: none;
 }
 body.operator-page .service-row{
     display: flex;

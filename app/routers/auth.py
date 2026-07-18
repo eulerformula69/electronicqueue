@@ -41,9 +41,7 @@ from app.security import get_password_hash, verify_password
 from app.services.operators import update_services_status_for_window
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
-    assign_ticket_to_least_loaded_window, assign_unassigned_waiting_tickets,
-    broadcast_board, reassign_waiting_tickets_from_window,
-    return_ticket_to_queue,
+    broadcast_board, return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -167,9 +165,6 @@ async def login(data: LoginRequest):
 
                     update_services_status_for_window(db, window.id)
 
-                    if window.status == "online":
-                        await assign_unassigned_waiting_tickets(db)
-
             db.commit()
 
             if operator.window_id:
@@ -220,8 +215,6 @@ async def logout(session_id: str = Header(...)):
                     record_operator_status(db, operator.id, window.id, window.status)
                     db.flush()
 
-                    await reassign_waiting_tickets_from_window(db, window.id)
-
                 if settings["active_ticket_on_operator_logout"] == "return_to_queue":
                     active_ticket = db.query(Ticket).filter(
                         Ticket.window_id == operator.window_id,
@@ -230,12 +223,6 @@ async def logout(session_id: str = Header(...)):
 
                     if active_ticket:
                         return_ticket_to_queue(active_ticket)
-
-                        if (
-                            settings.get("queue_mode") == "dynamic_operator_distribution"
-                            and active_ticket.target_window_id is None
-                        ):
-                            assign_ticket_to_least_loaded_window(db, active_ticket)
 
                 db.query(UserSession).filter(UserSession.operator_id == operator_id).delete()
 

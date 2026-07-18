@@ -40,8 +40,7 @@ from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state, update_services_status_for_window
 from app.services.settings import get_system_settings_dict
 from app.services.tickets import (
-    broadcast_board, get_board_state, reassign_waiting_tickets_from_window,
-    return_ticket_to_queue,
+    broadcast_board, get_board_state, return_ticket_to_queue,
 )
 
 router = APIRouter()
@@ -188,7 +187,6 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
                     window.status = "offline"
                     record_operator_status(db, operator.id, window.id, window.status)
                     db.flush()
-                    await reassign_waiting_tickets_from_window(db, window.id)
                     update_services_status_for_window(db, window.id)
 
                     if settings["active_ticket_on_operator_logout"] == "return_to_queue":

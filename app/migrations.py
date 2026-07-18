@@ -318,6 +318,17 @@ def migrate_ticket_defer_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_recall_schema(engine):
+    """Persist the latest repeat-call time for server-authoritative cooldowns."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS last_recalled_at timestamp;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """
@@ -368,44 +379,6 @@ def migrate_operator_status_periods_schema(engine):
         ALTER COLUMN started_at SET DEFAULT
             (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk');
 
-    """
-
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-
-def migrate_queue_mode_periods_schema(engine):
-    """Create queue-mode history and seed its current period."""
-    ddl = """
-    CREATE TABLE IF NOT EXISTS queue_mode_periods (
-        id bigserial PRIMARY KEY,
-        queue_mode varchar(40) NOT NULL,
-        started_at timestamp without time zone NOT NULL
-            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk'),
-        ended_at timestamp without time zone,
-        current_period_key integer NOT NULL DEFAULT 1,
-        CONSTRAINT ck_queue_mode_periods_mode CHECK (
-            queue_mode IN ('priority_fifo', 'dynamic_operator_distribution')
-        ),
-        CONSTRAINT ck_queue_mode_periods_dates CHECK (
-            ended_at IS NULL OR ended_at >= started_at
-        )
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_queue_mode_current_period
-        ON queue_mode_periods (current_period_key)
-        WHERE ended_at IS NULL;
-    CREATE INDEX IF NOT EXISTS ix_queue_mode_periods_started_at
-        ON queue_mode_periods (started_at);
-
-    INSERT INTO queue_mode_periods (queue_mode)
-    SELECT COALESCE(
-        (SELECT queue_mode FROM system_settings WHERE id = 1),
-        'priority_fifo'
-    )
-    WHERE NOT EXISTS (
-        SELECT 1 FROM queue_mode_periods WHERE ended_at IS NULL
-    );
     """
 
     with engine.begin() as conn:
@@ -509,6 +482,42 @@ def migrate_operator_auto_call_schema(engine):
        OR auto_call_mode NOT IN ('default', 'enabled', 'disabled');
     """
 
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_called_ticket_min_wait_schema(engine):
+    """Add the minimum wait before a called ticket can be finished."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS called_ticket_min_wait_seconds integer DEFAULT 180;
+
+    UPDATE system_settings
+    SET called_ticket_min_wait_seconds = COALESCE(called_ticket_min_wait_seconds, 180);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_auto_call_balance_and_board_cancel_schema(engine):
+    """Add low-load auto-call balancing and board cancellation settings."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS auto_call_balance_enabled varchar DEFAULT 'true',
+        ADD COLUMN IF NOT EXISTS auto_call_balance_queue_threshold integer DEFAULT 3,
+        ADD COLUMN IF NOT EXISTS auto_call_balance_min_free_operators integer DEFAULT 2,
+        ADD COLUMN IF NOT EXISTS cancelled_ticket_board_display_seconds integer DEFAULT 60,
+        ADD COLUMN IF NOT EXISTS cancelled_ticket_board_message_template varchar(500)
+            DEFAULT '⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.';
+
+    UPDATE system_settings
+    SET cancelled_ticket_board_message_template =
+        '⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.'
+    WHERE cancelled_ticket_board_message_template IS NULL
+       OR cancelled_ticket_board_message_template =
+        '⚠ Талон <number>: вызов отменён — клиент не подошёл. Вернулись? Сообщите номер оператору.';
+    """
     with engine.begin() as conn:
         conn.execute(text(ddl))
 
