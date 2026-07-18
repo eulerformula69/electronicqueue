@@ -133,6 +133,19 @@ def test_one_ticket_is_claimed_by_only_one_operator_and_leaves_queue():
     assert not [ticket for ticket in db.tickets if ticket.status == "waiting"]
 
 
+def test_call_next_never_reopens_finished_or_cancelled_tickets():
+    db = make_db(ticket_services=(1, 1, 1))
+    db.tickets[0].status = "finished"
+    db.tickets[1].status = "cancelled"
+
+    ticket, claimed = claim(db, Operator(id=1, window_id=10))
+
+    assert claimed is True
+    assert ticket.id == db.tickets[2].id
+    assert db.tickets[0].status == "finished"
+    assert db.tickets[1].status == "cancelled"
+
+
 def test_auto_call_respects_workplace_services():
     db = make_db(ticket_services=(2, 1), window_services=((10, 1),))
 

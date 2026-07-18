@@ -2,13 +2,11 @@ import asyncio
 from datetime import datetime, timedelta
 from operator import eq, ge, lt
 
+import pytest
+
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.routers import tickets as tickets_router
-from app.routers.tickets import (
-    COMPLETED_TODAY_TICKET_DETAIL,
-    call_specific_ticket,
-    find_completed_today_ticket_by_number,
-)
+from app.routers.tickets import call_specific_ticket
 from app.schemas import CallSpecificRequest
 
 
@@ -40,6 +38,9 @@ class FakeTicketQuery:
 
     def order_by(self, *order):
         self._order_desc = True
+        return self
+
+    def with_for_update(self, **kwargs):
         return self
 
     def first(self):
@@ -76,69 +77,48 @@ class FakeDb:
         self.closed = True
 
 
-def make_ticket(number, finished_at, completion_reason="completed"):
-    return Ticket(
-        number=number,
-        status="finished",
-        completion_reason=completion_reason,
-        finished_at=finished_at,
+@pytest.mark.parametrize("ticket_status", ["finished", "cancelled"])
+def test_call_specific_rejects_non_waiting_ticket(monkeypatch, ticket_status):
+    ticket = Ticket(
+        id=10,
+        number=42,
+        status=ticket_status,
+        created_at=datetime.now() - timedelta(hours=1),
+    )
+    db = FakeDb([ticket])
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+
+    response = asyncio.run(
+        call_specific_ticket(
+            CallSpecificRequest(number=42),
+            operator=Operator(id=7, window_id=3),
+        )
     )
 
-
-def test_find_completed_today_ticket_by_number_finds_finished_completed_ticket():
-    now = datetime(2026, 6, 29, 12, 0)
-    completed_ticket = make_ticket(42, datetime(2026, 6, 29, 10, 0))
-    cancelled_ticket = make_ticket(
-        42,
-        datetime(2026, 6, 29, 10, 10),
-        completion_reason="cancelled",
-    )
-
-    result = find_completed_today_ticket_by_number(
-        FakeDb([cancelled_ticket, completed_ticket]),
-        42,
-        now=now,
-    )
-
-    assert result is completed_ticket
-    assert COMPLETED_TODAY_TICKET_DETAIL == (
-        "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
-    )
+    assert response == {"detail": "Ожидающий талон с таким номером за сегодня не найден"}
+    assert ticket.status == ticket_status
+    assert db.committed is False
 
 
-def test_find_completed_today_ticket_by_number_ignores_yesterday_finished_ticket():
-    now = datetime(2026, 6, 29, 12, 0)
-    yesterday_ticket = make_ticket(42, datetime(2026, 6, 28, 10, 0))
-
-    result = find_completed_today_ticket_by_number(
-        FakeDb([yesterday_ticket]),
-        42,
-        now=now,
-    )
-
-    assert result is None
-
-
-def test_call_specific_reopens_today_finished_completed_ticket(monkeypatch):
+def test_call_specific_calls_today_waiting_ticket(monkeypatch):
     now = datetime.now()
     service = Service(id=5, name="Consultation")
     ticket = Ticket(
         id=10,
         number=42,
         service_id=service.id,
-        status="finished",
-        completion_reason="completed",
-        operator_id=1,
-        window_id=11,
-        target_window_id=99,
+        status="waiting",
+        target_window_id=None,
         created_at=now - timedelta(hours=2),
-        called_at=now - timedelta(hours=1),
-        finished_at=now - timedelta(minutes=5),
     )
     ticket.service = service
     window = Window(id=3, name="3")
     operator = Operator(id=7, window_id=window.id)
-    db = FakeDb([ticket], windows=[window])
+    db = FakeDb(
+        [ticket],
+        windows=[window],
+        window_services=[WindowService(window_id=window.id, service_id=service.id)],
+    )
     broadcasts = []
 
     async def fake_broadcast_board():
@@ -159,12 +139,11 @@ def test_call_specific_reopens_today_finished_completed_ticket(monkeypatch):
         call_specific_ticket(CallSpecificRequest(number=42), operator=operator)
     )
 
-    assert response == {
-        "id": 10,
-        "number": 42,
-        "status": "called",
-        "service_name": "Consultation",
-    }
+    assert response["id"] == 10
+    assert response["number"] == 42
+    assert response["status"] == "called"
+    assert response["called_at"] == ticket.called_at
+    assert response["service_name"] == "Consultation"
     assert ticket.status == "called"
     assert ticket.completion_reason is None
     assert ticket.operator_id == operator.id

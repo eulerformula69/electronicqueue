@@ -472,6 +472,7 @@ body.operator-page .operator-popup-form label{
     font-weight: 700;
 }
 body.operator-page .operator-popup-input{
+    box-sizing: border-box;
     width: 100%;
     padding: 11px 12px;
     border: 1px solid #cbd5e1;

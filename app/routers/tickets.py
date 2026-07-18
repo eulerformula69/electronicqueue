@@ -53,9 +53,6 @@ from app.services.operators import resolve_operator_auto_call_enabled
 
 router = APIRouter()
 
-COMPLETED_TODAY_TICKET_DETAIL = (
-    "Обслуживание этого клиента уже завершено. Вызвать талон не получится."
-)
 CLIENT_OPERATIONS_ON_BREAK_DETAIL = "Нельзя выполнять операции с клиентом, пока оператор на перерыве"
 
 
@@ -184,27 +181,6 @@ def build_reprint_ticket_payload(
         "waiting_before": waiting_before,
         "date": ticket.created_at.strftime("%d.%m.%Y %H:%M") if ticket.created_at else "",
     }
-
-
-def find_completed_today_ticket_by_number(
-    db: Session,
-    number: int,
-    now: datetime | None = None,
-):
-    today_start, tomorrow_start = _today_bounds(now)
-
-    return (
-        db.query(Ticket)
-        .filter(
-            Ticket.number == number,
-            Ticket.status == "finished",
-            Ticket.completion_reason == "completed",
-            Ticket.finished_at >= today_start,
-            Ticket.finished_at < tomorrow_start,
-        )
-        .order_by(Ticket.finished_at.desc())
-        .first()
-    )
 
 
 @router.post("/tickets/", tags=["Tickets"])
@@ -479,35 +455,23 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
 
         ticket = db.query(Ticket).filter(
             Ticket.number == data.number,
-            Ticket.status.in_(["waiting", "cancelled"]),
+            Ticket.status == "waiting",
             Ticket.created_at >= today_start,
             Ticket.created_at < tomorrow_start
-        ).order_by(Ticket.created_at.desc()).first()
-        is_emergency_completed_call = False
+        ).order_by(Ticket.created_at.desc()).with_for_update(skip_locked=True).first()
 
         if not ticket:
-            completed_ticket = find_completed_today_ticket_by_number(
-                db,
-                data.number,
-                now=today_start,
-            )
-            if completed_ticket:
-                ticket = completed_ticket
-                is_emergency_completed_call = True
-
-        if not ticket:
-            return {"detail": "Билет с таким номером за сегодня не найден или недоступен для вызова"}
+            return {"detail": "Ожидающий талон с таким номером за сегодня не найден"}
 
         # Если билет был перенаправлен на конкретное окно, вызвать его может только это окно.
         if (
-            not is_emergency_completed_call
-            and ticket.target_window_id is not None
+            ticket.target_window_id is not None
             and ticket.target_window_id != operator.window_id
         ):
             return {"detail": "Этот талон перенаправлен на другое рабочее место"}
 
         # Обычные билеты по-прежнему можно вызвать только на окне, которое обслуживает их услугу.
-        if not is_emergency_completed_call and ticket.target_window_id is None:
+        if ticket.target_window_id is None:
             window_service = db.query(WindowService).filter(
                 WindowService.window_id == operator.window_id,
                 WindowService.service_id == ticket.service_id
@@ -543,6 +507,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
             "id": ticket.id,
             "number": ticket.number,
             "status": ticket.status,
+            "called_at": ticket.called_at,
             "service_name": ticket.service.name if ticket.service else "Услуга не найдена"
         }
     finally:
