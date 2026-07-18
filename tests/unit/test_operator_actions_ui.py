@@ -137,6 +137,25 @@ def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
     assert "scheduleAutoCallAfterWorkspaceFreed();" in settings_section
 
 
+def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
+    source = read_text("queue/js/operator.js")
+    websocket_section = source.split("function initWebSocket", 1)[1]
+    websocket_section = websocket_section.split("function startOperatorPolling", 1)[0]
+    refresh_section = source.split("async function refreshQueueAndAutoCall", 1)[1]
+    refresh_section = refresh_section.split("function showToast", 1)[0]
+    start_section = source.split("function startAutoCallAfterFinish", 1)[1]
+    start_section = start_section.split("function scheduleAutoCallAfterWorkspaceFreed", 1)[0]
+
+    assert "let queueHasCallableTickets = null;" in source
+    assert "queueHasCallableTickets = Array.isArray(tickets) && tickets.length > 0;" in source
+    assert "refreshQueueAndAutoCall();" in websocket_section
+    assert 'stopAutoCall("Очередь пуста");' in refresh_section
+    assert 'statusDisplay?.dataset.state === "empty"' in refresh_section
+    assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
+    assert "if (queueHasCallableTickets === false)" in start_section
+    assert 'stopAutoCall("Очередь пуста");' in start_section
+
+
 def test_operator_redirect_loads_services_hidden_on_terminal():
     source = read_text("queue/js/operator.js")
 

@@ -39,6 +39,7 @@ let queueSoundInitialized = false;
 
 // Храним известные тикеты из прошлой загрузки очереди
 let knownQueueTicketIds = new Set();
+let queueHasCallableTickets = null;
 
 // Антидребезг звукового оповещения
 let lastNewTicketSoundAt = 0;
@@ -132,7 +133,7 @@ function initWebSocket() {
         }
 
         if (data.type === "queue_updated") {
-            loadQueue();
+            refreshQueueAndAutoCall();
         }
     };
     operatorSocket.onclose = () => {
@@ -735,6 +736,7 @@ async function loadQueue(options = {}) {
 
         const data = await res.json();
         const tickets = data.tickets ?? data;
+        queueHasCallableTickets = Array.isArray(tickets) && tickets.length > 0;
 		if (options.checkNewTickets !== false) {
 			checkNewTicketsAndNotify(tickets);
 		}		
@@ -753,6 +755,25 @@ async function loadQueue(options = {}) {
     } catch (e) {
         console.error("Ошибка загрузки очереди:", e);
         return [];
+    }
+}
+
+async function refreshQueueAndAutoCall() {
+    const tickets = await loadQueue();
+    if (!operatorSettings.auto_call_enabled || hasCurrentTicket()) return;
+
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+        stopAutoCall("Очередь пуста");
+        return;
+    }
+
+    const statusDisplay = getAutoCallStatusDisplay();
+    if (
+        isOperatorOnline() &&
+        !autoCallTimer &&
+        statusDisplay?.dataset.state === "empty"
+    ) {
+        scheduleAutoCallAfterWorkspaceFreed();
     }
 }
 
@@ -2039,6 +2060,11 @@ function startAutoCallAfterFinish() {
 
     if (hasCurrentTicket()) {
         updateAutoCallStatus("");
+        return;
+    }
+
+    if (queueHasCallableTickets === false) {
+        stopAutoCall("Очередь пуста");
         return;
     }
 
