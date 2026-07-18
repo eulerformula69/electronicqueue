@@ -36,9 +36,4 @@ function refreshOperatorUiState() {
         displayZone.dataset.ticketStatus = currentTicketStatus || "none";
     }
 
-    const autoCallNow = document.getElementById("auto-call-now-btn");
-    const autoCallDecline = document.getElementById("auto-call-decline-btn");
-    const autoCallInteractive = online && !hasTicket && !busy && operatorSettings.auto_call_enabled;
-    if (autoCallNow) autoCallNow.disabled = !autoCallInteractive;
-    if (autoCallDecline) autoCallDecline.disabled = !autoCallInteractive || !autoCallTimer;
 }

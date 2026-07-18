@@ -475,23 +475,6 @@ def migrate_operator_auto_call_schema(engine):
         conn.execute(text(ddl))
 
 
-def migrate_auto_call_declines_schema(engine):
-    ddl = """
-    CREATE TABLE IF NOT EXISTS auto_call_declines (
-        id bigserial PRIMARY KEY,
-        operator_id integer NOT NULL REFERENCES operators(id) ON DELETE CASCADE,
-        window_id integer REFERENCES windows(id) ON DELETE SET NULL,
-        reason varchar(255) NOT NULL,
-        created_at timestamp without time zone NOT NULL
-            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')
-    );
-    CREATE INDEX IF NOT EXISTS ix_auto_call_declines_operator_created
-        ON auto_call_declines (operator_id, created_at);
-    """
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-
 def migrate_service_terminal_visibility_schema(engine):
     """Add service terminal visibility flag."""
     ddl = """

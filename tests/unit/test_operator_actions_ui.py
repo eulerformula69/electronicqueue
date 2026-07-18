@@ -75,10 +75,6 @@ def test_operator_actions_keep_existing_ticket_endpoints():
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
-    display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
-    display_zone = display_zone.split('<section class="glass-card">', 1)[0]
-    info_panel = html.split('<div id="operator-info"', 1)[1]
-
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
     assert "localStorage.getItem('autoCallActive')" not in source
@@ -92,8 +88,7 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
     assert "loadQueue({ checkNewTickets: false })" in source
     assert "Очередь пуста" in source
-    assert "auto-call-info-block" in display_zone
-    assert "auto-call-info-block" not in info_panel
+    assert "auto-call-info-block" not in html
 
 
 def test_operator_auto_call_schedules_after_workspace_freeing_actions():
@@ -118,7 +113,7 @@ def test_operator_auto_call_resumes_when_operator_goes_online():
     change_status_section = source.split("async function changeWindowStatus", 1)[1]
     change_status_section = change_status_section.split("function updateStatusButtons", 1)[0]
 
-    assert 'stopAutoCall("Оператор не Online")' in change_status_section
+    assert 'result.status === "break" ? "Перерыв" : "Оператор офлайн"' in change_status_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in change_status_section
     assert "На паузе: оператор не в статусе Online" not in source
 
@@ -150,7 +145,7 @@ def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
     assert "queueHasCallableTickets = Array.isArray(tickets) && tickets.length > 0;" in source
     assert "refreshQueueAndAutoCall();" in websocket_section
     assert 'stopAutoCall("Очередь пуста");' in refresh_section
-    assert 'statusDisplay?.dataset.state === "empty"' in refresh_section
+    assert 'autoCallState === "empty"' in refresh_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
     assert "if (queueHasCallableTickets === false)" in start_section
     assert 'stopAutoCall("Очередь пуста");' in start_section
@@ -315,27 +310,20 @@ def test_operator_mutations_share_double_click_guard():
         assert f'endOperatorRequest("{key}")' in source
 
 
-def test_auto_call_block_has_countdown_actions_and_decline_reasons():
+def test_operator_page_does_not_render_auto_call_block():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
 
-    assert "Следующий талон будет вызван автоматически" in html
-    assert 'id="auto-call-countdown"' in html
-    assert 'onclick="runAutoCallNow()"' in html
-    assert 'onclick="showAutoCallDeclinePopup()"' in html
-    assert 'text: "Перерыв"' in source
-    assert 'declineAutoCall("break")' in source
-    assert 'await changeWindowStatus("break")' in source
-    assert "/operator/auto-call-declines" in source
-    decline_section = source.split("async function declineAutoCall", 1)[1]
-    decline_section = decline_section.split("async function runAutoCallNow", 1)[0]
-    assert "/tickets/cancel" not in decline_section
+    assert "auto-call-info-block" not in html
+    assert "auto-call-countdown" not in html
+    assert "showAutoCallDeclinePopup" not in source
+    assert "/operator/auto-call-declines" not in source
 
 
-def test_auto_call_block_shows_supported_stop_reasons():
+def test_auto_call_uses_distinct_break_and_offline_reasons():
     source = read_text("queue/js/operator.js")
 
-    assert "Оператор не Online" in source
+    assert 'return isOperatorOnBreak() ? "Перерыв" : "Оператор офлайн";' in source
     assert "Рабочее место занято текущим талоном" in source
     assert "Очередь пуста" in source
     assert "Отключена администратором" in source

@@ -232,7 +232,6 @@ async function loadOperatorReasonSettings() {
             operatorSettings.auto_call_enabled
         );
         autoCallSettingsLoaded = true;
-        syncAutoCallVisibility();
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
             stopAutoCall("Отключена администратором");
@@ -775,11 +774,10 @@ async function refreshQueueAndAutoCall() {
         return;
     }
 
-    const statusDisplay = getAutoCallStatusDisplay();
     if (
         isOperatorOnline() &&
         !autoCallTimer &&
-        statusDisplay?.dataset.state === "empty"
+        autoCallState === "empty"
     ) {
         scheduleAutoCallAfterWorkspaceFreed();
     }
@@ -1497,7 +1495,7 @@ async function changeWindowStatus(newStatus) {
         // Обновляем UI - подсветка кнопок
         updateStatusButtons(result.status); 
         if (result.status !== "online") {
-            stopAutoCall("Оператор не Online");
+            stopAutoCall(result.status === "break" ? "Перерыв" : "Оператор офлайн");
         } else {
             scheduleAutoCallAfterWorkspaceFreed();
         }
@@ -1976,29 +1974,12 @@ async function confirmReturnCurrentToQueue() {
 
 let autoCallTimer = null;
 let secondsLeft = 60;
+let autoCallState = "";
 
 function normalizeAutoCallDelay(value) {
     const delay = Number(value);
     if (!Number.isInteger(delay)) return 60;
     return Math.max(0, Math.min(600, delay));
-}
-
-function getAutoCallStatusDisplay() {
-    return document.getElementById("auto-call-status");
-}
-
-function getAutoCallHintDisplay() {
-    return document.getElementById("auto-call-hint");
-}
-
-function getAutoCallInfoBlock() {
-    return document.getElementById("auto-call-info-block");
-}
-
-function syncAutoCallVisibility() {
-    const block = getAutoCallInfoBlock();
-    if (!block) return;
-    block.style.display = operatorSettings.auto_call_enabled ? "" : "none";
 }
 
 function isOperatorOnline() {
@@ -2007,6 +1988,10 @@ function isOperatorOnline() {
 
 function isOperatorOnBreak() {
     return currentWindowStatus === "break";
+}
+
+function getAutoCallPausedMessage() {
+    return isOperatorOnBreak() ? "Перерыв" : "Оператор офлайн";
 }
 
 function ensureClientOperationsAllowed() {
@@ -2021,39 +2006,13 @@ function hasCurrentTicket() {
 }
 
 function updateAutoCallStatus(message, options = {}) {
-    syncAutoCallVisibility();
-    const statusDisplay = getAutoCallStatusDisplay();
-    if (!statusDisplay) return;
-    const hintDisplay = getAutoCallHintDisplay();
-    const titleDisplay = document.getElementById("auto-call-title");
-    const countdownDisplay = document.getElementById("auto-call-countdown");
-
     if (typeof message === "string") {
-        statusDisplay.textContent = message;
-        statusDisplay.dataset.state = options.state || "";
-        if (hintDisplay) hintDisplay.textContent = options.hint || "";
-        if (titleDisplay) {
-            titleDisplay.style.display = options.state === "countdown" ? "" : "none";
-        }
-        if (countdownDisplay) {
-            countdownDisplay.textContent = options.state === "countdown" ? String(secondsLeft) : "—";
-            countdownDisplay.style.display = options.state === "countdown" ? "" : "none";
-        }
+        autoCallState = options.state || "";
         refreshOperatorUiState();
         return;
     }
 
-    if (operatorSettings.auto_call_enabled) {
-        statusDisplay.textContent = "Автоочередь включена";
-        statusDisplay.dataset.state = "enabled";
-        if (hintDisplay) {
-            hintDisplay.textContent = "Отсчёт начнётся после завершения текущего клиента.";
-        }
-    } else {
-        statusDisplay.textContent = "Отключена администратором";
-        statusDisplay.dataset.state = "disabled";
-        if (hintDisplay) hintDisplay.textContent = "";
-    }
+    autoCallState = operatorSettings.auto_call_enabled ? "enabled" : "disabled";
     refreshOperatorUiState();
 }
 
@@ -2066,7 +2025,10 @@ function stopAutoCall(message) {
     if (message !== undefined) {
         let state = "";
         if (message.includes("Отключена")) state = "disabled";
-        if (message.includes("паузе") || message.includes("Ожидание") || message.includes("не Online")) state = "paused";
+        if (
+            message.includes("паузе") || message.includes("Ожидание") ||
+            message.includes("Перерыв") || message.includes("офлайн")
+        ) state = "paused";
         if (message.includes("пуста")) state = "empty";
         updateAutoCallStatus(message, {state});
     }
@@ -2081,7 +2043,7 @@ function startAutoCallAfterFinish() {
     }
 
     if (!isOperatorOnline()) {
-        updateAutoCallStatus("Оператор не Online", {state: "paused"});
+        updateAutoCallStatus(getAutoCallPausedMessage(), {state: "paused"});
         return;
     }
 
@@ -2122,57 +2084,6 @@ function scheduleAutoCallAfterWorkspaceFreed() {
     startAutoCallAfterFinish();
 }
 
-function showAutoCallDeclinePopup() {
-    if (!autoCallTimer) return;
-    const configuredReasons = (OperatorQueueSections.deferReasons || [])
-        .filter(reason => reason.value !== "break");
-    showOperatorPopup({
-        title: "Отказаться от автовызова",
-        message: "Выберите причину. Талон ещё не назначен и не будет отменён.",
-        actions: [
-            {
-                text: "Перерыв",
-                className: "btn-outline",
-                onClick: () => declineAutoCall("break")
-            },
-            ...configuredReasons.map(reason => ({
-                text: reason.label,
-                className: "btn-outline",
-                onClick: () => declineAutoCall(withOtherComment(reason.value))
-            })),
-            {text: "Назад", className: "btn-outline"}
-        ]
-    });
-}
-
-async function declineAutoCall(reason) {
-    if (!reason || !beginOperatorRequest("auto-call-decline")) return;
-    stopAutoCall("Автовызов отменён оператором");
-    try {
-        if (reason === "break") {
-            endOperatorRequest("auto-call-decline");
-            await changeWindowStatus("break");
-            return;
-        }
-        const res = await fetch(`${CONFIG.API_URL}/operator/auto-call-declines`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "session-id": sessionId
-            },
-            body: JSON.stringify({reason})
-        });
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.detail || "Не удалось записать причину отказа");
-        }
-    } catch (error) {
-        showToast(error.message || "Ошибка регистрации отказа", "danger");
-    } finally {
-        endOperatorRequest("auto-call-decline");
-    }
-}
-
 async function runAutoCallNow() {
     if (!operatorSettings.auto_call_enabled) {
         stopAutoCall("Отключена администратором");
@@ -2180,7 +2091,7 @@ async function runAutoCallNow() {
     }
 
     if (!isOperatorOnline()) {
-        stopAutoCall("Оператор не Online");
+        stopAutoCall(getAutoCallPausedMessage());
         return;
     }
 
