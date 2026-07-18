@@ -39,9 +39,6 @@ from app.schemas import (
 )
 from app.security import get_password_hash, verify_password
 from app.services.operators import update_services_status_for_window
-from app.services.tickets import (
-    assign_unassigned_waiting_tickets, reassign_waiting_tickets_from_window,
-)
 
 router = APIRouter()
 
@@ -279,12 +276,6 @@ async def update_window_status(
         window.status = new_status
         record_operator_status(db, operator.id, window.id, window.status)
         db.flush()
-
-        if window.status == "online":
-            await assign_unassigned_waiting_tickets(db)
-
-        if window.status in {"offline", "break"}:
-            await reassign_waiting_tickets_from_window(db, window.id)
 
         db.commit()
 
