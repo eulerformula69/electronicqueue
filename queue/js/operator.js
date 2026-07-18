@@ -192,6 +192,7 @@ setInterval(() => {
 
 // ==================== Основная логика ====================
 let currentTicketId = null;
+let currentTicketStatus = null;
 let currentTicketCalledAt = null;
 let currentTicketRecallCount = 0;
 let currentTicketReturnedToQueueCount = null;
@@ -264,6 +265,7 @@ function setCurrentTicket(ticket) {
     const returnedToQueueCount = Number(ticket.returned_to_queue_count);
 
     currentTicketId = ticket.id;
+    currentTicketStatus = ticket.status || "called";
     currentTicketReturnedToQueueCount = Number.isFinite(returnedToQueueCount)
         ? returnedToQueueCount
         : null;
@@ -271,13 +273,19 @@ function setCurrentTicket(ticket) {
         currentTicketCalledAt = parseTicketCalledAt(ticket) || new Date();
         currentTicketRecallCount = 0;
     }
+    if (operatorSettings.auto_call_enabled) {
+        stopAutoCall("Рабочее место занято текущим талоном");
+    }
+    refreshOperatorUiState();
 }
 
 function clearCurrentTicket() {
     currentTicketId = null;
+    currentTicketStatus = null;
     currentTicketCalledAt = null;
     currentTicketRecallCount = 0;
     currentTicketReturnedToQueueCount = null;
+    refreshOperatorUiState();
 }
 
 function showOperatorPopup({ title, message, actions }) {
@@ -786,6 +794,7 @@ async function callNext(options = {}) {
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
+    if (!beginOperatorRequest("call-next")) return;
 
     if (!options.autoCall) {
         stopAutoCall("");
@@ -823,6 +832,7 @@ async function callNext(options = {}) {
 
     loadQueue();
 	loadCurrentTicket();
+    endOperatorRequest("call-next");
 }
 
 function showToast(message, type = "danger") {
@@ -888,6 +898,7 @@ async function finishCurrent(options = {}) {
         showFinishWarningPopup();
         return;
     }
+    if (!beginOperatorRequest("finish")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/finish`, {
@@ -921,6 +932,8 @@ async function finishCurrent(options = {}) {
     } catch (e) {
         console.error(e);
         alert("Ошибка при завершении обслуживания");
+    } finally {
+        endOperatorRequest("finish");
     }
 }
 
@@ -1353,7 +1366,6 @@ async function confirmRedirectFromModal() {
         alert("Выберите услугу и подходящего получателя");
         return;
     }
-
     const selectedWindow = getRedirectWindow(redirectState.windowId);
     if (
         selectedWindow?.status === "offline" &&
@@ -1361,6 +1373,7 @@ async function confirmRedirectFromModal() {
     ) {
         return;
     }
+    if (!beginOperatorRequest("redirect")) return;
 
     redirectState.isSubmitting = true;
     renderRedirectModal();
@@ -1410,6 +1423,8 @@ async function confirmRedirectFromModal() {
         alert("Ошибка соединения с сервером");
         redirectState.isSubmitting = false;
         renderRedirectModal();
+    } finally {
+        endOperatorRequest("redirect");
     }
 }
 
@@ -1425,6 +1440,7 @@ function cancelRedirect() { closeRedirectModal(); }
 function cancelRedirectToWindow() { closeRedirectModal(); }
 
 async function changeWindowStatus(newStatus) {
+    if (!beginOperatorRequest("window-status")) return;
     try {
         const sessionId = sessionStorage.getItem("session_id");
         if (!sessionId) {
@@ -1481,7 +1497,7 @@ async function changeWindowStatus(newStatus) {
         // Обновляем UI - подсветка кнопок
         updateStatusButtons(result.status); 
         if (result.status !== "online") {
-            stopAutoCall("На паузе");
+            stopAutoCall("Оператор не Online");
         } else {
             scheduleAutoCallAfterWorkspaceFreed();
         }
@@ -1489,6 +1505,8 @@ async function changeWindowStatus(newStatus) {
     } catch (e) {
         console.error(e);
         alert("Ошибка при смене статуса");
+    } finally {
+        endOperatorRequest("window-status");
     }
 }
 
@@ -1498,24 +1516,9 @@ function updateStatusButtons(status) {
     const stopBtn = document.getElementById("btn-stop");
     const statusText = document.getElementById("status-text");
     const statusDot = document.getElementById("status-dot");
-    const callDisabled = currentWindowStatus === "break";
-    const clientActionButtonIds = [
-        "next-btn",
-        "call-by-number-btn",
-        "finish-btn",
-        "defer-ticket-btn",
-        "cancel-btn",
-        "recall-btn",
-        "redirect-btn",
-        "return-to-queue-btn",
-    ];
-
-    clientActionButtonIds.forEach(id => {
-        const button = document.getElementById(id);
-        if (button) {
-            button.disabled = callDisabled || (id === "recall-btn" && recallCooldown);
-        }
-    });
+    startBtn.disabled = currentWindowStatus === "online";
+    stopBtn.disabled = currentWindowStatus !== "online";
+    refreshOperatorUiState();
     if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.refresh) {
         OperatorQueueSections.refresh();
     }
@@ -1640,6 +1643,7 @@ const RECALL_CD_TIME = 10000; // 10 секунд ограничения
 async function recallCurrent(options = {}) {
     if (!ensureClientOperationsAllowed()) return;
     if (recallCooldown) return;
+    if (!beginOperatorRequest("recall")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/recall`, {
@@ -1658,6 +1662,8 @@ async function recallCurrent(options = {}) {
         }
     } catch (e) {
         console.error(e);
+    } finally {
+        endOperatorRequest("recall");
     }
 }
 
@@ -1675,8 +1681,8 @@ function startRecallTimer() {
         if (secondsLeft <= 0) {
             clearInterval(interval);
             recallCooldown = false;
-            btn.disabled = isOperatorOnBreak();
             btn.textContent = originalText;
+            refreshOperatorUiState();
         }
     }, 1000);
 }
@@ -1698,6 +1704,7 @@ async function cancelCurrent(options = {}) {
         showCancelReasonPopup();
         return;
     }
+    if (!beginOperatorRequest("cancel")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/cancel`, {
@@ -1743,6 +1750,8 @@ async function cancelCurrent(options = {}) {
     } catch (e) {
         console.error("Критическая ошибка в cancelCurrent:", e);
         alert("Произошла ошибка при выполнении запроса.");
+    } finally {
+        endOperatorRequest("cancel");
     }
 }
 
@@ -1797,6 +1806,7 @@ async function deferCurrentTicket(reason) {
         alert("Выберите причину отложения.");
         return;
     }
+    if (!beginOperatorRequest("defer")) return;
 
     const button = document.getElementById("defer-ticket-btn");
     if (button) button.disabled = true;
@@ -1831,6 +1841,7 @@ async function deferCurrentTicket(reason) {
         alert(e.message || "Не удалось отложить клиента");
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
+        endOperatorRequest("defer");
     }
 }
 
@@ -1840,6 +1851,7 @@ async function resumeDeferredTicket(ticketId) {
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
+    if (!beginOperatorRequest("resume-deferred")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/resume`, {
@@ -1861,6 +1873,8 @@ async function resumeDeferredTicket(ticketId) {
     } catch (e) {
         console.error("Ошибка возврата отложенного билета:", e);
         alert(e.message || "Не удалось вернуть клиента в обслуживание");
+    } finally {
+        endOperatorRequest("resume-deferred");
     }
 }
 
@@ -1926,6 +1940,7 @@ function showRepeatedReturnWarning() {
 
 async function confirmReturnCurrentToQueue() {
     if (!ensureClientOperationsAllowed()) return;
+    if (!beginOperatorRequest("return-to-queue")) return;
 
     const button = document.getElementById("return-to-queue-btn");
     if (button) button.disabled = true;
@@ -1955,6 +1970,7 @@ async function confirmReturnCurrentToQueue() {
         alert(e.message || "Не удалось вернуть клиента в очередь");
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
+        endOperatorRequest("return-to-queue");
     }
 }
 
@@ -2009,11 +2025,21 @@ function updateAutoCallStatus(message, options = {}) {
     const statusDisplay = getAutoCallStatusDisplay();
     if (!statusDisplay) return;
     const hintDisplay = getAutoCallHintDisplay();
+    const titleDisplay = document.getElementById("auto-call-title");
+    const countdownDisplay = document.getElementById("auto-call-countdown");
 
     if (typeof message === "string") {
         statusDisplay.textContent = message;
         statusDisplay.dataset.state = options.state || "";
         if (hintDisplay) hintDisplay.textContent = options.hint || "";
+        if (titleDisplay) {
+            titleDisplay.style.display = options.state === "countdown" ? "" : "none";
+        }
+        if (countdownDisplay) {
+            countdownDisplay.textContent = options.state === "countdown" ? String(secondsLeft) : "—";
+            countdownDisplay.style.display = options.state === "countdown" ? "" : "none";
+        }
+        refreshOperatorUiState();
         return;
     }
 
@@ -2028,6 +2054,7 @@ function updateAutoCallStatus(message, options = {}) {
         statusDisplay.dataset.state = "disabled";
         if (hintDisplay) hintDisplay.textContent = "";
     }
+    refreshOperatorUiState();
 }
 
 function stopAutoCall(message) {
@@ -2039,7 +2066,7 @@ function stopAutoCall(message) {
     if (message !== undefined) {
         let state = "";
         if (message.includes("Отключена")) state = "disabled";
-        if (message.includes("паузе") || message.includes("Ожидание")) state = "paused";
+        if (message.includes("паузе") || message.includes("Ожидание") || message.includes("не Online")) state = "paused";
         if (message.includes("пуста")) state = "empty";
         updateAutoCallStatus(message, {state});
     }
@@ -2054,12 +2081,12 @@ function startAutoCallAfterFinish() {
     }
 
     if (!isOperatorOnline()) {
-        updateAutoCallStatus("На паузе", {state: "paused"});
+        updateAutoCallStatus("Оператор не Online", {state: "paused"});
         return;
     }
 
     if (hasCurrentTicket()) {
-        updateAutoCallStatus("");
+        updateAutoCallStatus("Рабочее место занято текущим талоном", {state: "occupied"});
         return;
     }
 
@@ -2095,6 +2122,57 @@ function scheduleAutoCallAfterWorkspaceFreed() {
     startAutoCallAfterFinish();
 }
 
+function showAutoCallDeclinePopup() {
+    if (!autoCallTimer) return;
+    const configuredReasons = (OperatorQueueSections.deferReasons || [])
+        .filter(reason => reason.value !== "break");
+    showOperatorPopup({
+        title: "Отказаться от автовызова",
+        message: "Выберите причину. Талон ещё не назначен и не будет отменён.",
+        actions: [
+            {
+                text: "Перерыв",
+                className: "btn-outline",
+                onClick: () => declineAutoCall("break")
+            },
+            ...configuredReasons.map(reason => ({
+                text: reason.label,
+                className: "btn-outline",
+                onClick: () => declineAutoCall(withOtherComment(reason.value))
+            })),
+            {text: "Назад", className: "btn-outline"}
+        ]
+    });
+}
+
+async function declineAutoCall(reason) {
+    if (!reason || !beginOperatorRequest("auto-call-decline")) return;
+    stopAutoCall("Автовызов отменён оператором");
+    try {
+        if (reason === "break") {
+            endOperatorRequest("auto-call-decline");
+            await changeWindowStatus("break");
+            return;
+        }
+        const res = await fetch(`${CONFIG.API_URL}/operator/auto-call-declines`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            },
+            body: JSON.stringify({reason})
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.detail || "Не удалось записать причину отказа");
+        }
+    } catch (error) {
+        showToast(error.message || "Ошибка регистрации отказа", "danger");
+    } finally {
+        endOperatorRequest("auto-call-decline");
+    }
+}
+
 async function runAutoCallNow() {
     if (!operatorSettings.auto_call_enabled) {
         stopAutoCall("Отключена администратором");
@@ -2102,7 +2180,7 @@ async function runAutoCallNow() {
     }
 
     if (!isOperatorOnline()) {
-        stopAutoCall("На паузе");
+        stopAutoCall("Оператор не Online");
         return;
     }
 
@@ -2147,6 +2225,7 @@ async function promptCallByNumber() {
         alert("Пожалуйста, введите корректный числовой номер.");
         return;
     }
+    if (!beginOperatorRequest("call-specific")) return;
 
     try {
         const res = await fetch(`${CONFIG.API_URL}/tickets/call-specific`, {
@@ -2177,6 +2256,8 @@ async function promptCallByNumber() {
     } catch (e) {
         console.error(e);
         alert("Ошибка соединения с сервером");
+    } finally {
+        endOperatorRequest("call-specific");
     }
 }
 

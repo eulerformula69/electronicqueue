@@ -721,10 +721,38 @@ body.operator-page .display-zone .auto-call-info-block{
     margin-top: auto;
     padding: 16px 18px 0;
     border: 0;
-    border-radius: 0;
-    background: transparent;
+    border: 2px solid color-mix(in srgb, var(--primary) 22%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--primary) 6%, white);
     align-items: center;
     text-align: center;
+}
+body.operator-page .auto-call-title{
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+body.operator-page .auto-call-countdown{
+    font-size: clamp(2.8rem, 6vw, 4.6rem);
+    line-height: 1;
+    font-weight: 900;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+body.operator-page .auto-call-actions{
+    display: flex;
+    width: min(560px, 100%);
+    gap: 12px;
+    margin-top: 6px;
+}
+body.operator-page .auto-call-actions button{
+    flex: 1;
+}
+body.operator-page .current-ticket-actions-inactive [data-current-ticket-action],
+body.operator-page .operator-work-disabled [data-call-action],
+body.operator-page .operator-work-disabled [data-current-ticket-action]{
+    opacity: 0.38;
+    filter: grayscale(0.8);
 }
 body.operator-page .auto-call-info-block strong{
     font-size: 0.95rem;

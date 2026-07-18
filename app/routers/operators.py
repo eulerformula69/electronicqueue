@@ -33,11 +33,11 @@ from app.dependencies import (
     verify_session,
 )
 from app.models import (
-    Admin, Operator, OperatorServiceNotification, Service, Window, WindowService,
+    Admin, AutoCallDecline, Operator, OperatorServiceNotification, Service, Window, WindowService,
     record_operator_status,
 )
 from app.schemas import (
-    OperatorCreate, OperatorLoginUpdate, OperatorServiceNotificationRead,
+    AutoCallDeclineCreate, OperatorCreate, OperatorLoginUpdate, OperatorServiceNotificationRead,
     OperatorServiceNotificationUpdate, WindowOperatorUpdate,
 )
 from app.security import get_password_hash, verify_password
@@ -49,6 +49,25 @@ from app.services.settings import get_system_settings_dict
 router = APIRouter()
 
 AUTO_CALL_MODES = {"default", "enabled", "disabled"}
+
+
+@router.post("/operator/auto-call-declines", tags=["Operators"])
+def record_auto_call_decline(
+    data: AutoCallDeclineCreate,
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        decline = AutoCallDecline(
+            operator_id=operator.id,
+            window_id=operator.window_id,
+            reason=data.reason.strip(),
+        )
+        db.add(decline)
+        db.commit()
+        return {"status": "recorded"}
+    finally:
+        db.close()
 
 
 def normalize_auto_call_mode(value) -> str:

@@ -106,6 +106,20 @@ class OperatorServiceNotification(Base):
     enabled = Column(Integer, nullable=False, default=1, server_default=text("1"))
 
 
+class AutoCallDecline(Base):
+    __tablename__ = "auto_call_declines"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    operator_id = Column(Integer, ForeignKey("operators.id", ondelete="CASCADE"), nullable=False)
+    window_id = Column(Integer, ForeignKey("windows.id", ondelete="SET NULL"), nullable=True)
+    reason = Column(String(255), nullable=False)
+    created_at = Column(
+        TIMESTAMP(timezone=False),
+        nullable=False,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
+    )
+
+
 class Window(Base):
     __tablename__ = "windows"
     id = Column(Integer, primary_key=True, index=True)

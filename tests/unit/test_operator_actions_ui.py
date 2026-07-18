@@ -118,7 +118,7 @@ def test_operator_auto_call_resumes_when_operator_goes_online():
     change_status_section = source.split("async function changeWindowStatus", 1)[1]
     change_status_section = change_status_section.split("function updateStatusButtons", 1)[0]
 
-    assert 'stopAutoCall("На паузе")' in change_status_section
+    assert 'stopAutoCall("Оператор не Online")' in change_status_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in change_status_section
     assert "На паузе: оператор не в статусе Online" not in source
 
@@ -281,3 +281,62 @@ def test_operator_cancel_requires_reason_options():
     assert 'value: "Нет нужного документа"' in queue_sections_source
     assert 'value: "Другое"' in queue_sections_source
     assert "withOtherComment(reason.value)" in source
+
+
+def test_operator_ui_uses_one_state_refresh_for_action_availability():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator-ui-state.js")
+    css = read_text("queue/css/operator.css")
+
+    assert "function refreshOperatorUiState()" in source
+    assert '<script src="/queue/js/operator-ui-state.js"></script>' in html
+    assert 'document.querySelectorAll("[data-call-action]")' in source
+    assert 'document.querySelectorAll("[data-current-ticket-action]")' in source
+    assert "button.disabled = !online || hasTicket || busy" in source
+    assert "button.disabled = !online || !hasTicket || busy" in source
+    assert 'displayZone.classList.toggle("operator-work-disabled", !online)' in source
+    assert "data-call-action" in html
+    assert "data-current-ticket-action" in html
+    assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
+
+
+def test_operator_mutations_share_double_click_guard():
+    source = read_text("queue/js/operator.js")
+    ui_state = read_text("queue/js/operator-ui-state.js")
+
+    assert "const activeOperatorRequests = new Set();" in ui_state
+    assert "function beginOperatorRequest(key)" in ui_state
+    assert "if (activeOperatorRequests.size > 0) return false;" in ui_state
+    for key in (
+        "call-next", "call-specific", "finish", "cancel", "defer",
+        "redirect", "return-to-queue", "recall", "resume-deferred",
+    ):
+        assert f'beginOperatorRequest("{key}")' in source
+        assert f'endOperatorRequest("{key}")' in source
+
+
+def test_auto_call_block_has_countdown_actions_and_decline_reasons():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+
+    assert "Следующий талон будет вызван автоматически" in html
+    assert 'id="auto-call-countdown"' in html
+    assert 'onclick="runAutoCallNow()"' in html
+    assert 'onclick="showAutoCallDeclinePopup()"' in html
+    assert 'text: "Перерыв"' in source
+    assert 'declineAutoCall("break")' in source
+    assert 'await changeWindowStatus("break")' in source
+    assert "/operator/auto-call-declines" in source
+    decline_section = source.split("async function declineAutoCall", 1)[1]
+    decline_section = decline_section.split("async function runAutoCallNow", 1)[0]
+    assert "/tickets/cancel" not in decline_section
+
+
+def test_auto_call_block_shows_supported_stop_reasons():
+    source = read_text("queue/js/operator.js")
+
+    assert "Оператор не Online" in source
+    assert "Рабочее место занято текущим талоном" in source
+    assert "Очередь пуста" in source
+    assert "Отключена администратором" in source
+    assert "normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds)" in source

@@ -99,6 +99,10 @@ class OperatorServiceNotificationUpdate(BaseModel):
     enabled: bool
 
 
+class AutoCallDeclineCreate(BaseModel):
+    reason: str = Field(min_length=1, max_length=255)
+
+
 class OperatorServiceNotificationRead(BaseModel):
     service_id: int
     service_name: str
