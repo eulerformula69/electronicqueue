@@ -2,6 +2,7 @@
     var tickerMessages = [];
     var systemMessages = [];
     var expiryTimer = null;
+    var countdownTimer = null;
     var resizeTimer = null;
     var resizeListenerAttached = false;
 
@@ -31,6 +32,12 @@
             + (message.system ? " board-ticker__text--system" : "")
             + (isSegmentEnd ? " board-ticker__text--segment-end" : "");
         item.textContent = message.text;
+        if (message.system && message.expiresAt) {
+            var countdown = document.createElement("span");
+            countdown.className = "board-ticker__countdown";
+            countdown.setAttribute("data-expires-at", String(message.expiresAt));
+            item.appendChild(countdown);
+        }
         if (hidden) item.setAttribute("aria-hidden", "true");
         return item;
     }
@@ -52,6 +59,23 @@
         }
     }
 
+    function formatRemainingTime(totalSeconds) {
+        var seconds = Math.max(0, Math.ceil(totalSeconds));
+        var minutes = Math.floor(seconds / 60);
+        var remainder = seconds % 60;
+        return (minutes < 10 ? "0" : "") + minutes
+            + ":" + (remainder < 10 ? "0" : "") + remainder;
+    }
+
+    function updateSystemCountdowns() {
+        var countdowns = document.querySelectorAll(".board-ticker__countdown");
+        var now = Date.now();
+        for (var i = 0; i < countdowns.length; i++) {
+            var expiresAt = Number(countdowns[i].getAttribute("data-expires-at"));
+            countdowns[i].textContent = " · ещё " + formatRemainingTime((expiresAt - now) / 1000);
+        }
+    }
+
     function renderTickerMessages() {
         var now = Date.now();
         systemMessages = systemMessages.filter(function (item) {
@@ -69,7 +93,7 @@
         var messages = tickerMessages.map(function (text) {
             return {text: text, system: false};
         }).concat(systemMessages.map(function (item) {
-            return {text: item.text, system: true};
+            return {text: item.text, system: true, expiresAt: item.expiresAt};
         }));
         var ticker = ensureTicker();
         var track = ticker.getElementsByClassName("board-ticker__track")[0];
@@ -84,6 +108,10 @@
 
         track.innerHTML = "";
 
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
         if (!messages.length) return;
 
         appendMessageSet(track, messages, false);
@@ -99,6 +127,10 @@
 
         track.style.setProperty("--board-ticker-distance", distance + "px");
         track.style.setProperty("--board-ticker-duration", Math.max(18, Math.round(distance / 80)) + "s");
+        updateSystemCountdowns();
+        if (systemMessages.length) {
+            countdownTimer = setInterval(updateSystemCountdowns, 1000);
+        }
     }
 
     function scheduleRender() {

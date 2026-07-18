@@ -29,3 +29,5 @@ def test_all_standard_board_profiles_merge_system_and_user_ticker_messages():
     assert "setBoardSystemMessages" in board
     assert "setBoardSystemMessages" in lite
     assert "board-ticker__text--system" in ticker
+    assert "board-ticker__countdown" in ticker
+    assert "setInterval(updateSystemCountdowns, 1000)" in ticker
