@@ -81,7 +81,10 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/finish" in source
     assert "/tickets/cancel" in source
     assert "/tickets/defer" in source
-    assert "/tickets/deferred/${ticketId}/resume" in source
+    assert "/tickets/${sourceSection}/${ticketId}/resume" in source
+    assert 'selectedSection === "deferred" || selectedSection === "cancelled"' in Path(
+        "queue/js/operator-queue-sections.js"
+    ).read_text(encoding="utf-8")
     assert "/tickets/return-to-queue" in source
     assert "/tickets/recall" in source
     assert "/tickets/redirect" in source

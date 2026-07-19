@@ -46,7 +46,7 @@ from app.services.tickets import (
     called_ticket_wait_remaining_seconds,
     broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
-    defer_ticket, render_ticket_template, resume_deferred_ticket,
+    defer_ticket, render_ticket_template, resume_cancelled_ticket, resume_deferred_ticket,
     recall_cooldown_remaining_seconds,
     return_ticket_to_queue,
 )
@@ -655,6 +655,62 @@ async def defer_current_ticket(
         db.close()
 
 
+async def _resume_operator_ticket(
+    db,
+    *,
+    ticket_id: int,
+    operator: Operator,
+    source_status: str,
+    not_found_detail: str,
+    resume_ticket,
+):
+    if not operator.window_id:
+        raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+    ensure_client_operations_allowed(db, operator)
+
+    current = db.query(Ticket).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "called",
+    ).first()
+
+    if current:
+        raise HTTPException(status_code=409, detail=f"Сначала завершите клиента: {current.number}")
+
+    filters = [
+        Ticket.id == ticket_id,
+        Ticket.status == source_status,
+        Ticket.window_id == operator.window_id,
+    ]
+    if source_status == "deferred":
+        filters.append(Ticket.operator_id == operator.id)
+
+    ticket = db.query(Ticket).filter(*filters).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=not_found_detail)
+
+    resume_ticket(ticket, operator_id=operator.id, window_id=operator.window_id)
+
+    db.commit()
+    db.refresh(ticket)
+
+    window = db.query(Window).filter(Window.id == ticket.window_id).first()
+
+    await manager.broadcast({"type": "queue_updated"})
+    await broadcast_board()
+
+    if window:
+        await broadcast_ticket_called(ticket, window)
+
+    return {
+        "id": ticket.id,
+        "number": ticket.number,
+        "status": ticket.status,
+        "called_at": ticket.called_at,
+        "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
+    }
+
+
 @router.post("/tickets/deferred/{ticket_id}/resume", tags=["Tickets"])
 async def resume_operator_deferred_ticket(
     ticket_id: int,
@@ -662,53 +718,33 @@ async def resume_operator_deferred_ticket(
 ):
     db = SessionLocal()
     try:
-        if not operator.window_id:
-            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
-
-        ensure_client_operations_allowed(db, operator)
-
-        current = db.query(Ticket).filter(
-            Ticket.window_id == operator.window_id,
-            Ticket.status == "called",
-        ).first()
-
-        if current:
-            return {"detail": f"Сначала завершите клиента: {current.number}"}
-
-        ticket = db.query(Ticket).filter(
-            Ticket.id == ticket_id,
-            Ticket.status == "deferred",
-            Ticket.operator_id == operator.id,
-            Ticket.window_id == operator.window_id,
-        ).first()
-
-        if not ticket:
-            raise HTTPException(status_code=404, detail="Отложенный билет не найден")
-
-        resume_deferred_ticket(
-            ticket,
-            operator_id=operator.id,
-            window_id=operator.window_id,
+        return await _resume_operator_ticket(
+            db,
+            ticket_id=ticket_id,
+            operator=operator,
+            source_status="deferred",
+            not_found_detail="Отложенный билет не найден",
+            resume_ticket=resume_deferred_ticket,
         )
+    finally:
+        db.close()
 
-        db.commit()
-        db.refresh(ticket)
 
-        window = db.query(Window).filter(Window.id == ticket.window_id).first()
-
-        await manager.broadcast({"type": "queue_updated"})
-        await broadcast_board()
-
-        if window:
-            await broadcast_ticket_called(ticket, window)
-
-        return {
-            "id": ticket.id,
-            "number": ticket.number,
-            "status": ticket.status,
-            "called_at": ticket.called_at,
-            "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
-        }
+@router.post("/tickets/cancelled/{ticket_id}/resume", tags=["Tickets"])
+async def resume_operator_cancelled_ticket(
+    ticket_id: int,
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        return await _resume_operator_ticket(
+            db,
+            ticket_id=ticket_id,
+            operator=operator,
+            source_status="cancelled",
+            not_found_detail="Отменённый билет не найден",
+            resume_ticket=resume_cancelled_ticket,
+        )
     finally:
         db.close()
 

@@ -92,7 +92,7 @@ def test_admin_can_configure_called_ticket_min_wait():
 def test_resume_deferred_response_immediately_contains_new_called_at():
     router_source = read_text("app/routers/tickets.py")
     resume_endpoint = router_source.split(
-        'async def resume_operator_deferred_ticket', 1
-    )[1].split('@router.get("/tickets/my-queue"', 1)[0]
+        "async def _resume_operator_ticket", 1
+    )[1].split('@router.post("/tickets/deferred/', 1)[0]
 
     assert '"called_at": ticket.called_at' in resume_endpoint

@@ -1831,7 +1831,7 @@ async function deferCurrentTicket(reason) {
     }
 }
 
-async function resumeDeferredTicket(ticketId) {
+async function resumeTicket(ticketId, sourceSection = "deferred") {
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
@@ -1840,7 +1840,7 @@ async function resumeDeferredTicket(ticketId) {
     if (!beginOperatorRequest("resume-deferred")) return;
 
     try {
-        const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/resume`, {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/${sourceSection}/${ticketId}/resume`, {
             method: "POST",
             headers: { "session-id": sessionId }
         });
@@ -1857,7 +1857,7 @@ async function resumeDeferredTicket(ticketId) {
         showToast(`Билет ${data.number} возвращён в обслуживание`, "success");
         await loadQueue();
     } catch (e) {
-        console.error("Ошибка возврата отложенного билета:", e);
+        console.error("Ошибка возврата билета в обслуживание:", e);
         showToast(e.message || "Не удалось вернуть клиента в обслуживание", "danger");
     } finally {
         endOperatorRequest("resume-deferred");

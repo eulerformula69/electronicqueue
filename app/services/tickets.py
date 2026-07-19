@@ -255,7 +255,7 @@ def defer_ticket(
     ticket.finished_at = None
 
 
-def resume_deferred_ticket(
+def resume_ticket_to_service(
     ticket: Ticket,
     *,
     operator_id: int,
@@ -275,6 +275,36 @@ def resume_deferred_ticket(
     ticket.defer_reason = None
     ticket.deferred_at = None
     ticket.cancel_reason = None
+
+
+def resume_deferred_ticket(
+    ticket: Ticket,
+    *,
+    operator_id: int,
+    window_id: int,
+    now: datetime | None = None,
+) -> None:
+    resume_ticket_to_service(
+        ticket,
+        operator_id=operator_id,
+        window_id=window_id,
+        now=now,
+    )
+
+
+def resume_cancelled_ticket(
+    ticket: Ticket,
+    *,
+    operator_id: int,
+    window_id: int,
+    now: datetime | None = None,
+) -> None:
+    resume_ticket_to_service(
+        ticket,
+        operator_id=operator_id,
+        window_id=window_id,
+        now=now,
+    )
 
 
 def cancel_expired_returned_tickets(db: Session, *, now: datetime | None = None) -> int:

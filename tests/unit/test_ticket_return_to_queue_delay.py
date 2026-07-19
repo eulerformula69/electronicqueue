@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,7 @@ from app.services.tickets import (
     cancel_expired_returned_tickets_once,
     create_window_redirect_ticket,
     defer_ticket,
+    resume_cancelled_ticket,
     resume_deferred_ticket,
     return_ticket_to_queue,
 )
@@ -119,6 +121,31 @@ def test_resume_deferred_ticket_returns_ticket_to_service_without_general_queue(
     assert ticket.defer_reason is None
     assert ticket.deferred_at is None
     assert ticket.finished_at is None
+
+
+def test_resume_cancelled_ticket_returns_ticket_to_service():
+    now = datetime(2026, 7, 19, 12, 0)
+    ticket = SimpleNamespace(
+        status="cancelled",
+        completion_reason="cancelled",
+        operator_id=3,
+        window_id=7,
+        target_window_id=None,
+        called_at=now - timedelta(minutes=5),
+        last_recalled_at=now - timedelta(minutes=4),
+        finished_at=now - timedelta(minutes=3),
+        defer_reason=None,
+        deferred_at=None,
+        cancel_reason="Клиент не явился",
+    )
+
+    resume_cancelled_ticket(ticket, operator_id=3, window_id=7, now=now)
+
+    assert ticket.status == "called"
+    assert ticket.completion_reason is None
+    assert ticket.called_at == now
+    assert ticket.finished_at is None
+    assert ticket.cancel_reason is None
 
 
 def test_create_window_redirect_ticket_preserves_finished_source_stage():

@@ -133,7 +133,7 @@ const OperatorQueueSections = (() => {
 
         panel.innerHTML = tickets.map(ticket => {
             const reason = deferReasonLabel(ticket.defer_reason || ticket.cancel_reason || ticket.completion_reason || ticket.reason);
-            const canResume = selectedSection === "deferred";
+            const canResume = selectedSection === "deferred" || selectedSection === "cancelled";
             const resumeDisabled = (
                 typeof currentWindowStatus !== "undefined" && currentWindowStatus !== "online"
             ) || (typeof currentTicketId !== "undefined" && Boolean(currentTicketId));
@@ -153,7 +153,7 @@ const OperatorQueueSections = (() => {
                         ${reason ? `<span>Причина: ${escapeHtml(reason)}</span>` : ""}
                     </div>
                     ${redirected ? '<div class="redirect-badge">Перенаправлено</div>' : ''}
-                    ${canResume ? `<button class="btn-primary queue-resume-btn" type="button" onclick="resumeDeferredTicket(${Number(ticket.id)})" ${resumeDisabled ? "disabled" : ""}>Вернуть в обслуживание</button>` : ""}
+                    ${canResume ? `<button class="btn-primary queue-resume-btn" type="button" onclick="resumeTicket(${Number(ticket.id)}, '${selectedSection}')" ${resumeDisabled ? "disabled" : ""}>Вернуть в обслуживание</button>` : ""}
                 </div>
             `;
         }).join("");
