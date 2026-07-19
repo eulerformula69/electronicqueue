@@ -120,12 +120,21 @@ body.operator-page .ticket-label{
     margin-bottom: 10px;
 }
 body.operator-page .ticket-number{
-    font-size: 7rem; /* Увеличили обратно, но уберем лишний текст в JS */
+    width: 100%;
+    min-height: 112px;
+    font-size: 7rem;
     font-weight: 800;
     color: var(--primary);
     line-height: 1;
     margin: 10px 0 18px 0;
     letter-spacing: -2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+body.operator-page .current-ticket-actions-inactive .ticket-number{
+    font-size: 2rem;
+    letter-spacing: 0;
 }
 body.operator-page .services-list{
     margin-top: 10px;

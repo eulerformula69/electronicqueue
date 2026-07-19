@@ -88,6 +88,7 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/return-to-queue" in source
     assert "/tickets/recall" in source
     assert "/tickets/redirect" in source
+    assert "/tickets/redirect-to-window" in source
 
 
 def test_cancel_and_defer_keep_waiting_section_selected():
@@ -103,7 +104,20 @@ def test_cancel_and_defer_keep_waiting_section_selected():
     assert 'OperatorQueueSections.select("waiting");' in cancel_action
     assert 'OperatorQueueSections.select("waiting");' in defer_action
     assert "selectDeferred" not in source
-    assert "/tickets/redirect-to-window" in source
+
+
+def test_idle_ticket_text_is_smaller_without_shifting_client_label():
+    styles = Path("queue/css/operator.css").read_text(encoding="utf-8")
+
+    ticket_number = styles.split("body.operator-page .ticket-number{", 1)[1].split("}", 1)[0]
+    idle_ticket_number = styles.split(
+        "body.operator-page .current-ticket-actions-inactive .ticket-number{", 1
+    )[1].split("}", 1)[0]
+
+    assert "min-height: 112px" in ticket_number
+    assert "display: flex" in ticket_number
+    assert "align-items: center" in ticket_number
+    assert "font-size: 2rem" in idle_ticket_number
 
 
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
