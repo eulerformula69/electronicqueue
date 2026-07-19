@@ -88,6 +88,21 @@ def test_operator_actions_keep_existing_ticket_endpoints():
     assert "/tickets/return-to-queue" in source
     assert "/tickets/recall" in source
     assert "/tickets/redirect" in source
+
+
+def test_cancel_and_defer_keep_waiting_section_selected():
+    source = Path("queue/js/operator.js").read_text(encoding="utf-8")
+
+    cancel_action = source.split("async function cancelCurrent", 1)[1].split(
+        "function showCancelReasonPopup", 1
+    )[0]
+    defer_action = source.split("async function deferCurrentTicket", 1)[1].split(
+        "async function resumeTicket", 1
+    )[0]
+
+    assert 'OperatorQueueSections.select("waiting");' in cancel_action
+    assert 'OperatorQueueSections.select("waiting");' in defer_action
+    assert "selectDeferred" not in source
     assert "/tickets/redirect-to-window" in source
 
 

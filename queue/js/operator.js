@@ -1709,8 +1709,9 @@ async function cancelCurrent(options = {}) {
 				document.getElementById("current-service").textContent = "";
             }
             // Сбрасываем ID текущего билета, так как его больше нет
-            clearCurrentTicket(); 
-            loadQueue(); 
+            clearCurrentTicket();
+            OperatorQueueSections.select("waiting");
+            loadQueue();
             if (typeof updateStatus === "function") updateStatus(); 
             scheduleAutoCallAfterWorkspaceFreed();
             
@@ -1815,7 +1816,7 @@ async function deferCurrentTicket(reason) {
         clearCurrentTicket();
         document.getElementById("current").textContent = "Рабочее место свободно";
         document.getElementById("current-service").textContent = "";
-        OperatorQueueSections.selectDeferred();
+        OperatorQueueSections.select("waiting");
         showToast(
             data.ticket_number ? `Билет ${data.ticket_number} отложен` : "Клиент отложен",
             "success"

@@ -173,16 +173,11 @@ const OperatorQueueSections = (() => {
         render();
     }
 
-    function selectDeferred() {
-        selectedSection = "deferred";
-    }
-
     return {
         deferReasons,
         cancelReasons,
         setReasonOptions,
         select,
-        selectDeferred,
         setSections,
         refresh: render
     };
