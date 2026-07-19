@@ -133,7 +133,7 @@ body.operator-page .ticket-number{
     justify-content: center;
 }
 body.operator-page .current-ticket-actions-inactive .ticket-number{
-    font-size: 2rem;
+    font-size: 4rem;
     letter-spacing: 0;
 }
 body.operator-page .services-list{
