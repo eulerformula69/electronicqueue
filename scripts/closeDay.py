@@ -2,6 +2,7 @@
 """Close the queue at the end of the working day."""
 
 import asyncio
+import argparse
 import json
 import sys
 from dataclasses import dataclass
@@ -27,6 +28,10 @@ from app.models import (  # noqa: E402
     record_operator_status,
 )
 from app.services.settings import get_system_settings_dict  # noqa: E402
+from scripts.close_day_schedule import (  # noqa: E402
+    collect_interactive_schedule,
+    schedule_close_days,
+)
 
 
 @dataclass(frozen=True)
@@ -151,7 +156,50 @@ async def notify_clients(deleted_session_ids: tuple[str, ...]) -> None:
         )
 
 
-def main() -> int:
+def build_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Закрыть рабочий день сейчас или запланировать одноразовые закрытия."
+    )
+    parser.add_argument(
+        "--schedule",
+        action="append",
+        nargs="?",
+        const="",
+        metavar='"ДД.ММ.ГГГГ ЧЧ:ММ"',
+        help=(
+            "запланировать одноразовое закрытие; повторите опцию для нескольких дат "
+            "или не указывайте значение для интерактивного ввода"
+        ),
+    )
+    parser.add_argument(
+        "--run-now",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_argument_parser().parse_args(argv)
+    if args.schedule is not None and not args.run_now:
+        try:
+            values = args.schedule
+            if values == [""]:
+                values = collect_interactive_schedule()
+            elif "" in values:
+                raise ValueError(
+                    "пустой --schedule нельзя смешивать с датами; выберите один способ ввода"
+                )
+            scheduled = schedule_close_days(values)
+        except (RuntimeError, ValueError) as error:
+            print(f"Ошибка планирования закрытия дня: {error}", file=sys.stderr)
+            return 1
+
+        for item in scheduled:
+            print(f"Закрытие запланировано: {item.run_at:%d.%m.%Y в %H:%M} (Иркутск)")
+        print("Каждое задание сработает один раз.")
+        return 0
+
     db = SessionLocal()
     try:
         result = close_day(db)

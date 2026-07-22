@@ -106,7 +106,7 @@ rm -f /etc/apt/sources.list.d/grafana.list
 apt-get update
 apt-get install -y \
     python3 python3-venv python3-pip postgresql nginx rsync curl iproute2 \
-    mkcert libnss3-tools openssl acl ffmpeg
+    mkcert libnss3-tools openssl acl ffmpeg at
 
 SERVER_IP="${QUEUE_SERVER_IP:-}"
 if [[ -z "${SERVER_IP}" ]]; then
@@ -173,6 +173,7 @@ install -d -o "${APP_USER}" -g "${APP_USER}" \
     "${APP_DIR}/queue/media" "${APP_DIR}/queue/tts/cache"
 
 systemctl enable --now postgresql
+systemctl enable --now atd
 
 if [[ ${FIRST_INSTALL} -eq 1 ]]; then
     log "Создаю локальную базу данных"
@@ -274,6 +275,9 @@ chmod 0755 /usr/local/bin/queue-admin
 
 cat > /usr/local/bin/queue-close-day <<EOF
 #!/bin/sh
+if [ "\$(id -u)" -eq "\$(id -u ${APP_USER})" ]; then
+    exec ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/closeDay.py "\$@"
+fi
 exec runuser -u ${APP_USER} -- ${APP_DIR}/venv/bin/python ${APP_DIR}/scripts/closeDay.py "\$@"
 EOF
 chmod 0755 /usr/local/bin/queue-close-day

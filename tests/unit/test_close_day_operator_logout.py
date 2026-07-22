@@ -1,10 +1,13 @@
 import json
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from app.connections import ConnectionManager
 from scripts.closeDay import notify_clients
+from scripts.close_day_schedule import parse_run_at, schedule_close_days
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -79,3 +82,51 @@ def test_close_day_session_expiration_redirects_operator_without_browser_alert()
     assert "OperatorFeedback.acknowledge" in operator_source
     assert "alert(" not in operator_source
     assert "handleExpiredSession(data.message, { silent: data.silent === true })" in operator_source
+
+
+def test_parse_close_day_schedule_uses_irkutsk_time():
+    run_at = parse_run_at(
+        "24.07.2026 18:00",
+        now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
+    )
+
+    assert run_at.isoformat() == "2026-07-24T18:00:00+08:00"
+
+
+def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
+    calls = []
+
+    class Result:
+        returncode = 0
+        stdout = ""
+        stderr = "job 12 at Fri Jul 24 18:00:00 2026"
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Result()
+
+    monkeypatch.setattr("scripts.close_day_schedule.shutil.which", lambda name: "/usr/bin/at")
+    monkeypatch.setattr("scripts.close_day_schedule.subprocess.run", fake_run)
+
+    scheduled = schedule_close_days(
+        ["24.07.2026 18:00", "25.07.2026 14:00"],
+        now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
+    )
+
+    assert [call[0] for call in calls] == [
+        ["at", "-t", "202607241800"],
+        ["at", "-t", "202607251400"],
+    ]
+    assert all(
+        call[1]["input"] == "/usr/local/bin/queue-close-day --run-now\n"
+        for call in calls
+    )
+    assert [item.run_at.hour for item in scheduled] == [18, 14]
+
+
+def test_schedule_rejects_past_date():
+    with pytest.raises(ValueError, match="в будущем"):
+        parse_run_at(
+            "21.07.2026 18:00",
+            now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
+        )
