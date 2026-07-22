@@ -1,6 +1,4 @@
 import json
-import shlex
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -9,12 +7,7 @@ import pytest
 
 from app.connections import ConnectionManager
 from scripts.closeDay import notify_clients
-from scripts.close_day_schedule import (
-    build_close_day_command,
-    format_windows_start_date,
-    parse_run_at,
-    schedule_close_days,
-)
+from scripts.close_day_schedule import parse_run_at, run_schedule, wait_until
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -100,112 +93,46 @@ def test_parse_close_day_schedule_uses_irkutsk_time():
     assert run_at.isoformat() == "2026-07-24T18:00:00+08:00"
 
 
-def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
-    calls = []
+def test_wait_until_checks_clock_in_short_intervals():
+    timezone = ZoneInfo("Asia/Irkutsk")
+    moments = iter(
+        [
+            datetime(2026, 7, 22, 12, 0, tzinfo=timezone),
+            datetime(2026, 7, 22, 12, 0, 30, tzinfo=timezone),
+            datetime(2026, 7, 22, 12, 1, tzinfo=timezone),
+        ]
+    )
+    sleeps = []
 
-    class Result:
-        returncode = 0
-        stdout = ""
-        stderr = "job 12 at Fri Jul 24 18:00:00 2026"
-
-    def fake_run(command, **kwargs):
-        calls.append((command, kwargs))
-        return Result()
-
-    monkeypatch.setattr("scripts.close_day_schedule.shutil.which", lambda name: "/usr/bin/at")
-    monkeypatch.setattr("scripts.close_day_schedule.subprocess.run", fake_run)
-
-    scheduled = schedule_close_days(
-        ["24.07.2026 18:00", "25.07.2026 14:00"],
-        command="/opt/queue/venv/bin/python /opt/queue/scripts/closeDay.py --run-now",
-        now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
-        platform="posix",
+    wait_until(
+        datetime(2026, 7, 22, 12, 1, tzinfo=timezone),
+        now_func=lambda: next(moments),
+        sleep_func=sleeps.append,
     )
 
-    assert [call[0] for call in calls] == [
-        ["at", "-t", "202607241800"],
-        ["at", "-t", "202607251400"],
-    ]
-    assert all(
-        call[1]["input"]
-        == "/opt/queue/venv/bin/python /opt/queue/scripts/closeDay.py --run-now\n"
-        for call in calls
-    )
-    assert [item.run_at.hour for item in scheduled] == [18, 14]
+    assert sleeps == [30, 30]
 
 
-def test_close_day_command_uses_current_python_and_script_paths(tmp_path):
-    python_path = tmp_path / "python runtime" / "python3"
-    script_path = tmp_path / "queue project" / "scripts" / "closeDay.py"
-    command = build_close_day_command(python_path, script_path, platform="posix")
+def test_run_schedule_sorts_times_and_runs_every_close_day():
+    timezone = ZoneInfo("Asia/Irkutsk")
+    first = datetime(2026, 7, 24, 18, 0, tzinfo=timezone)
+    second = datetime(2026, 7, 25, 14, 0, tzinfo=timezone)
+    waited = []
+    close_day_calls = []
 
-    assert command == (
-        f"{shlex.quote(str(python_path.resolve()))} "
-        f"{shlex.quote(str(script_path.resolve()))} --run-now"
+    def close_day_once():
+        close_day_calls.append(True)
+        return 0
+
+    result = run_schedule(
+        [second, first],
+        close_day_once,
+        wait_func=waited.append,
     )
 
-
-def test_windows_schedule_uses_one_time_task_scheduler_job(monkeypatch):
-    calls = []
-
-    class Result:
-        returncode = 0
-        stdout = "SUCCESS"
-        stderr = ""
-
-    def fake_run(command, **kwargs):
-        calls.append((command, kwargs))
-        return Result()
-
-    monkeypatch.setattr(
-        "scripts.close_day_schedule.shutil.which",
-        lambda name: "C:/Windows/System32/schtasks.exe",
-    )
-    monkeypatch.setattr("scripts.close_day_schedule.subprocess.run", fake_run)
-
-    schedule_close_days(
-        ["24.07.2026 18:00"],
-        command='"C:\\Python Runtime\\python.exe" D:\\Qronion\\scripts\\closeDay.py --run-now',
-        now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
-        platform="nt",
-        windows_date_pattern="MM/dd/yyyy",
-    )
-
-    assert calls[0][0] == [
-        "schtasks.exe",
-        "/Create",
-        "/TN",
-        "Qronion-CloseDay-20260724-1800-1",
-        "/TR",
-        '"C:\\Python Runtime\\python.exe" D:\\Qronion\\scripts\\closeDay.py --run-now',
-        "/SC",
-        "ONCE",
-        "/SD",
-        "07/24/2026",
-        "/ST",
-        "18:00",
-        "/Z",
-        "/F",
-    ]
-    assert calls[0][1]["encoding"] == "oem"
-
-
-def test_windows_date_uses_russian_regional_format():
-    run_at = datetime(2026, 7, 22, 22, 53)
-
-    assert format_windows_start_date(run_at, "dd.MM.yyyy") == "22.07.2026"
-    assert format_windows_start_date(run_at, "d.M.yyyy") == "22.7.2026"
-
-
-def test_windows_close_day_command_quotes_paths(tmp_path):
-    python_path = tmp_path / "Python Runtime" / "python.exe"
-    script_path = tmp_path / "Queue Project" / "scripts" / "closeDay.py"
-
-    command = build_close_day_command(python_path, script_path, platform="nt")
-
-    assert command == subprocess.list2cmdline(
-        [str(python_path.resolve()), str(script_path.resolve()), "--run-now"]
-    )
+    assert waited == [first, second]
+    assert close_day_calls == [True, True]
+    assert result == 0
 
 
 def test_schedule_rejects_past_date():

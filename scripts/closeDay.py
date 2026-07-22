@@ -29,9 +29,9 @@ from app.models import (  # noqa: E402
 )
 from app.services.settings import get_system_settings_dict  # noqa: E402
 from scripts.close_day_schedule import (  # noqa: E402
-    build_close_day_command,
     collect_interactive_schedule,
-    schedule_close_days,
+    parse_run_at,
+    run_schedule,
 )
 
 
@@ -172,38 +172,11 @@ def build_argument_parser() -> argparse.ArgumentParser:
             "или не указывайте значение для интерактивного ввода"
         ),
     )
-    parser.add_argument(
-        "--run-now",
-        action="store_true",
-        help=argparse.SUPPRESS,
-    )
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_argument_parser().parse_args(argv)
-    if args.schedule is not None and not args.run_now:
-        try:
-            values = args.schedule
-            if values == [""]:
-                values = collect_interactive_schedule()
-            elif "" in values:
-                raise ValueError(
-                    "пустой --schedule нельзя смешивать с датами; выберите один способ ввода"
-                )
-            scheduled = schedule_close_days(
-                values,
-                command=build_close_day_command(sys.executable, __file__),
-            )
-        except (RuntimeError, ValueError) as error:
-            print(f"Ошибка планирования закрытия дня: {error}", file=sys.stderr)
-            return 1
-
-        for item in scheduled:
-            print(f"Закрытие запланировано: {item.run_at:%d.%m.%Y в %H:%M} (Иркутск)")
-        print("Каждое задание сработает один раз.")
-        return 0
-
+def run_close_day_once() -> int:
+    """Close the current day immediately and notify connected clients."""
     db = SessionLocal()
     try:
         result = close_day(db)
@@ -233,6 +206,32 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Терминалы, операторы и табло обновлены через WebSocket.")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_argument_parser().parse_args(argv)
+    if args.schedule is not None:
+        try:
+            values = args.schedule
+            if values == [""]:
+                values = collect_interactive_schedule()
+            elif "" in values:
+                raise ValueError(
+                    "пустой --schedule нельзя смешивать с датами; выберите один способ ввода"
+                )
+            run_times = [parse_run_at(value) for value in values]
+        except ValueError as error:
+            print(f"Ошибка планирования закрытия дня: {error}", file=sys.stderr)
+            return 1
+
+        print("Таймер запущен. Не закрывайте это окно до последнего закрытия.")
+        try:
+            return run_schedule(run_times, run_close_day_once)
+        except KeyboardInterrupt:
+            print("\nТаймер Close Day остановлен.")
+            return 130
+
+    return run_close_day_once()
 
 
 if __name__ == "__main__":
