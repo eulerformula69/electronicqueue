@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -15,6 +16,7 @@ from zoneinfo import ZoneInfo
 LOCAL_TIMEZONE = ZoneInfo("Asia/Irkutsk")
 INPUT_FORMAT = "%d.%m.%Y %H:%M"
 AT_FORMAT = "%Y%m%d%H%M"
+WINDOWS_DATE_TOKENS = re.compile(r"yyyy|yy|MM|M|dd|d")
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,33 @@ def parse_run_at(value: str, *, now: datetime | None = None) -> datetime:
     return run_at
 
 
+def get_windows_short_date_pattern() -> str:
+    """Read the current user's date format used by Windows Task Scheduler."""
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\International") as key:
+            pattern, _ = winreg.QueryValueEx(key, "sShortDate")
+    except (ImportError, OSError) as error:
+        raise RuntimeError(
+            "не удалось определить региональный формат даты Windows"
+        ) from error
+    return pattern
+
+
+def format_windows_start_date(run_at: datetime, pattern: str) -> str:
+    """Format a date according to the current Windows short-date pattern."""
+    values = {
+        "yyyy": f"{run_at.year:04d}",
+        "yy": f"{run_at.year % 100:02d}",
+        "MM": f"{run_at.month:02d}",
+        "M": str(run_at.month),
+        "dd": f"{run_at.day:02d}",
+        "d": str(run_at.day),
+    }
+    return WINDOWS_DATE_TOKENS.sub(lambda match: values[match.group()], pattern)
+
+
 def collect_interactive_schedule(input_func=input) -> list[str]:
     """Read one or more dates until the user submits an empty line."""
     print("Введите даты закрытия по одной строке в формате ДД.ММ.ГГГГ ЧЧ:ММ.")
@@ -81,6 +110,7 @@ def schedule_close_days(
     command: str,
     now: datetime | None = None,
     platform: str = os.name,
+    windows_date_pattern: str | None = None,
 ) -> list[ScheduledCloseDay]:
     """Create persistent one-time jobs through the operating-system scheduler."""
     scheduler = "schtasks.exe" if platform == "nt" else "at"
@@ -92,6 +122,8 @@ def schedule_close_days(
         )
 
     run_times = [parse_run_at(value, now=now) for value in values]
+    if platform == "nt" and windows_date_pattern is None:
+        windows_date_pattern = get_windows_short_date_pattern()
     environment = os.environ.copy()
     environment["TZ"] = "Asia/Irkutsk"
     scheduled: list[ScheduledCloseDay] = []
@@ -111,7 +143,7 @@ def schedule_close_days(
                     "/SC",
                     "ONCE",
                     "/SD",
-                    run_at.strftime("%m/%d/%Y"),
+                    format_windows_start_date(run_at, windows_date_pattern),
                     "/ST",
                     run_at.strftime("%H:%M"),
                     "/Z",

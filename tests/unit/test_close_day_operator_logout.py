@@ -11,6 +11,7 @@ from app.connections import ConnectionManager
 from scripts.closeDay import notify_clients
 from scripts.close_day_schedule import (
     build_close_day_command,
+    format_windows_start_date,
     parse_run_at,
     schedule_close_days,
 )
@@ -167,6 +168,7 @@ def test_windows_schedule_uses_one_time_task_scheduler_job(monkeypatch):
         command='"C:\\Python Runtime\\python.exe" D:\\Qronion\\scripts\\closeDay.py --run-now',
         now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
         platform="nt",
+        windows_date_pattern="MM/dd/yyyy",
     )
 
     assert calls[0][0] == [
@@ -186,6 +188,13 @@ def test_windows_schedule_uses_one_time_task_scheduler_job(monkeypatch):
         "/F",
     ]
     assert calls[0][1]["encoding"] == "oem"
+
+
+def test_windows_date_uses_russian_regional_format():
+    run_at = datetime(2026, 7, 22, 22, 53)
+
+    assert format_windows_start_date(run_at, "dd.MM.yyyy") == "22.07.2026"
+    assert format_windows_start_date(run_at, "d.M.yyyy") == "22.7.2026"
 
 
 def test_windows_close_day_command_quotes_paths(tmp_path):
