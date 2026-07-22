@@ -1,5 +1,6 @@
 import json
 import shlex
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -117,6 +118,7 @@ def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
         ["24.07.2026 18:00", "25.07.2026 14:00"],
         command="/opt/queue/venv/bin/python /opt/queue/scripts/closeDay.py --run-now",
         now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
+        platform="posix",
     )
 
     assert [call[0] for call in calls] == [
@@ -134,11 +136,66 @@ def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
 def test_close_day_command_uses_current_python_and_script_paths(tmp_path):
     python_path = tmp_path / "python runtime" / "python3"
     script_path = tmp_path / "queue project" / "scripts" / "closeDay.py"
-    command = build_close_day_command(python_path, script_path)
+    command = build_close_day_command(python_path, script_path, platform="posix")
 
     assert command == (
         f"{shlex.quote(str(python_path.resolve()))} "
         f"{shlex.quote(str(script_path.resolve()))} --run-now"
+    )
+
+
+def test_windows_schedule_uses_one_time_task_scheduler_job(monkeypatch):
+    calls = []
+
+    class Result:
+        returncode = 0
+        stdout = "SUCCESS"
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Result()
+
+    monkeypatch.setattr(
+        "scripts.close_day_schedule.shutil.which",
+        lambda name: "C:/Windows/System32/schtasks.exe",
+    )
+    monkeypatch.setattr("scripts.close_day_schedule.subprocess.run", fake_run)
+
+    schedule_close_days(
+        ["24.07.2026 18:00"],
+        command='"C:\\Python Runtime\\python.exe" D:\\Qronion\\scripts\\closeDay.py --run-now',
+        now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
+        platform="nt",
+    )
+
+    assert calls[0][0] == [
+        "schtasks.exe",
+        "/Create",
+        "/TN",
+        "Qronion-CloseDay-20260724-1800-1",
+        "/TR",
+        '"C:\\Python Runtime\\python.exe" D:\\Qronion\\scripts\\closeDay.py --run-now',
+        "/SC",
+        "ONCE",
+        "/SD",
+        "07/24/2026",
+        "/ST",
+        "18:00",
+        "/Z",
+        "/F",
+    ]
+    assert calls[0][1]["encoding"] == "oem"
+
+
+def test_windows_close_day_command_quotes_paths(tmp_path):
+    python_path = tmp_path / "Python Runtime" / "python.exe"
+    script_path = tmp_path / "Queue Project" / "scripts" / "closeDay.py"
+
+    command = build_close_day_command(python_path, script_path, platform="nt")
+
+    assert command == subprocess.list2cmdline(
+        [str(python_path.resolve()), str(script_path.resolve()), "--run-now"]
     )
 
 

@@ -24,11 +24,17 @@ class ScheduledCloseDay:
 
 
 def build_close_day_command(
-    python_executable: str, script_path: str | Path
+    python_executable: str,
+    script_path: str | Path,
+    *,
+    platform: str = os.name,
 ) -> str:
     """Build a shell-safe command that reruns this script immediately."""
     python_path = Path(python_executable).resolve()
     close_day_path = Path(script_path).resolve()
+    arguments = [str(python_path), str(close_day_path), "--run-now"]
+    if platform == "nt":
+        return subprocess.list2cmdline(arguments)
     return (
         f"{shlex.quote(str(python_path))} "
         f"{shlex.quote(str(close_day_path))} --run-now"
@@ -74,9 +80,13 @@ def schedule_close_days(
     *,
     command: str,
     now: datetime | None = None,
+    platform: str = os.name,
 ) -> list[ScheduledCloseDay]:
-    """Create persistent one-time jobs through the system `at` service."""
-    if shutil.which("at") is None:
+    """Create persistent one-time jobs through the operating-system scheduler."""
+    scheduler = "schtasks.exe" if platform == "nt" else "at"
+    if shutil.which(scheduler) is None:
+        if platform == "nt":
+            raise RuntimeError("Планировщик заданий Windows (schtasks.exe) недоступен")
         raise RuntimeError(
             "служба одноразовых заданий не установлена; повторно запустите deploy/install.sh"
         )
@@ -85,15 +95,43 @@ def schedule_close_days(
     environment = os.environ.copy()
     environment["TZ"] = "Asia/Irkutsk"
     scheduled: list[ScheduledCloseDay] = []
-    for run_at in run_times:
-        process = subprocess.run(
-            ["at", "-t", run_at.strftime(AT_FORMAT)],
-            input=f"{command}\n",
-            text=True,
-            capture_output=True,
-            check=False,
-            env=environment,
-        )
+    for index, run_at in enumerate(run_times, start=1):
+        if platform == "nt":
+            task_name = (
+                f"Qronion-CloseDay-{run_at:%Y%m%d-%H%M}-{index}"
+            )
+            process = subprocess.run(
+                [
+                    "schtasks.exe",
+                    "/Create",
+                    "/TN",
+                    task_name,
+                    "/TR",
+                    command,
+                    "/SC",
+                    "ONCE",
+                    "/SD",
+                    run_at.strftime("%m/%d/%Y"),
+                    "/ST",
+                    run_at.strftime("%H:%M"),
+                    "/Z",
+                    "/F",
+                ],
+                text=True,
+                encoding="oem",
+                errors="replace",
+                capture_output=True,
+                check=False,
+            )
+        else:
+            process = subprocess.run(
+                ["at", "-t", run_at.strftime(AT_FORMAT)],
+                input=f"{command}\n",
+                text=True,
+                capture_output=True,
+                check=False,
+                env=environment,
+            )
         if process.returncode != 0:
             details = (process.stderr or process.stdout).strip()
             raise RuntimeError(details or "не удалось создать одноразовое задание")
