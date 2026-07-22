@@ -3,23 +3,36 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
 LOCAL_TIMEZONE = ZoneInfo("Asia/Irkutsk")
 INPUT_FORMAT = "%d.%m.%Y %H:%M"
 AT_FORMAT = "%Y%m%d%H%M"
-DEFAULT_COMMAND = "/usr/local/bin/queue-close-day --run-now"
 
 
 @dataclass(frozen=True)
 class ScheduledCloseDay:
     run_at: datetime
     job_output: str
+
+
+def build_close_day_command(
+    python_executable: str, script_path: str | Path
+) -> str:
+    """Build a shell-safe command that reruns this script immediately."""
+    python_path = Path(python_executable).resolve()
+    close_day_path = Path(script_path).resolve()
+    return (
+        f"{shlex.quote(str(python_path))} "
+        f"{shlex.quote(str(close_day_path))} --run-now"
+    )
 
 
 def parse_run_at(value: str, *, now: datetime | None = None) -> datetime:
@@ -59,7 +72,7 @@ def collect_interactive_schedule(input_func=input) -> list[str]:
 def schedule_close_days(
     values: list[str],
     *,
-    command: str = DEFAULT_COMMAND,
+    command: str,
     now: datetime | None = None,
 ) -> list[ScheduledCloseDay]:
     """Create persistent one-time jobs through the system `at` service."""

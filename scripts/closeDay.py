@@ -29,6 +29,7 @@ from app.models import (  # noqa: E402
 )
 from app.services.settings import get_system_settings_dict  # noqa: E402
 from scripts.close_day_schedule import (  # noqa: E402
+    build_close_day_command,
     collect_interactive_schedule,
     schedule_close_days,
 )
@@ -190,7 +191,10 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError(
                     "пустой --schedule нельзя смешивать с датами; выберите один способ ввода"
                 )
-            scheduled = schedule_close_days(values)
+            scheduled = schedule_close_days(
+                values,
+                command=build_close_day_command(sys.executable, __file__),
+            )
         except (RuntimeError, ValueError) as error:
             print(f"Ошибка планирования закрытия дня: {error}", file=sys.stderr)
             return 1

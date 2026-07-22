@@ -1,4 +1,5 @@
 import json
+import shlex
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -7,7 +8,11 @@ import pytest
 
 from app.connections import ConnectionManager
 from scripts.closeDay import notify_clients
-from scripts.close_day_schedule import parse_run_at, schedule_close_days
+from scripts.close_day_schedule import (
+    build_close_day_command,
+    parse_run_at,
+    schedule_close_days,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -110,6 +115,7 @@ def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
 
     scheduled = schedule_close_days(
         ["24.07.2026 18:00", "25.07.2026 14:00"],
+        command="/opt/queue/venv/bin/python /opt/queue/scripts/closeDay.py --run-now",
         now=datetime(2026, 7, 22, 12, 0, tzinfo=ZoneInfo("Asia/Irkutsk")),
     )
 
@@ -118,10 +124,22 @@ def test_schedule_close_days_creates_one_at_job_per_date(monkeypatch):
         ["at", "-t", "202607251400"],
     ]
     assert all(
-        call[1]["input"] == "/usr/local/bin/queue-close-day --run-now\n"
+        call[1]["input"]
+        == "/opt/queue/venv/bin/python /opt/queue/scripts/closeDay.py --run-now\n"
         for call in calls
     )
     assert [item.run_at.hour for item in scheduled] == [18, 14]
+
+
+def test_close_day_command_uses_current_python_and_script_paths(tmp_path):
+    python_path = tmp_path / "python runtime" / "python3"
+    script_path = tmp_path / "queue project" / "scripts" / "closeDay.py"
+    command = build_close_day_command(python_path, script_path)
+
+    assert command == (
+        f"{shlex.quote(str(python_path.resolve()))} "
+        f"{shlex.quote(str(script_path.resolve()))} --run-now"
+    )
 
 
 def test_schedule_rejects_past_date():
