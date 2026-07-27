@@ -3,6 +3,7 @@
 (function () {
     var queue = [];
     var playing = false;
+    var lastActivityAt = 0;
     var SAFETY_TIMEOUT_MS = 15000;
     var PAUSE_MS = 800;
 
@@ -29,6 +30,7 @@
     }
 
     function speakTicketLite(ticket, onStateChange) {
+        lastActivityAt = new Date().getTime();
         queue.push({
             ticket: ticket,
             onStateChange: onStateChange
@@ -67,6 +69,7 @@
         function finish() {
             if (doneCalled) return;
             doneCalled = true;
+            lastActivityAt = new Date().getTime();
 
             try { clearTimeout(safetyTimer); } catch (e) {}
             try { if (source) source.stop(0); } catch (e) {}
@@ -138,4 +141,12 @@
     }
 
     window.speakTicketLite = speakTicketLite;
+    window.BoardTTSLite = {
+        isBusy: function () {
+            return playing || queue.length > 0;
+        },
+        getLastActivityAt: function () {
+            return lastActivityAt;
+        }
+    };
 })();

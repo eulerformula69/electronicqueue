@@ -11,6 +11,7 @@
     var RECONNECT_MS = 3000;
     var DUPLICATE_CALL_MS = 5000;
     var CLEAN_PROCESSED_MS = 5 * 60 * 1000;
+    var RELOAD_CALLS_STORAGE_KEY = "board-media-known-calls";
 
     var ws = null;
     var previousCalledTickets = [];
@@ -79,7 +80,9 @@
             window_name: windowName,
             status: ticket.status || "",
             display_text: ticket.display_text || "",
-            tts_text: ticket.tts_text || ""
+            tts_text: ticket.tts_text || "",
+            called_at: ticket.called_at || "",
+            last_recalled_at: ticket.last_recalled_at || ""
         };
     }
 
@@ -355,6 +358,42 @@
         }
     }
 
+    function getTicketCallKey(ticket) {
+        return getTicketId(ticket)
+            + ":" + toStr(ticket && ticket.called_at)
+            + ":" + toStr(ticket && ticket.last_recalled_at);
+    }
+
+    function readReloadCallKeys() {
+        var raw;
+        var parsed;
+
+        try {
+            raw = window.sessionStorage.getItem(RELOAD_CALLS_STORAGE_KEY);
+            if (!raw) return null;
+            window.sessionStorage.removeItem(RELOAD_CALLS_STORAGE_KEY);
+            parsed = JSON.parse(raw);
+            return Object.prototype.toString.call(parsed) === "[object Array]" ? parsed : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    var reloadCallKeys = readReloadCallKeys();
+
+    window.prepareMediaBoardReload = function () {
+        var keys = [];
+        var i;
+
+        for (i = 0; i < previousCalledTickets.length; i++) {
+            keys.push(getTicketCallKey(previousCalledTickets[i]));
+        }
+
+        try {
+            window.sessionStorage.setItem(RELOAD_CALLS_STORAGE_KEY, JSON.stringify(keys));
+        } catch (e) {}
+    };
+
     function mergeIncomingTickets(tickets) {
         var arr = [];
         var i;
@@ -393,6 +432,22 @@
     function handleBoardState(boardState) {
         var called = mergeIncomingTickets(boardState.called || []);
         var waiting = mergeIncomingTickets(boardState.waiting || []);
+        var known = {};
+        var i;
+
+        if (reloadCallKeys) {
+            for (i = 0; i < reloadCallKeys.length; i++) {
+                known[reloadCallKeys[i]] = true;
+            }
+
+            for (i = 0; i < called.length; i++) {
+                if (!known[getTicketCallKey(called[i])]) {
+                    announceTicket(called[i]);
+                }
+            }
+
+            reloadCallKeys = null;
+        }
 
         previousCalledTickets = called;
         latestWaitingTickets = waiting;

@@ -55,10 +55,10 @@
             videoAudioEnabled: getBooleanFlag("video_audio", true)
         };
 
-        loadScript("/queue/js/media-lite.js?v=board-profile-5");
-        loadScript("/queue/js/tts-lite.js?v=board-profile-4");
+        loadScript("/queue/js/media-lite.js?v=board-profile-7");
+        loadScript("/queue/js/tts-lite.js?v=board-profile-7");
         loadScript("/queue/js/board-ticker.js");
-        loadScript("/queue/js/board-lite.js?v=board-profile-6");
+        loadScript("/queue/js/board-lite.js?v=board-profile-7");
         loadScript("/queue/js/board-lite2.js?v=board-profile-2");
         return;
     }

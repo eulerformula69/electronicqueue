@@ -3,8 +3,9 @@
     var currentPlaylist = [];
     var playlistIndex = 0;
     var startedAt = new Date().getTime();
-    var RELOAD_ON_VIDEO_END_AFTER_MS = 20 * 60 * 1000;
+    var RELOAD_ON_VIDEO_END_AFTER_MS = 5 * 60 * 1000;
     var HARD_RELOAD_AFTER_MS = 60 * 60 * 1000;
+    var RELOAD_QUIET_AFTER_CALL_MS = 5000;
     var NEXT_VIDEO_STORAGE_KEY = "board-media-next-video";
     var VIDEO_AUDIO_ENABLED = !window.BOARD_CONFIG || window.BOARD_CONFIG.videoAudioEnabled !== false;
 
@@ -44,8 +45,56 @@
         return path;
     }
 
+    function canReloadSafely() {
+        var tts = window.BoardTTSLite;
+        var lastActivityAt;
+
+        if (!tts) return false;
+        if (tts.isBusy && tts.isBusy()) return false;
+
+        lastActivityAt = tts.getLastActivityAt ? tts.getLastActivityAt() : 0;
+        return !lastActivityAt
+            || new Date().getTime() - lastActivityAt >= RELOAD_QUIET_AFTER_CALL_MS;
+    }
+
     function reloadPage() {
+        if (window.prepareMediaBoardReload) {
+            try { window.prepareMediaBoardReload(); } catch (e) {}
+        }
+
         window.location.reload();
+    }
+
+    function updateReloadTimer() {
+        var timer = document.getElementById("media-reload-timer");
+        var remaining;
+        var totalSeconds;
+        var minutes;
+        var seconds;
+
+        if (!timer) return;
+
+        remaining = RELOAD_ON_VIDEO_END_AFTER_MS - (new Date().getTime() - startedAt);
+        if (remaining <= 0) {
+            timer.innerHTML = "Перезапуск: после видео и озвучки";
+            return;
+        }
+
+        totalSeconds = Math.ceil(remaining / 1000);
+        minutes = Math.floor(totalSeconds / 60);
+        seconds = totalSeconds % 60;
+        timer.innerHTML = "До перезапуска: "
+            + (minutes < 10 ? "0" : "") + minutes
+            + ":" + (seconds < 10 ? "0" : "") + seconds;
+    }
+
+    function hardReloadWhenSafe() {
+        if (canReloadSafely()) {
+            reloadPage();
+            return;
+        }
+
+        setTimeout(hardReloadWhenSafe, 1000);
     }
 
     function loadPlaylist(isUpdate) {
@@ -122,9 +171,11 @@
 
             /* Обновляем старый LG WebView только между роликами, не обрывая просмотр. */
             if (new Date().getTime() - startedAt >= RELOAD_ON_VIDEO_END_AFTER_MS) {
-                rememberNextVideo(currentPlaylist[playlistIndex]);
-                reloadPage();
-                return;
+                if (canReloadSafely()) {
+                    rememberNextVideo(currentPlaylist[playlistIndex]);
+                    reloadPage();
+                    return;
+                }
             }
 
             video.src = currentPlaylist[playlistIndex];
@@ -147,9 +198,11 @@
 
         window.initPlaylist = loadPlaylist;
         loadPlaylist(false);
+        updateReloadTimer();
+        setInterval(updateReloadTimer, 1000);
 
         /* Аварийная страховка на случай очень длинного ролика или зависшего события ended. */
-        setTimeout(reloadPage, HARD_RELOAD_AFTER_MS);
+        setTimeout(hardReloadWhenSafe, HARD_RELOAD_AFTER_MS);
     }
 
     if (document.readyState === "loading") {

@@ -419,7 +419,16 @@ def get_called_tickets():
                     ticket.number,
                     window.name
                 ),
-                "called_at": ticket.called_at.isoformat() if ticket.called_at else None
+                "tts_text": render_ticket_template(
+                    settings["call_message_template"],
+                    ticket.number,
+                    window.name
+                ),
+                "called_at": ticket.called_at.isoformat() if ticket.called_at else None,
+                "last_recalled_at": (
+                    ticket.last_recalled_at.isoformat()
+                    if ticket.last_recalled_at else None
+                ),
             })
 
         return result
