@@ -7,7 +7,9 @@
     var WAITING_PAGE_SIZE = (window.BOARD_CONFIG && window.BOARD_CONFIG.waitingPageSize) || 7;
     var PAGE_INTERVAL_MS = (window.BOARD_CONFIG && window.BOARD_CONFIG.pageIntervalMs) || 5000;
     var SHOW_LABELS = !window.BOARD_CONFIG || window.BOARD_CONFIG.showLabels !== false;
+    var CALL_AUDIO_ENABLED = !window.BOARD_CONFIG || window.BOARD_CONFIG.callAudioEnabled !== false;
     var RECONNECT_MS = 3000;
+    var DUPLICATE_CALL_MS = 5000;
     var CLEAN_PROCESSED_MS = 5 * 60 * 1000;
 
     var ws = null;
@@ -321,7 +323,7 @@
 
         if (!id) return;
 
-        if (processedIds[id]) return;
+        if (processedIds[id] && new Date().getTime() - processedIds[id] < DUPLICATE_CALL_MS) return;
 
         processedIds[id] = new Date().getTime();
         highlightedIds[id] = new Date().getTime();
@@ -339,6 +341,18 @@
             renderBoard(previousCalledTickets, latestWaitingTickets);
         } else {
             renderPage();
+        }
+
+        if (CALL_AUDIO_ENABLED && typeof window.speakTicketLite === "function") {
+            window.speakTicketLite(normalized, function (ticketId, isActive) {
+                if (isActive) {
+                    highlightedIds[ticketId] = new Date().getTime();
+                } else {
+                    delete highlightedIds[ticketId];
+                }
+
+                renderPage();
+            });
         }
     }
 

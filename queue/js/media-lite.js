@@ -4,6 +4,7 @@
     var playlistIndex = 0;
     var startedAt = new Date().getTime();
     var RELOAD_AFTER_MS = 3 * 60 * 60 * 1000;
+    var VIDEO_AUDIO_ENABLED = !window.BOARD_CONFIG || window.BOARD_CONFIG.videoAudioEnabled !== false;
 
     function getFileName(path) {
         try {
@@ -17,6 +18,8 @@
         var promise;
 
         try {
+            video.muted = !VIDEO_AUDIO_ENABLED;
+            video.volume = VIDEO_AUDIO_ENABLED ? 1.0 : 0;
             promise = video.play();
             if (promise && promise.catch) promise.catch(function () {});
         } catch (e) {}
@@ -78,6 +81,9 @@
         var video = document.getElementById("media-video");
         if (!video) return;
 
+        video.muted = !VIDEO_AUDIO_ENABLED;
+        video.volume = VIDEO_AUDIO_ENABLED ? 1.0 : 0;
+
         video.addEventListener("ended", function () {
             /* Перезапуск на границе роликов освобождает память LG WebView. */
             if (!window.BOARD_DISABLE_FORCED_RELOAD && new Date().getTime() - startedAt >= RELOAD_AFTER_MS) {
@@ -92,11 +98,13 @@
         });
 
         window.addEventListener("ticket-speech-start", function () {
-            video.volume = 0.2;
+            if (VIDEO_AUDIO_ENABLED) video.volume = 0.2;
         });
 
         window.addEventListener("ticket-speech-end", function () {
-            setTimeout(function () { video.volume = 1.0; }, 6000);
+            setTimeout(function () {
+                video.volume = VIDEO_AUDIO_ENABLED ? 1.0 : 0;
+            }, 6000);
         });
 
         window.addEventListener("playlist-updated", function () {

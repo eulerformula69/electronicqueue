@@ -19,6 +19,26 @@
         document.write('<script src="' + path + '"><\/script>');
     }
 
+    function getBooleanFlag(name, defaultValue) {
+        var query = window.location.search.replace(/^\?/, "").split("&");
+        var i;
+        var parts;
+        var key;
+        var value;
+
+        for (i = 0; i < query.length; i++) {
+            parts = query[i].split("=");
+            key = decodeURIComponent(parts[0] || "");
+
+            if (key === name) {
+                value = decodeURIComponent((parts[1] || "").replace(/\+/g, " ")).toLowerCase();
+                return value !== "0" && value !== "false" && value !== "off" && value !== "no";
+            }
+        }
+
+        return defaultValue;
+    }
+
     var screen = getScreenName();
     var isMedia = screen === "media";
 
@@ -30,12 +50,15 @@
             calledPageSize: 5,
             waitingPageSize: 5,
             pageIntervalMs: 5000,
-            showLabels: false
+            showLabels: false,
+            callAudioEnabled: getBooleanFlag("call_audio", true),
+            videoAudioEnabled: getBooleanFlag("video_audio", true)
         };
 
-        loadScript("/queue/js/media-lite.js?v=board-profile-2");
+        loadScript("/queue/js/media-lite.js?v=board-profile-3");
+        loadScript("/queue/js/tts-lite.js?v=board-profile-3");
         loadScript("/queue/js/board-ticker.js");
-        loadScript("/queue/js/board-lite.js?v=board-profile-2");
+        loadScript("/queue/js/board-lite.js?v=board-profile-3");
         loadScript("/queue/js/board-lite2.js?v=board-profile-2");
         return;
     }

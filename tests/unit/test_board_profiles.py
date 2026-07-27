@@ -15,7 +15,7 @@ def test_board_html_loads_profiles_before_board_script():
     source = _read("queue/board.html")
     bootstrap = _read("queue/js/board-bootstrap.js")
 
-    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-2"></script>' in source
+    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-3"></script>' in source
     assert 'loadScript("/queue/js/board-profiles.js")' in bootstrap
     assert bootstrap.index('/queue/js/board-profiles.js') < bootstrap.index('/queue/js/board.js')
 
@@ -49,7 +49,11 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'shouldShowLabels()' in profiles
     assert 'screen === "media"' in bootstrap
     assert 'showLabels: false' in bootstrap
-    assert 'loadScript("/queue/js/board-lite.js?v=board-profile-2")' in bootstrap
+    assert 'callAudioEnabled: getBooleanFlag("call_audio", true)' in bootstrap
+    assert 'videoAudioEnabled: getBooleanFlag("video_audio", true)' in bootstrap
+    assert 'loadScript("/queue/js/media-lite.js?v=board-profile-3")' in bootstrap
+    assert 'loadScript("/queue/js/tts-lite.js?v=board-profile-3")' in bootstrap
+    assert 'loadScript("/queue/js/board-lite.js?v=board-profile-3")' in bootstrap
     assert 'loadScript("/queue/js/board.js")' in bootstrap
     assert 'params.set("screen", "media")' in legacy_page
     assert "board-lite.js" not in legacy_page
@@ -65,6 +69,21 @@ def test_media_profile_hides_ticket_and_operator_labels_in_cards():
     assert "const ticketText" in board
     assert "var SHOW_LABELS" in lite_board
     assert "window.BOARD_CONFIG.showLabels !== false" in lite_board
+
+
+def test_media_audio_flags_control_ticket_announcements_and_video_sound():
+    bootstrap = _read("queue/js/board-bootstrap.js")
+    lite_board = _read("queue/js/board-lite.js")
+    media = _read("queue/js/media-lite.js")
+
+    assert 'getBooleanFlag("call_audio", true)' in bootstrap
+    assert 'getBooleanFlag("video_audio", true)' in bootstrap
+    assert 'window.BOARD_CONFIG.callAudioEnabled !== false' in lite_board
+    assert 'typeof window.speakTicketLite === "function"' in lite_board
+    assert 'window.speakTicketLite(normalized' in lite_board
+    assert "DUPLICATE_CALL_MS = 5000" in lite_board
+    assert 'window.BOARD_CONFIG.videoAudioEnabled !== false' in media
+    assert "video.muted = !VIDEO_AUDIO_ENABLED" in media
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
