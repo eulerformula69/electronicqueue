@@ -15,7 +15,6 @@
     var ws = null;
     var previousCalledTickets = [];
     var latestWaitingTickets = [];
-    var initialized = false;
     var processedIds = {};
     var highlightedIds = {};
 
@@ -369,29 +368,6 @@
         return arr;
     }
 
-    function detectAndAnnounceNewTickets(tickets) {
-        var i;
-        var id;
-        var j;
-        var found;
-
-        if (!initialized) return;
-
-        for (i = 0; i < tickets.length; i++) {
-            id = getTicketId(tickets[i]);
-            found = false;
-
-            for (j = 0; j < previousCalledTickets.length; j++) {
-                if (getTicketId(previousCalledTickets[j]) === id) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) announceTicket(tickets[i]);
-        }
-    }
-
     function normalizeBoardState(data) {
         if (data && (data.type === "board_state" || Object.prototype.toString.call(data.called) === "[object Array]" || Object.prototype.toString.call(data.waiting) === "[object Array]")) {
             if (typeof window.setBoardSystemMessages === "function") {
@@ -418,12 +394,8 @@
         var called = mergeIncomingTickets(boardState.called || []);
         var waiting = mergeIncomingTickets(boardState.waiting || []);
 
-        detectAndAnnounceNewTickets(called);
-
         previousCalledTickets = called;
         latestWaitingTickets = waiting;
-        initialized = true;
-
         renderBoard(previousCalledTickets, latestWaitingTickets);
     }
 

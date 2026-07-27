@@ -15,7 +15,7 @@ def test_board_html_loads_profiles_before_board_script():
     source = _read("queue/board.html")
     bootstrap = _read("queue/js/board-bootstrap.js")
 
-    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-5"></script>' in source
+    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-6"></script>' in source
     assert 'loadScript("/queue/js/board-profiles.js")' in bootstrap
     assert bootstrap.index('/queue/js/board-profiles.js') < bootstrap.index('/queue/js/board.js')
 
@@ -53,7 +53,7 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'videoAudioEnabled: getBooleanFlag("video_audio", true)' in bootstrap
     assert 'loadScript("/queue/js/media-lite.js?v=board-profile-5")' in bootstrap
     assert 'loadScript("/queue/js/tts-lite.js?v=board-profile-4")' in bootstrap
-    assert 'loadScript("/queue/js/board-lite.js?v=board-profile-3")' in bootstrap
+    assert 'loadScript("/queue/js/board-lite.js?v=board-profile-6")' in bootstrap
     assert 'loadScript("/queue/js/board.js")' in bootstrap
     assert 'params.set("screen", "media")' in legacy_page
     assert "board-lite.js" not in legacy_page
@@ -112,6 +112,20 @@ def test_media_reload_waits_for_video_end_and_resumes_with_next_video():
     assert "takeRememberedVideo()" in source
     assert "setTimeout(reloadPage, HARD_RELOAD_AFTER_MS)" in source
     assert "HARD_RELOAD_AFTER_MS = 60 * 60 * 1000" in source
+
+
+def test_media_board_speaks_only_explicit_call_events_with_server_tts_text():
+    source = _read("queue/js/board-lite.js")
+
+    handle_state_start = source.index("function handleBoardState(boardState)")
+    handle_recall_start = source.index("function handleRecall(data)")
+    handle_state = source[handle_state_start:handle_recall_start]
+    handle_recall = source[handle_recall_start:]
+
+    assert "announceTicket" not in handle_state
+    assert "announceTicket(ticket)" in handle_recall
+    assert 'tts_text: data.tts_text || srcTicket.tts_text || ""' in handle_recall
+    assert "detectAndAnnounceNewTickets" not in source
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
