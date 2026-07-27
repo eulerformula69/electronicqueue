@@ -56,7 +56,7 @@
         };
 
         loadScript("/queue/js/media-lite.js?v=board-profile-3");
-        loadScript("/queue/js/tts-lite.js?v=board-profile-3");
+        loadScript("/queue/js/tts-lite.js?v=board-profile-4");
         loadScript("/queue/js/board-ticker.js");
         loadScript("/queue/js/board-lite.js?v=board-profile-3");
         loadScript("/queue/js/board-lite2.js?v=board-profile-2");

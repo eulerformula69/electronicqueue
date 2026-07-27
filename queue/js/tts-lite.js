@@ -3,7 +3,6 @@
 (function () {
     var queue = [];
     var playing = false;
-    var currentAudio = null;
     var SAFETY_TIMEOUT_MS = 15000;
     var PAUSE_MS = 800;
 
@@ -29,16 +28,6 @@
         return "Талон " + number + ". Подойдите к окну " + windowName + ".";
     }
 
-    function stopCurrentAudio() {
-        try {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.src = "";
-                currentAudio = null;
-            }
-        } catch (e) {}
-    }
-
     function speakTicketLite(ticket, onStateChange) {
         queue.push({
             ticket: ticket,
@@ -54,9 +43,13 @@
         var ticketId;
         var text;
         var url;
-        var audio;
+        var AudioContextClass;
+        var context;
+        var source = null;
+        var request;
         var doneCalled = false;
         var safetyTimer;
+        var started = false;
 
         if (!queue.length) {
             playing = false;
@@ -68,32 +61,22 @@
         ticket = item.ticket || {};
         ticketId = String(ticket.id || ticket.ticket_id || ticket.ticket_number || ticket.number || "");
 
-        if (item.onStateChange) {
-            try { item.onStateChange(ticketId, true); } catch (e) {}
-        }
-
-        emit("ticket-speech-start");
-
         text = getTicketText(ticket);
         url = "/tts/audio?text=" + encodeURIComponent(text) + "&t=" + String(new Date().getTime());
-
-        stopCurrentAudio();
-
-        audio = new Audio();
-        currentAudio = audio;
 
         function finish() {
             if (doneCalled) return;
             doneCalled = true;
 
             try { clearTimeout(safetyTimer); } catch (e) {}
-            try { audio.pause(); } catch (e) {}
+            try { if (source) source.stop(0); } catch (e) {}
+            try { if (context && context.close) context.close(); } catch (e) {}
 
-            if (item.onStateChange) {
+            if (started && item.onStateChange) {
                 try { item.onStateChange(ticketId, false); } catch (e) {}
             }
 
-            emit("ticket-speech-end");
+            if (started) emit("ticket-speech-end");
 
             setTimeout(function () {
                 processQueue();
@@ -102,19 +85,53 @@
 
         safetyTimer = setTimeout(finish, SAFETY_TIMEOUT_MS);
 
-        audio.onended = finish;
-        audio.onerror = finish;
-        audio.onabort = finish;
-
-        audio.src = url;
+        AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+            finish();
+            return;
+        }
 
         try {
-            var playResult = audio.play();
-            if (playResult && playResult.catch) {
-                playResult.catch(function () {
+            context = new AudioContextClass();
+            request = new XMLHttpRequest();
+            request.open("GET", url, true);
+            request.responseType = "arraybuffer";
+
+            request.onload = function () {
+                if (request.status < 200 || request.status >= 300 || !request.response) {
                     finish();
-                });
-            }
+                    return;
+                }
+
+                context.decodeAudioData(
+                    request.response,
+                    function (buffer) {
+                        if (doneCalled) return;
+
+                        try {
+                            source = context.createBufferSource();
+                            source.buffer = buffer;
+                            source.connect(context.destination);
+                            source.onended = finish;
+                            started = true;
+
+                            if (item.onStateChange) {
+                                try { item.onStateChange(ticketId, true); } catch (e) {}
+                            }
+
+                            emit("ticket-speech-start");
+                            source.start(0);
+                        } catch (e) {
+                            finish();
+                        }
+                    },
+                    finish
+                );
+            };
+
+            request.onerror = finish;
+            request.onabort = finish;
+            request.send();
         } catch (e) {
             finish();
         }

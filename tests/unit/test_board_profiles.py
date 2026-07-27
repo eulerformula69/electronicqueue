@@ -15,7 +15,7 @@ def test_board_html_loads_profiles_before_board_script():
     source = _read("queue/board.html")
     bootstrap = _read("queue/js/board-bootstrap.js")
 
-    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-3"></script>' in source
+    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-4"></script>' in source
     assert 'loadScript("/queue/js/board-profiles.js")' in bootstrap
     assert bootstrap.index('/queue/js/board-profiles.js') < bootstrap.index('/queue/js/board.js')
 
@@ -52,7 +52,7 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'callAudioEnabled: getBooleanFlag("call_audio", true)' in bootstrap
     assert 'videoAudioEnabled: getBooleanFlag("video_audio", true)' in bootstrap
     assert 'loadScript("/queue/js/media-lite.js?v=board-profile-3")' in bootstrap
-    assert 'loadScript("/queue/js/tts-lite.js?v=board-profile-3")' in bootstrap
+    assert 'loadScript("/queue/js/tts-lite.js?v=board-profile-4")' in bootstrap
     assert 'loadScript("/queue/js/board-lite.js?v=board-profile-3")' in bootstrap
     assert 'loadScript("/queue/js/board.js")' in bootstrap
     assert 'params.set("screen", "media")' in legacy_page
@@ -84,6 +84,16 @@ def test_media_audio_flags_control_ticket_announcements_and_video_sound():
     assert "DUPLICATE_CALL_MS = 5000" in lite_board
     assert 'window.BOARD_CONFIG.videoAudioEnabled !== false' in media
     assert "video.muted = !VIDEO_AUDIO_ENABLED" in media
+
+
+def test_media_tts_uses_web_audio_without_stealing_the_video_element():
+    source = _read("queue/js/tts-lite.js")
+
+    assert "window.AudioContext || window.webkitAudioContext" in source
+    assert 'request.responseType = "arraybuffer"' in source
+    assert "context.decodeAudioData(" in source
+    assert "context.createBufferSource()" in source
+    assert "new Audio()" not in source
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
