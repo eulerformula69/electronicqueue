@@ -3,7 +3,9 @@
     var currentPlaylist = [];
     var playlistIndex = 0;
     var startedAt = new Date().getTime();
-    var RELOAD_AFTER_MS = 3 * 60 * 60 * 1000;
+    var RELOAD_ON_VIDEO_END_AFTER_MS = 20 * 60 * 1000;
+    var HARD_RELOAD_AFTER_MS = 60 * 60 * 1000;
+    var NEXT_VIDEO_STORAGE_KEY = "board-media-next-video";
     var VIDEO_AUDIO_ENABLED = !window.BOARD_CONFIG || window.BOARD_CONFIG.videoAudioEnabled !== false;
 
     function getFileName(path) {
@@ -25,9 +27,31 @@
         } catch (e) {}
     }
 
+    function rememberNextVideo(path) {
+        try {
+            window.sessionStorage.setItem(NEXT_VIDEO_STORAGE_KEY, path);
+        } catch (e) {}
+    }
+
+    function takeRememberedVideo() {
+        var path = "";
+
+        try {
+            path = window.sessionStorage.getItem(NEXT_VIDEO_STORAGE_KEY) || "";
+            window.sessionStorage.removeItem(NEXT_VIDEO_STORAGE_KEY);
+        } catch (e) {}
+
+        return path;
+    }
+
+    function reloadPage() {
+        window.location.reload();
+    }
+
     function loadPlaylist(isUpdate) {
         var video = document.getElementById("media-video");
         var request;
+        var rememberedVideo = takeRememberedVideo();
 
         if (!video) return;
 
@@ -66,6 +90,14 @@
                         break;
                     }
                 }
+            } else if (rememberedVideo) {
+                currentFileName = getFileName(rememberedVideo);
+                for (i = 0; i < currentPlaylist.length; i++) {
+                    if (getFileName(currentPlaylist[i]) === currentFileName) {
+                        playlistIndex = i;
+                        break;
+                    }
+                }
             }
 
             if (!found) {
@@ -85,14 +117,16 @@
         video.volume = VIDEO_AUDIO_ENABLED ? 1.0 : 0;
 
         video.addEventListener("ended", function () {
-            /* Перезапуск на границе роликов освобождает память LG WebView. */
-            if (!window.BOARD_DISABLE_FORCED_RELOAD && new Date().getTime() - startedAt >= RELOAD_AFTER_MS) {
-                window.location.reload();
+            if (!currentPlaylist.length) return;
+            playlistIndex = (playlistIndex + 1) % currentPlaylist.length;
+
+            /* Обновляем старый LG WebView только между роликами, не обрывая просмотр. */
+            if (new Date().getTime() - startedAt >= RELOAD_ON_VIDEO_END_AFTER_MS) {
+                rememberNextVideo(currentPlaylist[playlistIndex]);
+                reloadPage();
                 return;
             }
 
-            if (!currentPlaylist.length) return;
-            playlistIndex = (playlistIndex + 1) % currentPlaylist.length;
             video.src = currentPlaylist[playlistIndex];
             playVideo(video);
         });
@@ -113,6 +147,9 @@
 
         window.initPlaylist = loadPlaylist;
         loadPlaylist(false);
+
+        /* Аварийная страховка на случай очень длинного ролика или зависшего события ended. */
+        setTimeout(reloadPage, HARD_RELOAD_AFTER_MS);
     }
 
     if (document.readyState === "loading") {

@@ -15,7 +15,7 @@ def test_board_html_loads_profiles_before_board_script():
     source = _read("queue/board.html")
     bootstrap = _read("queue/js/board-bootstrap.js")
 
-    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-4"></script>' in source
+    assert '<script src="/queue/js/board-bootstrap.js?v=board-profile-5"></script>' in source
     assert 'loadScript("/queue/js/board-profiles.js")' in bootstrap
     assert bootstrap.index('/queue/js/board-profiles.js') < bootstrap.index('/queue/js/board.js')
 
@@ -51,7 +51,7 @@ def test_media_screen_uses_standard_board_with_media_profile():
     assert 'showLabels: false' in bootstrap
     assert 'callAudioEnabled: getBooleanFlag("call_audio", true)' in bootstrap
     assert 'videoAudioEnabled: getBooleanFlag("video_audio", true)' in bootstrap
-    assert 'loadScript("/queue/js/media-lite.js?v=board-profile-3")' in bootstrap
+    assert 'loadScript("/queue/js/media-lite.js?v=board-profile-5")' in bootstrap
     assert 'loadScript("/queue/js/tts-lite.js?v=board-profile-4")' in bootstrap
     assert 'loadScript("/queue/js/board-lite.js?v=board-profile-3")' in bootstrap
     assert 'loadScript("/queue/js/board.js")' in bootstrap
@@ -94,6 +94,24 @@ def test_media_tts_uses_web_audio_without_stealing_the_video_element():
     assert "context.decodeAudioData(" in source
     assert "context.createBufferSource()" in source
     assert "new Audio()" not in source
+
+
+def test_media_reload_waits_for_video_end_and_resumes_with_next_video():
+    source = _read("queue/js/media-lite.js")
+
+    ended_index = source.index('video.addEventListener("ended"')
+    planned_reload_index = source.index(
+        "new Date().getTime() - startedAt >= RELOAD_ON_VIDEO_END_AFTER_MS",
+        ended_index,
+    )
+
+    assert "RELOAD_ON_VIDEO_END_AFTER_MS = 20 * 60 * 1000" in source
+    assert planned_reload_index > ended_index
+    assert "rememberNextVideo(currentPlaylist[playlistIndex])" in source
+    assert 'window.sessionStorage.setItem(NEXT_VIDEO_STORAGE_KEY, path)' in source
+    assert "takeRememberedVideo()" in source
+    assert "setTimeout(reloadPage, HARD_RELOAD_AFTER_MS)" in source
+    assert "HARD_RELOAD_AFTER_MS = 60 * 60 * 1000" in source
 
 
 def test_board_popup_is_triggered_only_by_deduplicated_ticket_called_events_and_can_replace_highlight():
