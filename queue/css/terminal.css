@@ -5,17 +5,21 @@
 /* --- Страница --- */
 body.terminal-page{
     margin: 0;
-    padding: 60px 20px;
+    padding: clamp(20px, 5vh, 60px) 20px 20px;
     font-family: 'Inter', -apple-system, sans-serif; /* Шрифт как у оператора */
     background-color: var(--bg);
     color: var(--text-main);
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     box-sizing: border-box;
     cursor: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 body.terminal-page h1{
 	text-align: center; 
-    margin-bottom: 50px;
+    margin: 0 0 clamp(20px, 4vh, 50px);
     color: var(--primary);
     font-size: 42px;
     font-weight: 800;
@@ -30,8 +34,13 @@ body.terminal-page #services{
     justify-content: center;
     flex-wrap: wrap;
     gap: var(--button-gap);
+    width: 100%;
     max-width: 1200px;
-    margin: 0 auto 40px auto;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+    align-content: flex-start;
+    margin: 0 auto;
 }
 
 body.terminal-page .terminal-service-section{
@@ -62,6 +71,65 @@ body.terminal-page .terminal-service-section-list{
     flex-wrap: wrap;
     gap: var(--button-gap);
     margin-bottom: 34px;
+}
+
+body.terminal-page .service-pagination{
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    flex: none;
+    visibility: hidden;
+}
+
+body.terminal-page .service-pagination.visible{
+    visibility: visible;
+}
+
+body.terminal-page .service-pagination button{
+    min-width: 190px;
+    min-height: 64px;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+body.terminal-page .service-pagination button:disabled{
+    background: #cbd5e1;
+    color: #64748b;
+}
+
+body.terminal-page #service-page-status{
+    min-width: 120px;
+    color: var(--primary);
+    font-size: 20px;
+    font-weight: 800;
+    text-align: center;
+}
+
+@media (max-height: 760px){
+    body.terminal-page h1{
+        font-size: 34px;
+    }
+
+    body.terminal-page button.service-btn{
+        height: 130px;
+    }
+
+    body.terminal-page .terminal-service-section-title{
+        margin-bottom: 14px;
+        font-size: 21px;
+    }
+
+    body.terminal-page .terminal-service-section-list{
+        margin-bottom: 20px;
+    }
 }
 
 

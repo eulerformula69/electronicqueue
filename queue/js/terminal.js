@@ -100,6 +100,9 @@ let terminalSettings = {
 
 let terminalServiceGroups = [];
 let terminalUngroupedServices = [];
+let terminalServicePages = [];
+let terminalServicePage = 0;
+let terminalServiceResizeTimer = null;
 
 const TERMINAL_SERVICE_GESTURE = {
     corners: ["top-left", "top-right", "bottom-right", "bottom-left"],
@@ -307,13 +310,72 @@ function renderServiceGroups() {
         return;
     }
 
-    terminalServiceGroups.forEach(group => {
-        renderServiceSection(container, group.name, group.services || []);
+    terminalServicePages = buildServicePages();
+    terminalServicePage = Math.min(terminalServicePage, terminalServicePages.length - 1);
+    renderCurrentServicePage();
+}
+
+function getTerminalServiceSections() {
+    const sections = terminalServiceGroups
+        .filter(group => Array.isArray(group.services) && group.services.length)
+        .map(group => ({ title: group.name, services: group.services }));
+
+    if (terminalUngroupedServices.length) {
+        sections.push({ title: "Без группы", services: terminalUngroupedServices });
+    }
+
+    return sections;
+}
+
+function buildServicePages() {
+    const container = document.getElementById("services");
+    const pages = [];
+    let page = [];
+
+    getTerminalServiceSections().forEach(section => {
+        section.services.forEach(service => {
+            const pageSection = page.find(item => item.title === section.title);
+            if (pageSection) {
+                pageSection.services.push(service);
+            } else {
+                page.push({ title: section.title, services: [service] });
+            }
+
+            renderServicePage(page);
+            if (container.scrollHeight <= container.clientHeight + 1) return;
+
+            const overflowingSection = page.find(item => item.title === section.title);
+            overflowingSection.services.pop();
+            page = page.filter(item => item.services.length);
+
+            if (page.length) pages.push(page);
+            page = [{ title: section.title, services: [service] }];
+        });
     });
 
-    if (terminalUngroupedServices.length > 0) {
-        renderServiceSection(container, "Без группы", terminalUngroupedServices);
-    }
+    if (page.length) pages.push(page);
+    return pages.length ? pages : [[]];
+}
+
+function renderCurrentServicePage() {
+    renderServicePage(terminalServicePages[terminalServicePage] || []);
+
+    const pagination = document.getElementById("service-pagination");
+    const hasMultiplePages = terminalServicePages.length > 1;
+    pagination.classList.toggle("visible", hasMultiplePages);
+    document.getElementById("service-page-prev").disabled = terminalServicePage === 0;
+    document.getElementById("service-page-next").disabled =
+        terminalServicePage >= terminalServicePages.length - 1;
+    document.getElementById("service-page-status").textContent =
+        hasMultiplePages ? `${terminalServicePage + 1} / ${terminalServicePages.length}` : "";
+}
+
+function renderServicePage(sections) {
+    const container = document.getElementById("services");
+    container.innerHTML = "";
+    sections.forEach(section => {
+        renderServiceSection(container, section.title, section.services);
+    });
 }
 
 function renderServiceSection(container, title, services) {
@@ -871,6 +933,28 @@ function renderVkbKeys() {
 document.addEventListener('DOMContentLoaded', () => {
     renderVkbKeys();
     setActiveField('term-login');
+
+    document.getElementById("service-page-prev").addEventListener("click", () => {
+        if (terminalServicePage === 0) return;
+        terminalServicePage -= 1;
+        renderCurrentServicePage();
+    });
+
+    document.getElementById("service-page-next").addEventListener("click", () => {
+        if (terminalServicePage >= terminalServicePages.length - 1) return;
+        terminalServicePage += 1;
+        renderCurrentServicePage();
+    });
+
+    window.addEventListener("resize", () => {
+        window.clearTimeout(terminalServiceResizeTimer);
+        terminalServiceResizeTimer = window.setTimeout(() => {
+            if (!getTerminalServiceSections().length) return;
+            terminalServicePage = 0;
+            terminalServicePages = buildServicePages();
+            renderCurrentServicePage();
+        }, 150);
+    });
 
     // Поддержка физической клавиатуры
     document.addEventListener('keydown', (e) => {

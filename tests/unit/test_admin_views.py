@@ -122,6 +122,20 @@ def test_settings_view_renders_and_saves_ticket_print_scale_percent():
     assert "scale(var(--ticket-print-scale, 0.94))" in terminal_html
 
 
+def test_terminal_services_are_paginated_to_fit_the_viewport():
+    terminal = _read("queue/js/terminal.js")
+    terminal_html = _read("queue/terminal.html")
+    terminal_css = _read("queue/css/terminal.css")
+
+    assert "buildServicePages" in terminal
+    assert "container.scrollHeight <= container.clientHeight" in terminal
+    assert 'window.addEventListener("resize"' in terminal
+    assert 'id="service-page-prev"' in terminal_html
+    assert 'id="service-page-next"' in terminal_html
+    assert "height: 100dvh" in terminal_css
+    assert "overflow: hidden" in terminal_css
+
+
 def test_settings_view_renders_and_saves_auto_call_settings():
     modern_source = _read("queue/js/admin/views/settings.view.js")
     legacy_source = _read("queue/js/admin/settings.js")

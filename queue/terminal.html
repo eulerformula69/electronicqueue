@@ -174,6 +174,12 @@
     
     <div id="services">Загрузка услуг...</div>
 
+    <nav id="service-pagination" class="service-pagination" aria-label="Страницы услуг">
+        <button id="service-page-prev" type="button">Назад</button>
+        <span id="service-page-status" aria-live="polite"></span>
+        <button id="service-page-next" type="button">Далее</button>
+    </nav>
+
     <div id="ticket-notice">
         <button id="ticket-notice-close" type="button" aria-label="Закрыть уведомление" title="Закрыть">&times;</button>
         <span id="ticket-message"></span>
@@ -200,7 +206,7 @@
 
 
     <script src="/queue/js/config.js"></script>
-    <script src="/queue/js/terminal.js?v=1.7"></script>
+    <script src="/queue/js/terminal.js?v=1.8"></script>
     <script src="/queue/js/terminal-reprint.js?v=1.0"></script>
 </body>
 </html>
