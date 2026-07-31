@@ -45,7 +45,12 @@ class CloseDayResult:
     deleted_session_ids: tuple[str, ...]
 
 
-def close_day(db) -> CloseDayResult:
+def close_day(
+    db,
+    *,
+    ticket_action: str,
+    operators_offline: bool,
+) -> CloseDayResult:
     """Apply all end-of-day changes atomically and return affected row counts."""
     # This helper may create the singleton settings row and commit it.
     settings = get_system_settings_dict(db)
@@ -71,21 +76,34 @@ def close_day(db) -> CloseDayResult:
             """
         )
     )
-    tickets_finished = (
-        db.query(Ticket)
-        .filter(Ticket.status == "called")
-        .update(
-            {
-                Ticket.status: "finished",
-                Ticket.completion_reason: "completed",
-                Ticket.finished_at: now,
-            },
-            synchronize_session=False,
+    tickets_finished = 0
+    tickets_cancelled = 0
+    tickets_deferred = 0
+    if ticket_action == "finish":
+        tickets_finished = (
+            db.query(Ticket)
+            .filter(Ticket.status == "called")
+            .update(
+                {
+                    Ticket.status: "finished",
+                    Ticket.completion_reason: "completed",
+                    Ticket.finished_at: now,
+                },
+                synchronize_session=False,
+            )
         )
-    )
+    elif ticket_action != "cancel":
+        raise ValueError(f"Неизвестное действие с билетами: {ticket_action}")
+
     tickets_cancelled = (
         db.query(Ticket)
-        .filter(Ticket.status == "waiting")
+        .filter(
+            Ticket.status.in_(
+                ("waiting", "called")
+                if ticket_action == "cancel"
+                else ("waiting",)
+            )
+        )
         .update(
             {
                 Ticket.status: "cancelled",
@@ -95,7 +113,6 @@ def close_day(db) -> CloseDayResult:
             synchronize_session=False,
         )
     )
-    
     tickets_deferred = (
         db.query(Ticket)
         .filter(Ticket.status == "deferred")
@@ -109,27 +126,31 @@ def close_day(db) -> CloseDayResult:
         )
     )
 
-    operators = db.query(Operator).order_by(Operator.id).all()
-    for operator in operators:
-        record_operator_status(db, operator.id, operator.window_id, "offline")
+    windows_offline = 0
+    deleted_session_ids: tuple[str, ...] = ()
+    sessions_deleted = 0
+    if operators_offline:
+        operators = db.query(Operator).order_by(Operator.id).all()
+        for operator in operators:
+            record_operator_status(db, operator.id, operator.window_id, "offline")
 
-    windows_offline = (
-        db.query(Window)
-        .filter(or_(Window.status != "offline", Window.status.is_(None)))
-        .update({Window.status: "offline"}, synchronize_session=False)
-    )
-    deleted_session_ids = tuple(
-        session_id
-        for (session_id,) in db.query(UserSession.session_id)
-        .order_by(UserSession.session_id)
-        .all()
-    )
-    sessions_deleted = db.query(UserSession).delete(synchronize_session=False)
-
-    if settings["hide_services_without_online_operators"]:
-        db.query(Service).update(
-            {Service.status: "inactive"}, synchronize_session=False
+        windows_offline = (
+            db.query(Window)
+            .filter(or_(Window.status != "offline", Window.status.is_(None)))
+            .update({Window.status: "offline"}, synchronize_session=False)
         )
+        deleted_session_ids = tuple(
+            session_id
+            for (session_id,) in db.query(UserSession.session_id)
+            .order_by(UserSession.session_id)
+            .all()
+        )
+        sessions_deleted = db.query(UserSession).delete(synchronize_session=False)
+
+        if settings["hide_services_without_online_operators"]:
+            db.query(Service).update(
+                {Service.status: "inactive"}, synchronize_session=False
+            )
 
     db.commit()
     return CloseDayResult(
@@ -159,7 +180,42 @@ async def notify_clients(deleted_session_ids: tuple[str, ...]) -> None:
 
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Закрыть рабочий день сейчас или запланировать одноразовые закрытия."
+        description=(
+            "Закрыть рабочий день сейчас или по расписанию. "
+            "Для запуска явно выберите действие с билетами и операторами."
+        ),
+        epilog=(
+            "Пример: python scripts/closeDay.py "
+            "--finish-tickets --offline-operators"
+        ),
+    )
+    ticket_group = parser.add_mutually_exclusive_group(required=True)
+    ticket_group.add_argument(
+        "--finish-tickets",
+        action="store_const",
+        const="finish",
+        dest="ticket_action",
+        help="завершить обслуживаемые билеты, отменить ожидающие и отложенные",
+    )
+    ticket_group.add_argument(
+        "--cancel-tickets",
+        action="store_const",
+        const="cancel",
+        dest="ticket_action",
+        help="отменить обслуживаемые, ожидающие и отложенные билеты",
+    )
+    operator_group = parser.add_mutually_exclusive_group(required=True)
+    operator_group.add_argument(
+        "--offline-operators",
+        action="store_true",
+        dest="operators_offline",
+        help="перевести окна операторов в офлайн и закрыть их сессии",
+    )
+    operator_group.add_argument(
+        "--keep-operators-online",
+        action="store_false",
+        dest="operators_offline",
+        help="не менять статусы и сессии операторов",
     )
     parser.add_argument(
         "--schedule",
@@ -175,11 +231,15 @@ def build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_close_day_once() -> int:
+def run_close_day_once(*, ticket_action: str, operators_offline: bool) -> int:
     """Close the current day immediately and notify connected clients."""
     db = SessionLocal()
     try:
-        result = close_day(db)
+        result = close_day(
+            db,
+            ticket_action=ticket_action,
+            operators_offline=operators_offline,
+        )
     except (SQLAlchemyError, ValueError) as error:
         db.rollback()
         print(f"Ошибка закрытия рабочего дня: {error}", file=sys.stderr)
@@ -190,7 +250,7 @@ def run_close_day_once() -> int:
     print("Рабочий день закрыт.")
     print(f"Окон переведено в offline: {result.windows_offline}")
     print(f"Текущих билетов завершено: {result.tickets_finished}")
-    print(f"Ожидающих билетов отменено: {result.tickets_cancelled}")
+    print(f"Открытых билетов отменено: {result.tickets_cancelled}")
     print(f"Отложенных билетов отменено: {result.tickets_deferred}")
     print(f"Сессий операторов закрыто: {result.sessions_deleted}")
 
@@ -209,7 +269,16 @@ def run_close_day_once() -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_argument_parser().parse_args(argv)
+    parser = build_argument_parser()
+    effective_argv = sys.argv[1:] if argv is None else argv
+    if not effective_argv:
+        parser.print_help()
+        return 0
+    args = parser.parse_args(effective_argv)
+    close_day_once = lambda: run_close_day_once(
+        ticket_action=args.ticket_action,
+        operators_offline=args.operators_offline,
+    )
     if args.schedule is not None:
         try:
             values = args.schedule
@@ -226,12 +295,12 @@ def main(argv: list[str] | None = None) -> int:
 
         print("Таймер запущен. Не закрывайте это окно до последнего закрытия.")
         try:
-            return run_schedule(run_times, run_close_day_once)
+            return run_schedule(run_times, close_day_once)
         except KeyboardInterrupt:
             print("\nТаймер Close Day остановлен.")
             return 130
 
-    return run_close_day_once()
+    return close_day_once()
 
 
 if __name__ == "__main__":

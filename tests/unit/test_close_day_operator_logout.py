@@ -6,11 +6,52 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.connections import ConnectionManager
-from scripts.closeDay import notify_clients
+from scripts.closeDay import build_argument_parser, main, notify_clients
 from scripts.close_day_schedule import parse_run_at, run_schedule, wait_until
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_close_day_without_flags_prints_help_and_does_not_run(capsys):
+    assert main([]) == 0
+
+    output = capsys.readouterr().out
+    assert "--finish-tickets" in output
+    assert "--cancel-tickets" in output
+    assert "--offline-operators" in output
+    assert "--keep-operators-online" in output
+
+
+def test_close_day_requires_ticket_and_operator_choices():
+    parser = build_argument_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--finish-tickets"])
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--offline-operators"])
+
+
+def test_close_day_parses_explicit_choices():
+    args = build_argument_parser().parse_args(
+        ["--cancel-tickets", "--keep-operators-online"]
+    )
+
+    assert args.ticket_action == "cancel"
+    assert args.operators_offline is False
+
+
+def test_close_day_passes_explicit_choices_to_operation(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "scripts.closeDay.run_close_day_once",
+        lambda **options: calls.append(options) or 0,
+    )
+
+    assert main(["--cancel-tickets", "--keep-operators-online"]) == 0
+    assert calls == [
+        {"ticket_action": "cancel", "operators_offline": False}
+    ]
 
 
 class FakeWebSocket:

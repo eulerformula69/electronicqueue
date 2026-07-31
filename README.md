@@ -166,26 +166,33 @@ sudo bash deploy/install.sh
 Закрыть рабочий день сразу:
 
 ```bash
-sudo queue-close-day
+sudo queue-close-day --finish-tickets --offline-operators
 ```
+
+Без флагов команда только показывает подсказку. Для запуска нужно явно выбрать:
+
+- `--finish-tickets` — завершить обслуживаемые билеты, а ожидающие и
+  отложенные отменить; либо `--cancel-tickets` — отменить все открытые билеты;
+- `--offline-operators` — перевести операторов в офлайн и закрыть их сессии;
+  либо `--keep-operators-online` — не менять их статусы и сессии.
 
 Запланировать несколько одноразовых закрытий в интерактивном режиме:
 
 ```bash
-sudo queue-close-day --schedule
+sudo queue-close-day --finish-tickets --offline-operators --schedule
 ```
 
 Если короткая команда не установлена, скрипт можно запустить напрямую тем
 Python, которым он обычно запускается на сервере:
 
 ```bash
-python3 scripts/closeDay.py --schedule
+python3 scripts/closeDay.py --finish-tickets --offline-operators --schedule
 ```
 
 На Windows:
 
 ```bat
-py scripts/closeDay.py --schedule
+py scripts/closeDay.py --finish-tickets --offline-operators --schedule
 ```
 
 Скрипт остаётся запущенным и проверяет время внутри процесса. До последнего
@@ -200,6 +207,8 @@ py scripts/closeDay.py --schedule
 
 ```bash
 sudo queue-close-day \
+  --finish-tickets \
+  --offline-operators \
   --schedule "24.07.2026 18:00" \
   --schedule "25.07.2026 14:00"
 ```
