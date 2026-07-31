@@ -4,8 +4,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from starlette.websockets import WebSocketState
 
 from app.connections import ConnectionManager
+from app.routers.websocket import receive_text_or_none
 from scripts.closeDay import build_argument_parser, main, notify_clients
 from scripts.close_day_schedule import parse_run_at, run_schedule, wait_until
 
@@ -64,6 +66,19 @@ class FakeWebSocket:
 
     async def send_json(self, message):
         self.messages.append(message)
+
+
+@pytest.mark.asyncio
+async def test_receive_text_treats_already_closed_websocket_as_disconnect():
+    class ClosedWebSocket:
+        application_state = WebSocketState.DISCONNECTED
+
+        async def receive_text(self):
+            raise RuntimeError(
+                'WebSocket is not connected. Need to call "accept" first.'
+            )
+
+    assert await receive_text_or_none(ClosedWebSocket()) is None
 
 
 @pytest.mark.asyncio

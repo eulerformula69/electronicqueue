@@ -19,6 +19,7 @@ from fastapi.params import Path
 from fastapi.responses import FileResponse
 from sqlalchemy import and_, asc, func, literal, text
 from sqlalchemy.orm import Session
+from starlette.websockets import WebSocketState
 
 from app.config import (
     ALLOWED_MEDIA_EXTENSIONS, BASE_DIR, DEFAULT_PAGE_LIMIT, MAX_FILE_SIZE,
@@ -46,6 +47,18 @@ from app.services.tickets import (
 router = APIRouter()
 
 
+async def receive_text_or_none(websocket: WebSocket) -> str | None:
+    """Return None when the peer has already disconnected."""
+    try:
+        return await websocket.receive_text()
+    except WebSocketDisconnect:
+        return None
+    except RuntimeError:
+        if websocket.application_state == WebSocketState.DISCONNECTED:
+            return None
+        raise
+
+
 @router.websocket("/ws/terminal")
 async def websocket_endpoint(websocket: WebSocket):
     """
@@ -57,7 +70,9 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            raw = await websocket.receive_text()
+            raw = await receive_text_or_none(websocket)
+            if raw is None:
+                break
             try:
                 message = json.loads(raw)
             except Exception:
@@ -126,8 +141,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 await broadcast_board()
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        pass
     finally:
+        manager.disconnect(websocket)
         db.close()
 
 
@@ -139,9 +155,12 @@ async def websocket_board(websocket: WebSocket):
         await websocket.send_json(get_board_state())
 
         while True:
-            await websocket.receive_text()  # держим соединение живым
+            if await receive_text_or_none(websocket) is None:
+                break
 
     except WebSocketDisconnect:
+        pass
+    finally:
         manager.disconnect(websocket)
 
 
