@@ -38,8 +38,12 @@ def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     assert "return-to-queue-btn" not in primary_actions
     assert "defer-ticket-btn" in actions_area
     assert "showDeferReasonPopup()" in actions_area
-    assert "ВЫЗВАТЬ ПО НОМЕРУ" in actions_area
-    assert 'onclick="cancelCurrent()"' in actions_area
+    settings_area = source.split('<div id="operator-settings-popup"', 1)[1].split(
+        '</header>', 1
+    )[0]
+    assert "Вызвать по номеру" not in actions_area
+    assert "Вызвать по номеру" in settings_area
+    assert "cancelCurrent({reason: 'no_show'})" in actions_area
 
 
 def test_operator_has_four_clickable_queue_columns():
@@ -77,16 +81,17 @@ def test_redirect_limit_is_checked_before_modal_opens():
     )
 
 
-def test_operator_finish_warning_can_route_to_cancel_or_finish():
+def test_operator_finish_warning_can_continue_or_confirm_finish():
     source = read_text("queue/js/operator.js")
 
-    assert "SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000" in source
-    assert "RECALL_FINISH_WARNING_COUNT = 2" in source
+    assert "operatorSettings.short_service_warning_minutes" in source
+    assert "warningMinutes * 60 * 1000" in source
     assert "showFinishWarningPopup()" in source
-    assert 'text: "Завершить"' in source
-    assert 'text: "Клиент не явился"' in source
+    assert 'title: "Обслуживание завершено слишком быстро?"' in source
+    assert 'text: "Подтвердить завершение"' in source
+    assert 'text: "Продолжить обслуживание"' in source
     assert "finishCurrent({ skipWarning: true })" in source
-    assert 'cancelCurrent({ reason: "no_show" })' in source
+    assert "быстрее чем за ${warningMinutes} мин." in source
 
 
 def test_operator_actions_keep_existing_ticket_endpoints():
@@ -137,7 +142,7 @@ def test_idle_ticket_text_is_smaller_without_shifting_client_label():
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
-    display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
+    display_zone = html.split('<section class="glass-card display-zone"', 1)[1]
     display_zone = display_zone.split('<section class="glass-card">', 1)[0]
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
@@ -147,10 +152,11 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "auto_call_enabled" in source
     assert "auto_call_delay_seconds" in source
     assert "startAutoCallAfterFinish();" in source
-    assert "runAutoCallNow" in source
-    assert "await callNext({ autoCall: true });" in source
+    assert "runAutoCallNow" not in source
+    assert "await callNext({ autoCall: true });" not in source
+    assert "Следующий клиент через ${remaining} сек." in source
     assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
-    assert "loadQueue({ checkNewTickets: false })" in source
+    assert "auto_call_server_managed" in source
     assert "Очередь пуста" in source
     assert "auto-call-info-block" in display_zone
     assert "auto-call-countdown" not in display_zone
@@ -213,11 +219,12 @@ def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
     assert "autoCallSettingsLoaded &&" in settings_section
     assert "!wasAutoCallEnabled &&" in settings_section
     assert "operatorSettings.auto_call_enabled" in settings_section
-    assert "autoCallWasJustEnabled || hadActiveAutoCallTimer" in settings_section
+    assert "hadActiveAutoCallTimer" not in settings_section
+    assert "autoCallWasJustEnabled" in settings_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in settings_section
 
 
-def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
+def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatch():
     source = read_text("queue/js/operator.js")
     websocket_section = source.split("function initWebSocket", 1)[1]
     websocket_section = websocket_section.split("function startOperatorPolling", 1)[0]
@@ -232,8 +239,8 @@ def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
     assert 'stopAutoCall("Очередь пуста");' in refresh_section
     assert 'autoCallState === "empty"' in refresh_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
-    assert "if (queueHasCallableTickets === false)" in start_section
-    assert 'stopAutoCall("Очередь пуста");' in start_section
+    assert "if (queueHasCallableTickets === false)" not in start_section
+    assert "renderAutoDispatchCountdown();" in start_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
@@ -375,11 +382,115 @@ def test_operator_ui_uses_one_state_refresh_for_action_availability():
     assert 'document.querySelectorAll("[data-call-action]")' in source
     assert 'document.querySelectorAll("[data-current-ticket-action]")' in source
     assert "button.disabled = !online || hasTicket || busy" in source
-    assert "button.disabled = !online || !hasTicket || busy" in source
-    assert 'displayZone.classList.toggle("operator-work-disabled", !online)' in source
+    assert "button.disabled = !hasTicket || !statusAllowsAction || busy" in source
+    assert 'displayZone.classList.toggle("operator-work-disabled", !online && !hasTicket)' in source
     assert "data-call-action" in html
     assert "data-current-ticket-action" in html
+    assert 'data-ticket-status="called"' in css
+    assert "#start-service-btn" in css
+
+
+def test_operator_ui_follows_contextual_action_audit():
+    html = read_text("queue/operator.html")
+    css = read_text("queue/css/operator.css")
+
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    assert ">Вызвать следующего<" in html
+    assert ">Начать обслуживание<" in html
+    assert ">Завершить обслуживание<" in html
+    assert 'class="btn-primary" id="finish-btn"' in html
+    assert 'class="button-group secondary-actions called-actions"' in html
+    assert 'class="button-group secondary-actions serving-actions"' in html
+    assert html.index('id="redirect-btn"') < html.index('id="defer-ticket-btn"')
+    assert "Отменить (не явился)" in html
+    assert 'id="start-service-btn" class="btn-primary"' in html
+    assert html.index('id="recall-btn"') < html.index('id="cancel-btn"')
+    assert 'data-ticket-status="serving"' in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
+    assert "transition: all" not in css
+    assert "prefers-reduced-motion: reduce" in css
+    assert "@media (max-width: 760px)" in css
     assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
+
+
+def test_break_allows_finishing_active_ticket_but_not_starting_another():
+    ui_state = read_text("queue/js/operator-ui-state.js")
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+
+    assert "button.disabled = !online || hasTicket || busy" in ui_state
+    assert "button.disabled = !hasTicket || !statusAllowsAction || busy" in ui_state
+    assert "if (!isOperatorOnBreak() || currentTicketId) return true;" in source
+    assert "Ticket.status.in_(ACTIVE_TICKET_STATUSES)" in backend
+    assert "if active_ticket:" in backend
+
+
+def test_break_with_active_ticket_offers_deferred_or_immediate_break():
+    source = read_text("queue/js/operator.js")
+
+    assert "showBreakWithActiveTicketPopup()" in source
+    assert "Уйти после завершения обслуживания" in source
+    assert "Вернуть талон в очередь и уйти" in source
+    assert 'sessionStorage.setItem(PENDING_BREAK_STORAGE_KEY, "true")' in source
+    assert 'confirmReturnCurrentToQueue({scheduleNext: false})' in source
+    assert 'await changeWindowStatus("break")' in source
+
+
+def test_deferred_ticket_limit_and_reminder_are_configurable():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+    settings_view = read_text("queue/js/admin/views/settings.view.js")
+
+    assert 'id="deferred-reminder"' in html
+    assert "У вас всё ещё есть отложенные талоны" in source
+    assert 'settings["max_deferred_tickets_per_operator"]' in backend
+    assert "max_deferred_tickets_per_operator" in settings_view
+    assert "short_service_warning_minutes" in settings_view
+
+
+def test_deferred_tickets_block_new_calls_with_an_explanation():
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+    dispatcher = read_text("app/services/auto_dispatch.py")
+
+    assert "deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator" in source
+    assert "Сначала верните отложенный талон в обслуживание" in source
+    assert 'OperatorQueueSections.select("deferred")' in source
+    assert "ensure_operator_has_no_deferred_tickets(db, operator)" in backend
+    assert "deferred_limit_reached" in dispatcher
+
+
+def test_deferred_reminder_waits_two_minutes():
+    source = read_text("queue/js/operator.js")
+
+    assert "function scheduleDeferredReminder(count, deferredSince)" in source
+    assert "+ 2 * 60 * 1000" in source
+    assert "reminder.hidden = true" in source
+
+
+def test_pending_break_runs_after_ticket_request_finishes():
+    source = read_text("queue/js/operator.js")
+    scheduler = source.split("function scheduleAutoCallAfterWorkspaceFreed()", 1)[1]
+    scheduler = scheduler.split("async function promptCallByNumber", 1)[0]
+
+    assert "setTimeout(async () =>" in scheduler
+    assert 'const changed = await changeWindowStatus("break")' in scheduler
+    assert "if (changed) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY)" in scheduler
+
+
+def test_operator_queue_scrolls_inside_desktop_viewport():
+    css = read_text("queue/css/operator.css")
+
+    body = css.split("body.operator-page{", 1)[1].split("}", 1)[0]
+    layout = css.split("body.operator-page .main-layout{", 1)[1].split("}", 1)[0]
+    queue = css.split("body.operator-page .queue-list{", 1)[1].split("}", 1)[0]
+
+    assert "height: 100dvh" in body
+    assert "overflow: hidden" in body
+    assert "min-height: 0" in layout
+    assert "overflow: hidden" in layout
+    assert "overflow-y: auto" in queue
 
 
 def test_operator_mutations_share_double_click_guard():
@@ -390,11 +501,30 @@ def test_operator_mutations_share_double_click_guard():
     assert "function beginOperatorRequest(key)" in ui_state
     assert "if (activeOperatorRequests.size > 0) return false;" in ui_state
     for key in (
-        "call-next", "call-specific", "finish", "cancel", "defer",
+        "call-next", "call-specific", "finish", "cancel", "cancel-deferred", "defer",
         "redirect", "return-to-queue", "recall", "resume-deferred",
     ):
         assert f'beginOperatorRequest("{key}")' in source
         assert f'endOperatorRequest("{key}")' in source
+
+
+def test_deferred_ticket_can_be_cancelled_from_queue_card():
+    source = read_text("queue/js/operator.js")
+    sections = read_text("queue/js/operator-queue-sections.js")
+    backend = read_text("app/routers/tickets.py")
+    css = read_text("queue/css/operator.css")
+
+    assert "selectedSection === \"deferred\"" in sections
+    assert "cancelDeferredTicket" in sections
+    assert "Отменить талон" in sections
+    assert "async function cancelDeferredTicket(ticketId, ticketNumber)" in source
+    assert "/tickets/deferred/${ticketId}/cancel" in source
+    assert "Отменён из отложенных" in source
+    assert '@router.post("/tickets/deferred/{ticket_id}/cancel"' in backend
+    assert 'Ticket.status == "deferred"' in backend
+    assert "queue-ticket-actions" in css
+    assert ".queue-ticket-actions > :only-child" in css
+    assert "grid-column: 1 / -1" in css
 
 
 def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls():
@@ -420,4 +550,4 @@ def test_auto_call_uses_distinct_break_and_offline_reasons():
     assert 'statusDisplay.textContent = "Включён";' in source
     assert "Автоочередь" not in source
     assert "Отсчёт начнётся после завершения текущего клиента" not in source
-    assert "normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds)" in source
+    assert "normalizeAutoCallDelay" in source

@@ -11,6 +11,7 @@ from app.models import (
     Operator, OperatorStatusPeriod, Service, Ticket, Window, WindowService,
 )
 from app.services.settings import get_system_settings_dict
+from app.services.ticket_lifecycle import ACTIVE_TICKET_STATUSES
 
 RECALL_COOLDOWN_SECONDS = 10
 
@@ -21,11 +22,13 @@ def called_ticket_wait_remaining_seconds(
     *,
     now: datetime | None = None,
 ) -> int:
-    """Return the server-authoritative wait before finishing a called ticket."""
-    if not ticket.called_at:
+    """Return the server-authoritative minimum service time remaining."""
+    if not ticket.service_started_at:
         return 0
     current_time = now or datetime.now()
-    available_at = ticket.called_at + timedelta(seconds=max(0, min_wait_seconds))
+    available_at = ticket.service_started_at + timedelta(
+        seconds=max(0, min_wait_seconds)
+    )
     return max(0, math.ceil((available_at - current_time).total_seconds()))
 
 
@@ -98,6 +101,11 @@ def low_load_auto_call_winner(
         .filter(Ticket.status == "called", Ticket.operator_id.isnot(None))
         .all()
     }
+    current_operator_ids.update(
+        row[0] for row in db.query(Ticket.operator_id)
+        .filter(Ticket.status == "serving", Ticket.operator_id.isnot(None))
+        .all()
+    )
     candidates = [
         candidate for candidate in candidates
         if candidate.id not in current_operator_ids
@@ -161,6 +169,11 @@ def claim_next_ticket(
         Ticket.window_id == operator.window_id,
         Ticket.status == "called",
     ).first()
+    if not current:
+        current = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "serving",
+        ).first()
     if current:
         return current, False
 
@@ -202,6 +215,7 @@ def claim_next_ticket(
     ticket.window_id = operator.window_id
     ticket.target_window_id = None
     ticket.called_at = called_at or datetime.now()
+    ticket.service_started_at = None
     ticket.last_recalled_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
@@ -220,6 +234,7 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     ticket.window_id = None
     ticket.target_window_id = None
     ticket.called_at = None
+    ticket.service_started_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
     ticket.deferred_at = None
@@ -263,6 +278,7 @@ def resume_ticket_to_service(
     ticket.window_id = window_id
     ticket.target_window_id = None
     ticket.called_at = called_at
+    ticket.service_started_at = None
     ticket.last_recalled_at = None
     ticket.finished_at = None
     ticket.defer_reason = None
@@ -277,12 +293,18 @@ def resume_deferred_ticket(
     window_id: int,
     now: datetime | None = None,
 ) -> None:
-    resume_ticket_to_service(
-        ticket,
-        operator_id=operator_id,
-        window_id=window_id,
-        now=now,
-    )
+    service_started_at = now or datetime.now()
+    ticket.status = "serving"
+    ticket.completion_reason = None
+    ticket.operator_id = operator_id
+    ticket.window_id = window_id
+    ticket.target_window_id = None
+    ticket.service_started_at = service_started_at
+    ticket.last_recalled_at = None
+    ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
+    ticket.cancel_reason = None
 
 
 def resume_cancelled_ticket(
@@ -345,7 +367,7 @@ def get_called_tickets():
         tickets = (
             db.query(Ticket, Window)
             .join(Window, Ticket.window_id == Window.id)
-            .filter(Ticket.status == "called")
+            .filter(Ticket.status.in_(ACTIVE_TICKET_STATUSES))
             .order_by(Ticket.called_at.asc())
             .all()
         )

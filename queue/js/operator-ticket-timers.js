@@ -41,7 +41,11 @@ function updateCalledTicketTimers() {
     const finishButton = document.getElementById("finish-btn");
     const serviceTimerContainer = document.getElementById("service-timer");
     const serviceTimer = document.getElementById("service-timer-value");
-    const hasServerStartTime = Boolean(currentTicketId && currentTicketCalledAt);
+    const hasServerStartTime = Boolean(
+        currentTicketId &&
+        currentTicketStatus === "serving" &&
+        currentTicketServiceStartedAt
+    );
 
     if (serviceTimerContainer) {
         serviceTimerContainer.hidden = !hasServerStartTime;
@@ -49,7 +53,7 @@ function updateCalledTicketTimers() {
 
     if (serviceTimer) {
         const elapsedSeconds = hasServerStartTime
-            ? (Date.now() - currentTicketCalledAt.getTime()) / 1000
+            ? (Date.now() - currentTicketServiceStartedAt.getTime()) / 1000
             : 0;
         serviceTimer.textContent = formatTicketDuration(elapsedSeconds);
     }
@@ -57,8 +61,8 @@ function updateCalledTicketTimers() {
     if (finishButton) {
         const remaining = calledTicketWaitRemainingSeconds();
         finishButton.textContent = remaining > 0
-            ? `ЗАВЕРШИТЬ (ЧЕРЕЗ ${formatTicketDuration(remaining)})`
-            : "ЗАВЕРШИТЬ";
+            ? `Завершить через ${formatTicketDuration(remaining)}`
+            : "Завершить обслуживание";
     }
 
     refreshOperatorUiState();
@@ -70,7 +74,11 @@ function syncCalledTicketTimers() {
         calledTicketTimerInterval = null;
     }
     updateCalledTicketTimers();
-    if (currentTicketId && currentTicketCalledAt) {
+    if (
+        currentTicketId &&
+        currentTicketStatus === "serving" &&
+        currentTicketServiceStartedAt
+    ) {
         calledTicketTimerInterval = setInterval(updateCalledTicketTimers, 1000);
     }
 }
@@ -91,7 +99,7 @@ function updateRecallCooldown() {
     if (button) {
         button.textContent = recallCooldown
             ? `Повтор через ${remaining}с`
-            : "ПОВТОРИТЬ ВЫЗОВ";
+            : "Повторить вызов";
     }
     refreshOperatorUiState();
     if (!recallCooldown && recallCooldownInterval) {

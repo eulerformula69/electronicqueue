@@ -15,8 +15,9 @@ body.operator-page{
     display: flex;
     flex-direction: column;
 
-    height: 100vh;        /* вместо min-height */
-    overflow: hidden;     /* чтобы скролл был внутри очереди */
+    height: 100dvh;
+    min-height: 100vh;
+    overflow: hidden;
 
     box-sizing: border-box;
 }
@@ -61,7 +62,7 @@ body.operator-page .app-update-notification{
 /* Основной контейнер */
 body.operator-page .main-layout{
     display: grid;
-    grid-template-columns: 1fr 3fr 1fr;
+    grid-template-columns: minmax(240px, 1fr) minmax(360px, 2fr) minmax(240px, 1fr);
     gap: 20px;
     padding: 20px 20px 44px 20px; /* добавили запас снизу */
     flex: 1;
@@ -91,7 +92,7 @@ body.operator-page .glass-card{
 /* Центральная зона с номером */
 body.operator-page .display-zone{
     padding: 40px 20px;
-    min-width: 400px;
+    min-width: 0;
     display: flex; /* Добавлено */
     flex-direction: column; /* Добавлено */
     align-items: center; /* Центрирование по горизонтали */
@@ -133,7 +134,7 @@ body.operator-page .ticket-number{
     justify-content: center;
 }
 body.operator-page .current-ticket-actions-inactive .ticket-number{
-    font-size: 4rem;
+    font-size: 2rem;
     letter-spacing: 0;
 }
 body.operator-page .services-list{
@@ -218,16 +219,23 @@ body.operator-page button{
     border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 100ms ease-out, background-color 160ms ease, color 160ms ease, opacity 160ms ease;
     font-size: 0.9rem;
+}
+body.operator-page button:not(:disabled):active{
+    transform: scale(0.98);
 }
 body.operator-page .btn-primary{ background: var(--primary); color: white; }
 body.operator-page .btn-primary:hover{ background: var(--primary-hover); }
 body.operator-page .btn-success{ background: var(--success); color: white; }
 body.operator-page .btn-danger{ background: var(--danger); color: white; }
+body.operator-page .btn-danger-outline{
+    border-color: color-mix(in srgb, var(--danger) 45%, white);
+    color: var(--danger);
+}
 body.operator-page .primary-actions{
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     width: 100%;
     margin-top: 0;
@@ -254,40 +262,9 @@ body.operator-page .secondary-actions button{
     min-width: 0;
 }
 
-body.operator-page .secondary-critical-actions{
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-body.operator-page .secondary-critical-actions #defer-ticket-btn{
-    grid-column: 1 / 3;
-}
-
-body.operator-page .secondary-critical-actions #cancel-btn{
-    grid-column: 3 / 5;
-}
-
-body.operator-page .button-group.tertiary-actions{
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    width: 100%;
-}
-
-body.operator-page .tertiary-actions #recall-btn{
-    grid-column: 1 / 2;
-}
-
-body.operator-page .tertiary-actions{
-    grid-column: 2 / 3;
-}
-
-body.operator-page .tertiary-actions #redirect-btn{
-    grid-column: 3 / 5;
-}
-
-body.operator-page .tertiary-actions button{
-	
-    width: 100%;
+body.operator-page .called-actions,
+body.operator-page .serving-actions{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 body.operator-page .operator-more-actions{
@@ -561,6 +538,12 @@ body.operator-page .operator-changelog-actions{
     justify-content: center;
     margin-top: 22px;
 }
+body.operator-page .operator-changelog-actions .btn-primary{
+    width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+    padding: 14px 18px;
+}
 body.operator-page .info-status{
     display: flex;
     align-items: center;
@@ -636,6 +619,22 @@ body.operator-page .operator-work-disabled [data-current-ticket-action]{
     filter: grayscale(0.8);
 }
 
+body.operator-page .display-zone[data-ticket-status="none"] [data-current-ticket-action],
+body.operator-page .display-zone[data-ticket-status="none"] .called-actions,
+body.operator-page .display-zone[data-ticket-status="none"] .serving-actions,
+body.operator-page .display-zone[data-ticket-status="called"] .serving-actions,
+body.operator-page .display-zone[data-ticket-status="serving"] .called-actions,
+body.operator-page .display-zone[data-ticket-status="called"] #finish-btn,
+body.operator-page .display-zone[data-ticket-status="called"] #redirect-btn,
+body.operator-page .display-zone[data-ticket-status="called"] #defer-ticket-btn,
+body.operator-page .display-zone[data-ticket-status="serving"] #start-service-btn,
+body.operator-page .display-zone[data-ticket-status="serving"] #recall-btn,
+body.operator-page .display-zone[data-ticket-status="serving"] #cancel-btn,
+body.operator-page .display-zone[data-ticket-status="called"] [data-call-action],
+body.operator-page .display-zone[data-ticket-status="serving"] [data-call-action] {
+    display: none;
+}
+
 body.operator-page .icon-button {
     display: inline-flex;
     align-items: center;
@@ -668,7 +667,7 @@ body.operator-page .dot{
     height: 10px;
     border-radius: 50%;
     background-color: #8d99ae; /* Серый по умолчанию */
-    transition: all 0.3s ease;
+    transition: background-color 160ms ease, box-shadow 160ms ease;
 }
 body.operator-page .dot.online{
     background-color: var(--success) !important;
@@ -717,7 +716,7 @@ body.operator-page .auto-call-status-text{
     font-weight: 700;
     color: var(--success);   /* Зеленый цвет для активного ожидания */
     min-height: 1.6rem;
-    transition: all 0.3s ease;
+    transition: color 160ms ease, opacity 160ms ease;
 }
 
 
@@ -763,7 +762,7 @@ body.operator-page input:checked + .slider:before{
     100% { opacity: 1; }
 }
 body.operator-page .auto-call-status-text:not(:empty){
-    animation: pulse-text 2s infinite;
+    animation: none;
 }
 
 
@@ -1121,8 +1120,113 @@ body.operator-page .queue-detail-meta{
     line-height: 1.25;
 }
 
-body.operator-page .queue-resume-btn{
+body.operator-page .queue-ticket-actions{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
     margin-top: 12px;
     width: 100%;
+}
+
+body.operator-page .queue-resume-btn,
+body.operator-page .queue-cancel-deferred-btn{
     min-height: 42px;
+}
+
+body.operator-page .queue-ticket-actions > :only-child{
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+body.operator-page .deferred-reminder{
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid #f0c36a;
+    border-radius: 8px;
+    background: #fff8e6;
+    color: #7a4b00;
+    text-align: left;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+    body.operator-page {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    body.operator-page .main-layout {
+        grid-template-columns: minmax(220px, 1fr) minmax(360px, 2fr);
+        overflow: visible;
+    }
+
+    body.operator-page .main-layout > .glass-card:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    body.operator-page {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    body.operator-page .header-panel {
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    body.operator-page .main-layout {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 12px;
+        gap: 12px;
+    }
+
+    body.operator-page .main-layout > .glass-card:last-child {
+        grid-column: auto;
+    }
+
+    body.operator-page .glass-card,
+    body.operator-page .operator-queue-panel {
+        overflow: visible !important;
+    }
+
+    body.operator-page .operator-queue-panel {
+        max-height: 50vh;
+    }
+
+    body.operator-page .display-zone {
+        padding: 24px 16px;
+    }
+
+    body.operator-page .current-client-panel {
+        flex-basis: auto;
+        min-height: 220px;
+    }
+
+    body.operator-page .ticket-number {
+        font-size: clamp(4rem, 22vw, 7rem);
+    }
+
+    body.operator-page .called-actions,
+    body.operator-page .serving-actions,
+    body.operator-page .queue-ticket-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.operator-page *,
+    body.operator-page *::before,
+    body.operator-page *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }

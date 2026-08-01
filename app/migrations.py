@@ -329,6 +329,20 @@ def migrate_ticket_recall_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_service_started_schema(engine):
+    """Add the factual start time for the called -> serving transition."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS service_started_at timestamp without time zone;
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_status_service_started_at
+        ON tickets (status, service_started_at);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """
@@ -486,6 +500,21 @@ def migrate_operator_auto_call_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_auto_dispatch_schema(engine):
+    """Persist recoverable server-side auto-dispatch deadlines."""
+    ddl = """
+    ALTER TABLE operators
+        ADD COLUMN IF NOT EXISTS next_auto_call_at timestamp without time zone;
+
+    CREATE INDEX IF NOT EXISTS ix_operators_next_auto_call_at
+        ON operators (next_auto_call_at)
+        WHERE next_auto_call_at IS NOT NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_called_ticket_min_wait_schema(engine):
     """Add the minimum wait before a called ticket can be finished."""
     ddl = """
@@ -609,5 +638,20 @@ def migrate_operator_service_notifications_schema(engine):
         ON operator_service_notifications (service_id);
     """
 
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def migrate_operator_workflow_settings_schema(engine):
+    """Add configurable limits for operator ticket workflow."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS short_service_warning_minutes integer DEFAULT 5,
+        ADD COLUMN IF NOT EXISTS max_deferred_tickets_per_operator integer DEFAULT 3;
+
+    UPDATE system_settings
+    SET short_service_warning_minutes = COALESCE(short_service_warning_minutes, 5),
+        max_deferred_tickets_per_operator = COALESCE(max_deferred_tickets_per_operator, 3);
+    """
     with engine.begin() as conn:
         conn.execute(text(ddl))

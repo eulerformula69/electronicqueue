@@ -30,5 +30,6 @@ def test_balancing_is_server_transactional_and_filters_eligibility():
     assert 'Window.status == "online"' in source
     assert "WindowService.service_id == ticket.service_id" in source
     assert 'Ticket.status == "called"' in source
+    assert 'Ticket.status == "serving"' in source
     assert 'Ticket.completion_reason.in_(("completed", "redirected"))' in source
     assert "queue_size > settings" in source

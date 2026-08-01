@@ -74,7 +74,7 @@ export async function loadOperators(){
             max="600"
             step="1"
             value="${operatorSettings.auto_call_delay_seconds ?? 60}"
-            placeholder="Задержка, сек."
+            placeholder="До системного вызова, сек."
           >
           <button onclick="saveOperatorAutoCallSettings()">Сохранить автовызов</button>
           <hr>

@@ -40,6 +40,7 @@ from app.schemas import LoginRequest, PingRequest
 from app.security import get_password_hash, verify_password
 from app.services.operators import update_services_status_for_window
 from app.services.settings import get_system_settings_dict
+from app.services.ticket_lifecycle import ACTIVE_TICKET_STATUSES
 from app.services.tickets import (
     broadcast_board, return_ticket_to_queue,
 )
@@ -218,7 +219,7 @@ async def logout(session_id: str = Header(...)):
                 if settings["active_ticket_on_operator_logout"] == "return_to_queue":
                     active_ticket = db.query(Ticket).filter(
                         Ticket.window_id == operator.window_id,
-                        Ticket.status == "called"
+                        Ticket.status.in_(ACTIVE_TICKET_STATUSES)
                     ).first()
 
                     if active_ticket:

@@ -153,7 +153,12 @@ const OperatorQueueSections = (() => {
                         ${reason ? `<span>Причина: ${escapeHtml(reason)}</span>` : ""}
                     </div>
                     ${redirected ? '<div class="redirect-badge">Перенаправлено</div>' : ''}
-                    ${canResume ? `<button class="btn-primary queue-resume-btn" type="button" onclick="resumeTicket(${Number(ticket.id)}, '${selectedSection}')" ${resumeDisabled ? "disabled" : ""}>Вернуть в обслуживание</button>` : ""}
+                    ${canResume ? `
+                        <div class="queue-ticket-actions">
+                            <button class="btn-primary queue-resume-btn" type="button" onclick="resumeTicket(${Number(ticket.id)}, '${selectedSection}')" ${resumeDisabled ? "disabled" : ""}>Вернуть в обслуживание</button>
+                            ${selectedSection === "deferred" ? `<button class="btn-outline btn-danger-outline queue-cancel-deferred-btn" type="button" onclick="cancelDeferredTicket(${Number(ticket.id)}, ${Number(ticket.number)})" ${resumeDisabled ? "disabled" : ""}>Отменить талон</button>` : ""}
+                        </div>
+                    ` : ""}
                 </div>
             `;
         }).join("");

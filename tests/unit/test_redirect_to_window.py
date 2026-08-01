@@ -81,7 +81,7 @@ def test_redirect_to_available_window_creates_ticket_for_selected_service(
     monkeypatch,
     target_status,
 ):
-    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="serving", window_id=5)
     target_window = Window(id=7, name="Window 7", status=target_status)
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
@@ -127,7 +127,7 @@ def test_redirect_to_window_uses_configured_redirect_limit(monkeypatch):
         id=10,
         number=42,
         service_id=1,
-        status="called",
+        status="serving",
         window_id=5,
         returned_to_queue_count=2,
     )
@@ -159,7 +159,7 @@ def test_redirect_to_window_uses_configured_redirect_limit(monkeypatch):
 
 
 def test_redirect_to_window_rejects_service_not_supported_by_window(monkeypatch):
-    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="serving", window_id=5)
     target_window = Window(id=7, name="Window 7", status="online")
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
@@ -187,7 +187,7 @@ def test_redirect_to_window_rejects_service_not_supported_by_window(monkeypatch)
 
 
 def test_redirect_to_window_rejects_offline_window(monkeypatch):
-    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="serving", window_id=5)
     target_window = Window(id=7, name="Window 7", status="offline")
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
@@ -215,7 +215,7 @@ def test_redirect_to_window_rejects_offline_window(monkeypatch):
 
 
 def test_redirect_to_window_allows_offline_window_when_enabled(monkeypatch):
-    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="serving", window_id=5)
     target_window = Window(id=7, name="Window 7", status="offline")
     selected_service = Service(id=3, name="Selected", is_archived=0, status="active")
     operator = Operator(id=2, window_id=5)
@@ -255,7 +255,7 @@ def test_redirect_to_window_allows_offline_window_when_enabled(monkeypatch):
 
 
 def test_redirect_to_window_rejects_inactive_service(monkeypatch):
-    source_ticket = Ticket(id=10, number=42, service_id=1, status="called", window_id=5)
+    source_ticket = Ticket(id=10, number=42, service_id=1, status="serving", window_id=5)
     target_window = Window(id=7, name="Window 7", status="online")
     selected_service = Service(id=3, name="Selected", is_archived=0, status="inactive")
     operator = Operator(id=2, window_id=5)

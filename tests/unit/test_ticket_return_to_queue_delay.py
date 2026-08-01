@@ -104,12 +104,13 @@ def test_resume_deferred_ticket_returns_ticket_to_service_without_general_queue(
         now=now,
     )
 
-    assert ticket.status == "called"
+    assert ticket.status == "serving"
     assert ticket.completion_reason is None
     assert ticket.operator_id == 7
     assert ticket.window_id == 3
     assert ticket.target_window_id is None
-    assert ticket.called_at == now
+    assert ticket.called_at == now - timedelta(minutes=20)
+    assert ticket.service_started_at == now
     assert ticket.defer_reason is None
     assert ticket.deferred_at is None
     assert ticket.finished_at is None
@@ -201,6 +202,9 @@ class ActiveTicketQuery:
     def first(self):
         return self.ticket
 
+    def scalar(self):
+        return 0
+
 
 class ActiveTicketDb:
     def __init__(self, ticket):
@@ -210,7 +214,6 @@ class ActiveTicketDb:
         self.closed = False
 
     def query(self, model):
-        assert model is Ticket
         return ActiveTicketQuery(self.ticket)
 
     def commit(self):
@@ -246,6 +249,7 @@ async def test_cancel_ticket_accepts_other_comment_reason(monkeypatch):
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
     monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+    monkeypatch.setattr(tickets_router, "ensure_client_operations_allowed", lambda *_: None)
 
     result = await tickets_router.cancel_current_ticket(
         CancelTicketRequest(reason="Другое: клиент ушёл"),
@@ -286,6 +290,12 @@ async def test_defer_ticket_accepts_other_comment_reason(monkeypatch):
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
     monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+    monkeypatch.setattr(tickets_router, "ensure_client_operations_allowed", lambda *_: None)
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda _db: {"max_deferred_tickets_per_operator": 3},
+    )
 
     result = await tickets_router.defer_current_ticket(
         DeferTicketRequest(reason="Другое: клиент вернётся позже"),

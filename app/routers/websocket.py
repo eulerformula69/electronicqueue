@@ -40,6 +40,7 @@ from app.models import (
 from app.security import get_password_hash, verify_password
 from app.services.operators import get_operator_state, update_services_status_for_window
 from app.services.settings import get_system_settings_dict
+from app.services.ticket_lifecycle import ACTIVE_TICKET_STATUSES
 from app.services.tickets import (
     broadcast_board, get_board_state, return_ticket_to_queue,
 )
@@ -211,7 +212,7 @@ async def websocket_operator(websocket: WebSocket, operator_id: int):
                     if settings["active_ticket_on_operator_logout"] == "return_to_queue":
                         active_ticket = db.query(Ticket).filter(
                             Ticket.window_id == operator.window_id,
-                            Ticket.status == "called"
+                            Ticket.status.in_(ACTIVE_TICKET_STATUSES)
                         ).first()
                         if active_ticket:
                             return_ticket_to_queue(active_ticket)

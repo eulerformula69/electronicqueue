@@ -257,6 +257,8 @@ class SystemSettingsUpdate(BaseModel):
     auto_call_enabled: bool = False
     auto_call_delay_seconds: int = Field(default=60, ge=0, le=600)
     called_ticket_min_wait_seconds: int = Field(default=180, ge=0, le=3600)
+    short_service_warning_minutes: int = Field(default=5, ge=0, le=60)
+    max_deferred_tickets_per_operator: int = Field(default=3, ge=1, le=50)
     auto_call_balance_enabled: bool = True
     auto_call_balance_queue_threshold: int = Field(default=3, ge=1, le=100)
     auto_call_balance_min_free_operators: int = Field(default=2, ge=2, le=100)
@@ -291,6 +293,8 @@ class SystemSettingsResponse(BaseModel):
     auto_call_enabled: bool
     auto_call_delay_seconds: int
     called_ticket_min_wait_seconds: int
+    short_service_warning_minutes: int
+    max_deferred_tickets_per_operator: int
     auto_call_balance_enabled: bool
     auto_call_balance_queue_threshold: int
     auto_call_balance_min_free_operators: int
@@ -316,6 +320,8 @@ class PublicSettingsResponse(BaseModel):
     auto_call_enabled: bool
     auto_call_delay_seconds: int
     called_ticket_min_wait_seconds: int
+    short_service_warning_minutes: int
+    max_deferred_tickets_per_operator: int
     auto_call_balance_enabled: bool
     auto_call_balance_queue_threshold: int
     auto_call_balance_min_free_operators: int

@@ -100,7 +100,7 @@
         const closeButton = document.createElement("button");
         closeButton.type = "button";
         closeButton.className = "btn-primary";
-        closeButton.textContent = "Понятно";
+        closeButton.textContent = "Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления и теперь в курсе всех изменений в работе очереди";
         closeButton.addEventListener(
             "click",
             () => closeOperatorChangelog(overlay, version, options.saveVersion !== false)

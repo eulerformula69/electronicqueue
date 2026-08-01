@@ -43,6 +43,11 @@ from app.schemas import (
 )
 from app.security import get_password_hash, verify_password
 from app.services.settings import get_system_settings_dict, normalize_ticket_reason
+from app.services.ticket_lifecycle import (
+    ACTIVE_TICKET_STATUSES,
+    InvalidTicketTransition,
+    start_ticket_service,
+)
 from app.services.tickets import (
     called_ticket_wait_remaining_seconds,
     broadcast_board, claim_next_ticket,
@@ -81,8 +86,35 @@ def operator_window_is_on_break(db: Session, operator: Operator) -> bool:
 
 
 def ensure_client_operations_allowed(db: Session, operator: Operator) -> None:
-    if operator_window_is_on_break(db, operator):
-        raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
+    if not operator_window_is_on_break(db, operator):
+        return
+
+    active_ticket = db.query(Ticket.id).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status.in_(ACTIVE_TICKET_STATUSES),
+    ).first()
+    if active_ticket:
+        return
+
+    raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
+
+
+def ensure_operator_has_no_deferred_tickets(db: Session, operator: Operator) -> None:
+    settings = get_system_settings_dict(db)
+    deferred_limit = settings["max_deferred_tickets_per_operator"]
+    deferred_count = db.query(func.count(Ticket.id)).filter(
+        Ticket.operator_id == operator.id,
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "deferred",
+    ).scalar() or 0
+    if deferred_count >= deferred_limit:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Достигнут лимит отложенных талонов ({deferred_limit}). "
+                "Сначала верните один из них в обслуживание."
+            ),
+        )
 
 
 def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) -> dict:
@@ -343,7 +375,7 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     
     ticket = db.query(Ticket).filter(
         Ticket.window_id == operator.window_id,
-        Ticket.status == "called"  
+        Ticket.status == "serving"
     ).first()
 
     if not ticket:
@@ -383,6 +415,47 @@ async def finish_ticket(operator: Operator = Depends(verify_session)):
     return ticket
 
 
+@router.post("/tickets/start-service", tags=["Tickets"])
+async def start_service(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
+        ticket = db.query(Ticket).filter(
+            Ticket.window_id == operator.window_id,
+            Ticket.status == "called",
+        ).with_for_update().first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Нет вызванного клиента")
+
+        try:
+            start_ticket_service(
+                ticket,
+                operator_id=operator.id,
+                window_id=operator.window_id,
+            )
+        except InvalidTicketTransition as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+        db.commit()
+        db.refresh(ticket)
+        await manager.broadcast({"type": "queue_updated"})
+
+        return {
+            "id": ticket.id,
+            "number": ticket.number,
+            "status": ticket.status,
+            "service_started_at": ticket.service_started_at,
+            "finish_remaining_seconds": get_system_settings_dict(db)[
+                "called_ticket_min_wait_seconds"
+            ],
+        }
+    finally:
+        db.close()
+
+
 @router.post("/tickets/next", tags=["Tickets"])
 async def call_next_ticket(
     data: CallNextRequest | None = Body(default=None),
@@ -394,6 +467,7 @@ async def call_next_ticket(
             return {"detail": "Оператору не назначено окно"}
 
         ensure_client_operations_allowed(db, operator)
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
         settings = get_system_settings_dict(db)
         is_auto_call = bool(data and data.auto_call)
@@ -451,11 +525,12 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
             return {"detail": "Оператору не назначено окно"}
 
         ensure_client_operations_allowed(db, operator)
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
         # Проверяем, не обслуживается ли уже клиент
         current = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
-            Ticket.status == "called"
+            Ticket.status.in_(ACTIVE_TICKET_STATUSES)
         ).first()
 
         if current:
@@ -499,6 +574,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
         ticket.window_id = operator.window_id
         ticket.target_window_id = None
         ticket.called_at = datetime.now()
+        ticket.service_started_at = None
         ticket.last_recalled_at = None
         ticket.finished_at = None
         ticket.defer_reason = None
@@ -597,7 +673,7 @@ async def return_current_ticket_to_queue(operator: Operator = Depends(verify_ses
 
         ticket = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
-            Ticket.status == "called"
+            Ticket.status.in_(ACTIVE_TICKET_STATUSES)
         ).first()
 
         if not ticket:
@@ -633,11 +709,26 @@ async def defer_current_ticket(
 
         ticket = db.query(Ticket).filter(
             Ticket.window_id == operator.window_id,
-            Ticket.status == "called",
+            Ticket.status.in_(ACTIVE_TICKET_STATUSES),
         ).first()
 
         if not ticket:
             raise HTTPException(status_code=404, detail="Нет активного билета для отложения")
+
+        settings = get_system_settings_dict(db)
+        deferred_count = db.query(func.count(Ticket.id)).filter(
+            Ticket.operator_id == operator.id,
+            Ticket.status == "deferred",
+        ).scalar() or 0
+        deferred_limit = settings["max_deferred_tickets_per_operator"]
+        if deferred_count >= deferred_limit:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Количество отложенных талонов: {deferred_count}. "
+                    f"Сначала верните один из них в обслуживание (лимит: {deferred_limit})."
+                ),
+            )
 
         defer_ticket(
             ticket,
@@ -674,10 +765,12 @@ async def _resume_operator_ticket(
         raise HTTPException(status_code=400, detail="Оператору не назначено окно")
 
     ensure_client_operations_allowed(db, operator)
+    if source_status != "deferred":
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
     current = db.query(Ticket).filter(
         Ticket.window_id == operator.window_id,
-        Ticket.status == "called",
+        Ticket.status.in_(ACTIVE_TICKET_STATUSES),
     ).first()
 
     if current:
@@ -705,7 +798,7 @@ async def _resume_operator_ticket(
     await manager.broadcast({"type": "queue_updated"})
     await broadcast_board()
 
-    if window:
+    if window and source_status != "deferred":
         await broadcast_ticket_called(ticket, window)
 
     return {
@@ -713,6 +806,7 @@ async def _resume_operator_ticket(
         "number": ticket.number,
         "status": ticket.status,
         "called_at": ticket.called_at,
+        "service_started_at": ticket.service_started_at,
         "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
     }
 
@@ -732,6 +826,50 @@ async def resume_operator_deferred_ticket(
             not_found_detail="Отложенный билет не найден",
             resume_ticket=resume_deferred_ticket,
         )
+    finally:
+        db.close()
+
+
+@router.post("/tickets/deferred/{ticket_id}/cancel", tags=["Tickets"])
+async def cancel_operator_deferred_ticket(
+    ticket_id: int,
+    data: CancelTicketRequest | None = Body(default=None),
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id,
+            Ticket.status == "deferred",
+            Ticket.operator_id == operator.id,
+            Ticket.window_id == operator.window_id,
+        ).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Отложенный талон не найден")
+
+        ticket.status = "cancelled"
+        ticket.completion_reason = "cancelled"
+        ticket.cancel_reason = normalize_ticket_reason(
+            data.reason if data else "Отменён из отложенных"
+        )
+        ticket.defer_reason = None
+        ticket.deferred_at = None
+        ticket.finished_at = datetime.now()
+
+        db.commit()
+        db.refresh(ticket)
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        return {
+            "status": ticket.status,
+            "ticket_number": ticket.number,
+            "cancel_reason": ticket.cancel_reason,
+        }
     finally:
         db.close()
 
@@ -900,6 +1038,10 @@ def get_my_queue(
         return {
             "tickets": result,
             "tickets_served_today": tickets_served_today,
+            "deferred_since": min(
+                (ticket.deferred_at for ticket in deferred_tickets if ticket.deferred_at),
+                default=None,
+            ),
             "sections": sections,
             "section_counts": {
                 key: len(value)
@@ -921,7 +1063,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
 
         ticket = db.query(Ticket).filter(
             Ticket.id == data.ticket_id,
-            Ticket.status == "called"
+            Ticket.status == "serving"
         ).first()
         if not ticket:
             raise HTTPException(status_code=404, detail="Вызванный билет не найден")
@@ -1000,7 +1142,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
 
         ticket = db.query(Ticket).filter(
             Ticket.id == data.ticket_id,
-            Ticket.status == "called"
+            Ticket.status == "serving"
         ).first()
         if not ticket:
             return {"detail": "Сначала завершите текущего клиента или тикет не найден"}
@@ -1159,7 +1301,7 @@ def get_current_ticket(operator: Operator = Depends(verify_session)):
         ticket = (
             db.query(Ticket)
             .filter(
-                Ticket.status == "called",
+                Ticket.status.in_(ACTIVE_TICKET_STATUSES),
                 Ticket.window_id == operator.window_id
             )
             .order_by(Ticket.called_at.asc())

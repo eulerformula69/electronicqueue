@@ -17,7 +17,7 @@ def read_text(path: str) -> str:
 
 def test_called_ticket_wait_is_enforced_from_server_time():
     now = datetime(2026, 7, 18, 12, 0, 0)
-    ticket = Ticket(called_at=now - timedelta(seconds=45))
+    ticket = Ticket(service_started_at=now - timedelta(seconds=45))
 
     assert called_ticket_wait_remaining_seconds(ticket, 180, now=now) == 135
     assert called_ticket_wait_remaining_seconds(
@@ -27,16 +27,18 @@ def test_called_ticket_wait_is_enforced_from_server_time():
     ) == 0
 
 
-def test_ticket_without_called_at_has_no_artificial_wait():
-    assert called_ticket_wait_remaining_seconds(Ticket(called_at=None), 180) == 0
+def test_ticket_without_service_started_at_has_no_artificial_wait():
+    assert called_ticket_wait_remaining_seconds(
+        Ticket(service_started_at=None), 180
+    ) == 0
 
 
-def test_operator_restores_wait_and_service_timers_from_called_at():
+def test_operator_restores_service_timer_from_service_started_at():
     operator_source = read_text("queue/js/operator.js")
     timer_source = read_text("queue/js/operator-ticket-timers.js")
     html = read_text("queue/operator.html")
 
-    assert "currentTicketCalledAt = parseTicketCalledAt(ticket);" in operator_source
+    assert "currentTicketServiceStartedAt = parseTicketServiceStartedAt(ticket);" in operator_source
     assert "calledTicketWaitRemainingSeconds" in timer_source
     assert "currentTicketFinishRemainingSeconds" in timer_source
     assert "performance.now()" in timer_source
@@ -44,7 +46,7 @@ def test_operator_restores_wait_and_service_timers_from_called_at():
     assert 'id="service-timer-value"' in html
     assert 'id="service-timer" class="service-timer" aria-live="off" hidden' in html
     assert "serviceTimerContainer.hidden = !hasServerStartTime" in timer_source
-    assert "ЗАВЕРШИТЬ (ЧЕРЕЗ" in timer_source
+    assert "Завершить через" in timer_source
 
 
 def test_finish_button_uses_wait_state_but_other_actions_do_not():
@@ -108,10 +110,12 @@ def test_admin_can_configure_called_ticket_min_wait():
         assert "3600" in source
 
 
-def test_resume_deferred_response_immediately_contains_new_called_at():
+def test_resume_deferred_response_contains_serving_timestamp():
     router_source = read_text("app/routers/tickets.py")
     resume_endpoint = router_source.split(
         "async def _resume_operator_ticket", 1
     )[1].split('@router.post("/tickets/deferred/', 1)[0]
 
     assert '"called_at": ticket.called_at' in resume_endpoint
+    assert '"service_started_at": ticket.service_started_at' in resume_endpoint
+    assert 'source_status != "deferred"' in resume_endpoint

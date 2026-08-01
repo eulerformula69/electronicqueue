@@ -50,6 +50,8 @@ let queueSoundInitialized = false;
 // Храним известные тикеты из прошлой загрузки очереди
 let knownQueueTicketIds = new Set();
 let queueHasCallableTickets = null;
+let deferredTicketCount = 0;
+let deferredReminderTimer = null;
 
 // Антидребезг звукового оповещения
 let lastNewTicketSoundAt = 0;
@@ -67,8 +69,11 @@ const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;
 let serviceNotificationSettings = new Map();
 let operatorSettings = {
     auto_call_enabled: false,
+    auto_call_server_managed: false,
     auto_call_delay_seconds: 60,
     called_ticket_min_wait_seconds: 180,
+    short_service_warning_minutes: 5,
+    max_deferred_tickets_per_operator: 3,
     redirect_allow_break: true,
     redirect_allow_offline: false,
     max_ticket_redirects: 3
@@ -76,6 +81,7 @@ let operatorSettings = {
 let autoCallSettingsLoaded = false;
 let recallCooldown = false;
 const CLIENT_OPERATIONS_ON_BREAK_MESSAGE = "Нельзя выполнять операции с клиентом во время перерыва";
+const PENDING_BREAK_STORAGE_KEY = "operatorPendingBreak";
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -147,6 +153,21 @@ function initWebSocket() {
         if (data.type === "queue_updated") {
             refreshQueueAndAutoCall();
         }
+
+        if (data.type === "auto_dispatch_updated") {
+            loadAutoDispatchState();
+        }
+
+        if (
+            data.type === "ticket_called" &&
+            Number(data.operator_id) === Number(operatorId)
+        ) {
+            setCurrentTicket({...data.ticket, status: "called"});
+            document.getElementById("current").textContent = data.number;
+            document.getElementById("current-service").textContent =
+                data.service_name || "Услуга не указана";
+            Promise.all([loadCurrentTicket(), loadAutoDispatchState()]);
+        }
     };
     operatorSocket.onclose = () => {
         console.log("WebSocket отключен, переподключение...");
@@ -169,7 +190,8 @@ function startOperatorPolling() {
         try {
             await Promise.all([
                 loadQueue(),
-                loadCurrentTicket()
+                loadCurrentTicket(),
+                loadAutoDispatchState()
             ]);
         } catch (e) {
             console.debug("Operator polling error:", e);
@@ -185,6 +207,7 @@ initWebSocket();
 loadQueue();
 loadAllServices();
 startOperatorPolling();
+loadAutoDispatchState();
 
 // ------------------- WebSocket heartbeat вместо HTTP /ping -------------------
 setInterval(() => {
@@ -206,6 +229,7 @@ setInterval(() => {
 let currentTicketId = null;
 let currentTicketStatus = null;
 let currentTicketCalledAt = null;
+let currentTicketServiceStartedAt = null;
 let currentTicketLastRecalledAt = null;
 let currentTicketFinishRemainingSeconds = 0;
 let currentTicketRecallRemainingSeconds = 0;
@@ -215,8 +239,6 @@ let currentTicketRecallCount = 0;
 let currentTicketRedirectCount = null;
 let allServices = [];
 let allWindows = [];
-const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
-const RECALL_FINISH_WARNING_COUNT = 2;
 
 async function loadOperatorReasonSettings() {
     try {
@@ -229,16 +251,22 @@ async function loadOperatorReasonSettings() {
         if (!settingsRes.ok) throw new Error("Settings load failed");
         const settings = await settingsRes.json();
         const details = detailsRes.ok ? await detailsRes.json() : {};
-        const hadActiveAutoCallTimer = Boolean(autoCallTimer);
         const wasAutoCallEnabled = operatorSettings.auto_call_enabled;
         operatorSettings = {
             ...operatorSettings,
             auto_call_enabled: (details.auto_call_enabled ?? settings.auto_call_enabled) === true,
+            auto_call_server_managed: details.auto_call_server_managed === true,
             auto_call_delay_seconds: normalizeAutoCallDelay(
                 details.auto_call_delay_seconds ?? settings.auto_call_delay_seconds
             ),
             called_ticket_min_wait_seconds: normalizeCalledTicketMinWait(
                 settings.called_ticket_min_wait_seconds
+            ),
+            short_service_warning_minutes: Math.max(
+                0, Number(settings.short_service_warning_minutes) || 0
+            ),
+            max_deferred_tickets_per_operator: Math.max(
+                1, Number(settings.max_deferred_tickets_per_operator) || 3
             ),
             redirect_allow_break: settings.redirect_allow_break === true,
             redirect_allow_offline: settings.redirect_allow_offline === true,
@@ -257,7 +285,7 @@ async function loadOperatorReasonSettings() {
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
             stopAutoCall("Отключён администратором");
-        } else if (autoCallWasJustEnabled || hadActiveAutoCallTimer) {
+        } else if (autoCallWasJustEnabled) {
             scheduleAutoCallAfterWorkspaceFreed();
         }
     } catch (e) {
@@ -287,6 +315,13 @@ function parseTicketCalledAt(ticket) {
     return Number.isNaN(calledAt.getTime()) ? null : calledAt;
 }
 
+function parseTicketServiceStartedAt(ticket) {
+    if (!ticket || !ticket.service_started_at) return null;
+
+    const serviceStartedAt = new Date(ticket.service_started_at);
+    return Number.isNaN(serviceStartedAt.getTime()) ? null : serviceStartedAt;
+}
+
 function parseTicketLastRecalledAt(ticket) {
     if (!ticket || !ticket.last_recalled_at) return null;
 
@@ -304,12 +339,15 @@ function setCurrentTicket(ticket) {
         ? returnedToQueueCount
         : null;
     currentTicketCalledAt = parseTicketCalledAt(ticket);
+    currentTicketServiceStartedAt = parseTicketServiceStartedAt(ticket);
     currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket);
     const finishRemaining = Number(ticket.finish_remaining_seconds);
     const recallRemaining = Number(ticket.recall_remaining_seconds);
     currentTicketFinishRemainingSeconds = Number.isFinite(finishRemaining)
         ? Math.max(0, finishRemaining)
-        : normalizeCalledTicketMinWait(operatorSettings.called_ticket_min_wait_seconds);
+        : currentTicketStatus === "serving"
+            ? normalizeCalledTicketMinWait(operatorSettings.called_ticket_min_wait_seconds)
+            : 0;
     currentTicketRecallRemainingSeconds = Number.isFinite(recallRemaining)
         ? Math.max(0, recallRemaining)
         : RECALL_COOLDOWN_SECONDS;
@@ -330,6 +368,7 @@ function clearCurrentTicket() {
     currentTicketId = null;
     currentTicketStatus = null;
     currentTicketCalledAt = null;
+    currentTicketServiceStartedAt = null;
     currentTicketLastRecalledAt = null;
     currentTicketFinishRemainingSeconds = 0;
     currentTicketRecallRemainingSeconds = 0;
@@ -772,6 +811,8 @@ async function loadQueue(options = {}) {
             cancelled: [],
             served: []
         }, data.section_counts);
+        deferredTicketCount = Number(data.section_counts?.deferred) || 0;
+        scheduleDeferredReminder(deferredTicketCount, data.deferred_since);
         if (data.tickets_served_today !== undefined) {
             const counter = document.getElementById("served-today-count");
             if (counter) counter.textContent = data.tickets_served_today;
@@ -784,8 +825,34 @@ async function loadQueue(options = {}) {
     }
 }
 
+function scheduleDeferredReminder(count, deferredSince) {
+    const reminder = document.getElementById("deferred-reminder");
+    if (!reminder) return;
+    if (deferredReminderTimer) clearTimeout(deferredReminderTimer);
+    deferredReminderTimer = null;
+    reminder.hidden = true;
+
+    if (!count) return;
+
+    const deferredAt = deferredSince ? new Date(deferredSince).getTime() : Date.now();
+    const showAt = (Number.isFinite(deferredAt) ? deferredAt : Date.now()) + 2 * 60 * 1000;
+    const show = () => {
+        reminder.hidden = false;
+        reminder.textContent = count === 1
+            ? "У вас всё ещё есть отложенный талон. Может, вернуть его в обслуживание?"
+            : `У вас всё ещё есть отложенные талоны (${count}). Может, вернуть их в обслуживание?`;
+    };
+    const delay = Math.max(0, showAt - Date.now());
+    if (delay === 0) show();
+    else deferredReminderTimer = setTimeout(show, delay);
+}
+
 async function refreshQueueAndAutoCall() {
-    const tickets = await loadQueue();
+    const [tickets] = await Promise.all([
+        loadQueue(),
+        loadCurrentTicket(),
+        loadAutoDispatchState()
+    ]);
     if (!operatorSettings.auto_call_enabled || hasCurrentTicket()) return;
 
     if (!Array.isArray(tickets) || tickets.length === 0) {
@@ -795,7 +862,6 @@ async function refreshQueueAndAutoCall() {
 
     if (
         isOperatorOnline() &&
-        !autoCallTimer &&
         autoCallState === "empty"
     ) {
         scheduleAutoCallAfterWorkspaceFreed();
@@ -808,6 +874,14 @@ async function refreshQueueAndAutoCall() {
 async function callNext(options = {}) {
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
+        return;
+    }
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
+        showToast(
+            `Сначала верните отложенный талон в обслуживание. Отложено: ${deferredTicketCount}`,
+            "warning"
+        );
+        OperatorQueueSections.select("deferred");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
@@ -862,30 +936,28 @@ function showToast(message, type = "danger") {
 function shouldWarnBeforeFinish() {
     if (!currentTicketId) return false;
 
+    const warningMinutes = operatorSettings.short_service_warning_minutes;
     const isShortService =
-        currentTicketCalledAt &&
-        Date.now() - currentTicketCalledAt.getTime() < SHORT_SERVICE_WARNING_MS;
+        warningMinutes > 0 &&
+        currentTicketServiceStartedAt &&
+        Date.now() - currentTicketServiceStartedAt.getTime() < warningMinutes * 60 * 1000;
 
-    return isShortService || currentTicketRecallCount >= RECALL_FINISH_WARNING_COUNT;
+    return Boolean(isShortService);
 }
 
 function showFinishWarningPopup() {
+    const warningMinutes = operatorSettings.short_service_warning_minutes;
     showOperatorPopup({
-        title: "Проверьте действие",
-        message: "Похоже, клиент мог не подойти. Если клиент не подошёл, выберите «Клиент не явился». Если обслуживание действительно завершено, подтвердите завершение.",
+        title: "Обслуживание завершено слишком быстро?",
+        message: `Вы обслужили клиента быстрее чем за ${warningMinutes} мин. Возможно, завершение нажато случайно. Вы можете продолжить обслуживание или подтвердить завершение.`,
         actions: [
             {
-                text: "Завершить",
-                className: "btn-danger",
+                text: "Подтвердить завершение",
+                className: "btn-primary",
                 onClick: () => finishCurrent({ skipWarning: true })
             },
             {
-                text: "Клиент не явился",
-                className: "btn-outline",
-                onClick: () => cancelCurrent({ reason: "no_show" })
-            },
-            {
-                text: "Отмена",
+                text: "Продолжить обслуживание",
                 className: "btn-outline"
             }
         ]
@@ -935,6 +1007,43 @@ async function finishCurrent(options = {}) {
         showToast("Ошибка при завершении обслуживания", "danger");
     } finally {
         endOperatorRequest("finish");
+    }
+}
+
+async function startService() {
+    if (!currentTicketId || currentTicketStatus !== "called") return;
+    if (!ensureClientOperationsAllowed()) return;
+    if (!beginOperatorRequest("start-service")) return;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/start-service`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            }
+        });
+        const result = await res.json();
+        if (!res.ok) {
+            showToast(result.detail || "Не удалось начать обслуживание", "danger");
+            return;
+        }
+
+        currentTicketStatus = result.status;
+        currentTicketServiceStartedAt = parseTicketServiceStartedAt(result);
+        currentTicketFinishRemainingSeconds = Math.max(
+            0,
+            Number(result.finish_remaining_seconds) || 0
+        );
+        currentTicketFinishCountdownStartedAt = performance.now();
+        refreshOperatorUiState();
+        syncCalledTicketTimers();
+        showToast("Обслуживание начато", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Ошибка соединения с сервером", "danger");
+    } finally {
+        endOperatorRequest("start-service");
     }
 }
 
@@ -1527,8 +1636,48 @@ async function changeWindowStatus(newStatus) {
 }
 
 async function toggleWindowStatus(control) {
+    if (!control.checked && currentTicketId) {
+        updateStatusButtons(currentWindowStatus);
+        showBreakWithActiveTicketPopup();
+        return;
+    }
+
+    if (control.checked) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
     const changed = await changeWindowStatus(control.checked ? "online" : "break");
     if (!changed) updateStatusButtons(currentWindowStatus);
+}
+
+function showBreakWithActiveTicketPopup() {
+    showOperatorPopup({
+        title: "Почему вы хотите уйти на перерыв с текущим талоном?",
+        message: "Выберите, что сделать с уже назначенным клиентом.",
+        actions: [
+            {
+                text: "Уйти после завершения обслуживания",
+                className: "btn-primary",
+                onClick: () => {
+                    sessionStorage.setItem(PENDING_BREAK_STORAGE_KEY, "true");
+                    showToast("Перерыв начнётся после завершения работы с клиентом", "success");
+                }
+            },
+            {
+                text: "Вернуть талон в очередь и уйти",
+                className: "btn-outline",
+                onClick: returnTicketAndStartBreak
+            },
+            {
+                text: "Остаться онлайн",
+                className: "btn-outline"
+            }
+        ]
+    });
+}
+
+async function returnTicketAndStartBreak() {
+    const returned = await confirmReturnCurrentToQueue({scheduleNext: false});
+    if (!returned) return;
+    sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
+    await changeWindowStatus("break");
 }
 
 function updateStatusButtons(status) {
@@ -1867,6 +2016,14 @@ async function resumeTicket(ticketId, sourceSection = "deferred") {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
+    if (
+        sourceSection !== "deferred" &&
+        deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator
+    ) {
+        showToast("Сначала верните отложенный талон в обслуживание", "warning");
+        OperatorQueueSections.select("deferred");
+        return;
+    }
     if (!ensureClientOperationsAllowed()) return;
     if (!beginOperatorRequest("resume-deferred")) return;
 
@@ -1895,6 +2052,39 @@ async function resumeTicket(ticketId, sourceSection = "deferred") {
     }
 }
 
+async function cancelDeferredTicket(ticketId, ticketNumber) {
+    if (!ensureClientOperationsAllowed()) return;
+    const confirmed = await OperatorFeedback.confirm({
+        title: `Отменить талон № ${ticketNumber}?`,
+        message: "Талон будет убран из отложенных и появится в разделе «Отменённые».",
+        confirmText: "Отменить талон",
+        danger: true
+    });
+    if (!confirmed || !beginOperatorRequest("cancel-deferred")) return;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/cancel`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            },
+            body: JSON.stringify({reason: "Отменён из отложенных"})
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || "Не удалось отменить отложенный талон");
+
+        showToast(`Талон ${data.ticket_number || ticketNumber} отменён`, "success");
+        await loadQueue();
+        scheduleAutoCallAfterWorkspaceFreed();
+    } catch (e) {
+        console.error("Ошибка отмены отложенного талона:", e);
+        showToast(e.message || "Не удалось отменить отложенный талон", "danger");
+    } finally {
+        endOperatorRequest("cancel-deferred");
+    }
+}
+
 async function returnCurrentToQueue() {
     closeOperatorMoreMenu();
 
@@ -1907,7 +2097,7 @@ async function returnCurrentToQueue() {
     await confirmReturnCurrentToQueue();
 }
 
-async function confirmReturnCurrentToQueue() {
+async function confirmReturnCurrentToQueue(options = {}) {
     if (!ensureClientOperationsAllowed()) return;
     if (!beginOperatorRequest("return-to-queue")) return;
 
@@ -1933,19 +2123,21 @@ async function confirmReturnCurrentToQueue() {
             "success"
         );
         await loadQueue();
-        scheduleAutoCallAfterWorkspaceFreed();
+        if (options.scheduleNext !== false) scheduleAutoCallAfterWorkspaceFreed();
+        return true;
     } catch (e) {
         console.error("Ошибка возврата билета в очередь:", e);
         showToast(e.message || "Не удалось вернуть клиента в очередь", "danger");
+        return false;
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
         endOperatorRequest("return-to-queue");
     }
 }
 
-let autoCallTimer = null;
-let secondsLeft = 60;
 let autoCallState = "";
+let autoDispatchDeadlineMs = null;
+let autoDispatchCountdownTimer = null;
 
 function normalizeAutoCallDelay(value) {
     const delay = Number(value);
@@ -1955,6 +2147,48 @@ function normalizeAutoCallDelay(value) {
 
 function getAutoCallStatusDisplay() {
     return document.getElementById("auto-call-status");
+}
+
+function renderAutoDispatchCountdown() {
+    if (!operatorSettings.auto_call_enabled || !isOperatorOnline()) return;
+    if (hasCurrentTicket()) return;
+    if (autoDispatchDeadlineMs === null) {
+        updateAutoCallStatus("Подготовка системного вызова...", {state: "countdown"});
+        return;
+    }
+
+    const remaining = Math.max(0, Math.ceil((autoDispatchDeadlineMs - Date.now()) / 1000));
+    if (remaining === 0) {
+        updateAutoCallStatus("Вызываем следующего клиента...", {state: "calling"});
+        return;
+    }
+    updateAutoCallStatus(`Следующий клиент через ${remaining} сек.`, {state: "countdown"});
+}
+
+async function loadAutoDispatchState() {
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/operators/auto-dispatch-state`, {
+            headers: {"session-id": sessionId}
+        });
+        if (!res.ok) return;
+        const state = await res.json();
+        operatorSettings.auto_call_enabled = state.enabled === true;
+        autoDispatchDeadlineMs = Number.isInteger(state.remaining_seconds)
+            ? Date.now() + state.remaining_seconds * 1000
+            : null;
+
+        if (!operatorSettings.auto_call_enabled) {
+            updateAutoCallStatus();
+            return;
+        }
+
+        if (!autoDispatchCountdownTimer) {
+            autoDispatchCountdownTimer = setInterval(renderAutoDispatchCountdown, 250);
+        }
+        renderAutoDispatchCountdown();
+    } catch (e) {
+        console.debug("Auto-dispatch state load error:", e);
+    }
 }
 
 function syncAutoCallVisibility() {
@@ -1975,7 +2209,7 @@ function getAutoCallPausedMessage() {
 }
 
 function ensureClientOperationsAllowed() {
-    if (!isOperatorOnBreak()) return true;
+    if (!isOperatorOnBreak() || currentTicketId) return true;
 
     showToast(CLIENT_OPERATIONS_ON_BREAK_MESSAGE, "warning");
     return false;
@@ -2017,11 +2251,6 @@ function updateAutoCallStatus(message, options = {}) {
 }
 
 function stopAutoCall(message) {
-    if (autoCallTimer) {
-        clearInterval(autoCallTimer);
-        autoCallTimer = null;
-    }
-    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
     if (message !== undefined) {
         let state = "";
         if (message.includes("Отключён")) state = "disabled";
@@ -2052,68 +2281,25 @@ function startAutoCallAfterFinish() {
         return;
     }
 
-    if (queueHasCallableTickets === false) {
-        stopAutoCall("Очередь пуста");
-        return;
-    }
-
-    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
-    if (secondsLeft === 0) {
-        runAutoCallNow();
-        return;
-    }
-
-    updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-        state: "countdown"
-    });
-    autoCallTimer = setInterval(() => {
-        secondsLeft -= 1;
-        if (secondsLeft <= 0) {
-            clearInterval(autoCallTimer);
-            autoCallTimer = null;
-            runAutoCallNow();
-            return;
-        }
-        updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-            state: "countdown"
-        });
-    }, 1000);
+    renderAutoDispatchCountdown();
 }
 
 function scheduleAutoCallAfterWorkspaceFreed() {
+    if (
+        !currentTicketId &&
+        sessionStorage.getItem(PENDING_BREAK_STORAGE_KEY) === "true"
+    ) {
+        setTimeout(async () => {
+            const changed = await changeWindowStatus("break");
+            if (changed) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
+        }, 0);
+        return;
+    }
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
+        stopAutoCall(`Сначала верните отложенные талоны (${deferredTicketCount})`);
+        return;
+    }
     startAutoCallAfterFinish();
-}
-
-async function runAutoCallNow() {
-    if (!operatorSettings.auto_call_enabled) {
-        stopAutoCall("Отключён администратором");
-        return;
-    }
-
-    if (!isOperatorOnline()) {
-        stopAutoCall(getAutoCallPausedMessage());
-        return;
-    }
-
-    if (hasCurrentTicket()) {
-        stopAutoCall("");
-        return;
-    }
-
-    const nextBtn = document.getElementById("next-btn");
-    if (nextBtn && nextBtn.disabled) {
-        stopAutoCall("Ожидание готовности...");
-        return;
-    }
-
-    const tickets = await loadQueue({ checkNewTickets: false });
-    if (!Array.isArray(tickets) || tickets.length === 0) {
-        stopAutoCall("Очередь пуста");
-        return;
-    }
-
-    updateAutoCallStatus("Вызываю следующего клиента...", {state: "calling"});
-    await callNext({ autoCall: true });
 }
 
 /* =========================
@@ -2121,9 +2307,18 @@ async function runAutoCallNow() {
 ========================= */
 async function promptCallByNumber() {
     closeOperatorMoreMenu();
+    closeOperatorSettingsPopup();
 
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
+        return;
+    }
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
+        showToast(
+            `Нельзя вызвать нового клиента: у вас отложено ${deferredTicketCount}`,
+            "warning"
+        );
+        OperatorQueueSections.select("deferred");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;

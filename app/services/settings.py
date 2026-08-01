@@ -16,6 +16,8 @@ MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
 DEFAULT_MAX_TICKET_REDIRECTS = 3
 MIN_MAX_TICKET_REDIRECTS = 1
 MAX_MAX_TICKET_REDIRECTS = 20
+DEFAULT_SHORT_SERVICE_WARNING_MINUTES = 5
+DEFAULT_MAX_DEFERRED_TICKETS_PER_OPERATOR = 3
 DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE = (
     "⚠ Талон <number>: вызов отменён оператором окна <window>. "
     "Вернулись? Сообщите номер оператору."
@@ -249,6 +251,20 @@ def get_system_settings_dict(db: Session) -> dict:
         ),
         "called_ticket_min_wait_seconds": _normalize_called_ticket_min_wait_seconds(
             settings.called_ticket_min_wait_seconds
+        ),
+        "short_service_warning_minutes": max(
+            0, min(60, int(
+                settings.short_service_warning_minutes
+                if settings.short_service_warning_minutes is not None
+                else DEFAULT_SHORT_SERVICE_WARNING_MINUTES
+            ))
+        ),
+        "max_deferred_tickets_per_operator": max(
+            1, min(50, int(
+                settings.max_deferred_tickets_per_operator
+                if settings.max_deferred_tickets_per_operator is not None
+                else DEFAULT_MAX_DEFERRED_TICKETS_PER_OPERATOR
+            ))
         ),
         "auto_call_balance_enabled": _str_to_bool(
             settings.auto_call_balance_enabled, default=True

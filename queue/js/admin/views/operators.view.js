@@ -45,7 +45,7 @@ function render() {
                         <span>По умолчанию</span>
                     </label>
                     <label class="operator-auto-call-delay">
-                        <span>Задержка, сек.</span>
+                        <span>До системного вызова, сек.</span>
                         <input class="admin-input" name="auto_call_delay_seconds" type="number" min="0" max="600" step="1" value="${ctx.ui.escapeHtml(settings.auto_call_delay_seconds ?? 60)}">
                     </label>
                     ${ctx.ui.button("Сохранить", {variant: "primary", action: "save-auto-call"})}

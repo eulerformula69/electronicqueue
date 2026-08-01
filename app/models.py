@@ -79,6 +79,7 @@ class Ticket(Base):
     deferred_at = Column(TIMESTAMP, nullable=True)
     cancel_reason = Column(String(255), nullable=True)
     called_at = Column(TIMESTAMP, nullable=True)
+    service_started_at = Column(TIMESTAMP, nullable=True)
     last_recalled_at = Column(TIMESTAMP, nullable=True)
     finished_at = Column(TIMESTAMP, nullable=True)
 
@@ -93,6 +94,7 @@ class Operator(Base):
     password = Column(String, nullable=False)
     window_id = Column(Integer, ForeignKey("windows.id"), unique=True)
     auto_call_mode = Column(String, default="default")
+    next_auto_call_at = Column(TIMESTAMP, nullable=True)
 
 
 class OperatorServiceNotification(Base):
@@ -258,6 +260,8 @@ class SystemSettings(Base):
     auto_call_enabled = Column(String, default="false")
     auto_call_delay_seconds = Column(Integer, default=60)
     called_ticket_min_wait_seconds = Column(Integer, default=180)
+    short_service_warning_minutes = Column(Integer, default=5)
+    max_deferred_tickets_per_operator = Column(Integer, default=3)
     auto_call_balance_enabled = Column(String, default="true")
     auto_call_balance_queue_threshold = Column(Integer, default=3)
     auto_call_balance_min_free_operators = Column(Integer, default=2)
