@@ -523,6 +523,8 @@ def test_deferred_ticket_can_be_cancelled_from_queue_card():
     assert '@router.post("/tickets/deferred/{ticket_id}/cancel"' in backend
     assert 'Ticket.status == "deferred"' in backend
     assert "queue-ticket-actions" in css
+    assert ".queue-ticket-actions > :only-child" in css
+    assert "grid-column: 1 / -1" in css
 
 
 def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls():

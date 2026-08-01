@@ -1127,6 +1127,11 @@ body.operator-page .queue-cancel-deferred-btn{
     min-height: 42px;
 }
 
+body.operator-page .queue-ticket-actions > :only-child{
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
 body.operator-page .deferred-reminder{
     width: 100%;
     margin: 0 0 12px;
