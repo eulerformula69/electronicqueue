@@ -19,13 +19,18 @@ function formatTicketDuration(totalSeconds) {
     return hours > 0 ? `${String(hours).padStart(2, "0")}:${clock}` : clock;
 }
 
-function calledTicketWaitRemainingSeconds(nowMs = Date.now()) {
-    if (!currentTicketId || !currentTicketCalledAt) return 0;
-    const waitSeconds = normalizeCalledTicketMinWait(
-        operatorSettings.called_ticket_min_wait_seconds
+function serverCountdownRemainingSeconds(initialSeconds, startedAtMs, nowMs) {
+    const elapsedSeconds = (nowMs - startedAtMs) / 1000;
+    return Math.max(0, Math.ceil(initialSeconds - elapsedSeconds));
+}
+
+function calledTicketWaitRemainingSeconds(nowMs = performance.now()) {
+    if (!currentTicketId) return 0;
+    return serverCountdownRemainingSeconds(
+        currentTicketFinishRemainingSeconds,
+        currentTicketFinishCountdownStartedAt,
+        nowMs
     );
-    const availableAt = currentTicketCalledAt.getTime() + waitSeconds * 1000;
-    return Math.max(0, Math.ceil((availableAt - nowMs) / 1000));
 }
 
 function isCalledTicketWaitActive() {
@@ -70,15 +75,13 @@ function syncCalledTicketTimers() {
     }
 }
 
-function recallCooldownRemainingSeconds(nowMs = Date.now()) {
+function recallCooldownRemainingSeconds(nowMs = performance.now()) {
     if (!currentTicketId) return 0;
-    const callTimes = [currentTicketCalledAt, currentTicketLastRecalledAt]
-        .filter(Boolean)
-        .map(value => value.getTime());
-    const latestCallAtMs = callTimes.length ? Math.max(...callTimes) : null;
-    if (latestCallAtMs === null) return 0;
-    const availableAt = latestCallAtMs + RECALL_COOLDOWN_SECONDS * 1000;
-    return Math.max(0, Math.ceil((availableAt - nowMs) / 1000));
+    return serverCountdownRemainingSeconds(
+        currentTicketRecallRemainingSeconds,
+        currentTicketRecallCountdownStartedAt,
+        nowMs
+    );
 }
 
 function updateRecallCooldown() {

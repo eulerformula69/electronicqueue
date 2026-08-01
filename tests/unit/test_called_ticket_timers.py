@@ -38,7 +38,8 @@ def test_operator_restores_wait_and_service_timers_from_called_at():
 
     assert "currentTicketCalledAt = parseTicketCalledAt(ticket);" in operator_source
     assert "calledTicketWaitRemainingSeconds" in timer_source
-    assert "currentTicketCalledAt.getTime()" in timer_source
+    assert "currentTicketFinishRemainingSeconds" in timer_source
+    assert "performance.now()" in timer_source
     assert "setInterval(updateCalledTicketTimers, 1000)" in timer_source
     assert 'id="service-timer-value"' in html
     assert 'id="service-timer" class="service-timer" aria-live="off" hidden' in html
@@ -74,10 +75,28 @@ def test_recall_cooldown_restores_from_server_state_after_reload():
     timer_source = read_text("queue/js/operator-ticket-timers.js")
     state_source = read_text("queue/js/operator-ui-state.js")
 
-    assert "currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket)" in operator_source
+    assert "currentTicketRecallRemainingSeconds" in operator_source
     assert "recallCooldownRemainingSeconds" in timer_source
     assert "syncRecallCooldown();" in operator_source
     assert "waitingBeforeRecall" in state_source
+
+
+def test_current_ticket_api_returns_server_authoritative_countdowns():
+    router_source = read_text("app/routers/tickets.py")
+    current_endpoint = router_source.split('def get_current_ticket', 1)[1]
+
+    assert 'ticket_payload["finish_remaining_seconds"]' in current_endpoint
+    assert 'ticket_payload["recall_remaining_seconds"]' in current_endpoint
+    assert 'now = datetime.now()' in current_endpoint
+
+
+def test_recall_response_returns_fresh_server_countdown():
+    router_source = read_text("app/routers/tickets.py")
+    recall_endpoint = router_source.split(
+        'async def recall_ticket', 1
+    )[1].split('@router.get("/tickets/current"', 1)[0]
+
+    assert '"recall_remaining_seconds": recall_cooldown_remaining_seconds(' in recall_endpoint
 
 
 def test_admin_can_configure_called_ticket_min_wait():

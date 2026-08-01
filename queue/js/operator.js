@@ -206,6 +206,10 @@ let currentTicketId = null;
 let currentTicketStatus = null;
 let currentTicketCalledAt = null;
 let currentTicketLastRecalledAt = null;
+let currentTicketFinishRemainingSeconds = 0;
+let currentTicketRecallRemainingSeconds = 0;
+let currentTicketFinishCountdownStartedAt = performance.now();
+let currentTicketRecallCountdownStartedAt = performance.now();
 let currentTicketRecallCount = 0;
 let currentTicketReturnedToQueueCount = null;
 let allServices = [];
@@ -299,6 +303,16 @@ function setCurrentTicket(ticket) {
         : null;
     currentTicketCalledAt = parseTicketCalledAt(ticket);
     currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket);
+    const finishRemaining = Number(ticket.finish_remaining_seconds);
+    const recallRemaining = Number(ticket.recall_remaining_seconds);
+    currentTicketFinishRemainingSeconds = Number.isFinite(finishRemaining)
+        ? Math.max(0, finishRemaining)
+        : normalizeCalledTicketMinWait(operatorSettings.called_ticket_min_wait_seconds);
+    currentTicketRecallRemainingSeconds = Number.isFinite(recallRemaining)
+        ? Math.max(0, recallRemaining)
+        : RECALL_COOLDOWN_SECONDS;
+    currentTicketFinishCountdownStartedAt = performance.now();
+    currentTicketRecallCountdownStartedAt = performance.now();
     if (!isSameTicket) {
         currentTicketRecallCount = 0;
     }
@@ -315,6 +329,10 @@ function clearCurrentTicket() {
     currentTicketStatus = null;
     currentTicketCalledAt = null;
     currentTicketLastRecalledAt = null;
+    currentTicketFinishRemainingSeconds = 0;
+    currentTicketRecallRemainingSeconds = 0;
+    currentTicketFinishCountdownStartedAt = performance.now();
+    currentTicketRecallCountdownStartedAt = performance.now();
     currentTicketRecallCount = 0;
     currentTicketReturnedToQueueCount = null;
     refreshOperatorUiState();
@@ -1651,6 +1669,11 @@ async function recallCurrent(options = {}) {
                 currentTicketRecallCount += 1;
             }
             currentTicketLastRecalledAt = parseTicketLastRecalledAt(result);
+            currentTicketRecallRemainingSeconds = Math.max(
+                0,
+                Number(result.recall_remaining_seconds) || 0
+            );
+            currentTicketRecallCountdownStartedAt = performance.now();
             syncRecallCooldown();
         } else {
             showToast(result.detail || "Ошибка вызова", "danger");

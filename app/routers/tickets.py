@@ -15,6 +15,7 @@ from fastapi import (
     APIRouter, Body, Depends, File, Header, HTTPException, Query, UploadFile,
     WebSocket, WebSocketDisconnect, status,
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.params import Path
 from fastapi.responses import FileResponse
 from sqlalchemy import and_, asc, func, literal
@@ -1129,6 +1130,10 @@ async def recall_ticket(operator: Operator = Depends(verify_session)):
             "status": "success",
             "message": f"Повторный вызов клиента {ticket.number}",
             "last_recalled_at": ticket.last_recalled_at,
+            "recall_remaining_seconds": recall_cooldown_remaining_seconds(
+                ticket,
+                now=now,
+            ),
         }
     finally:
         db.close()
@@ -1154,6 +1159,19 @@ def get_current_ticket(operator: Operator = Depends(verify_session)):
         if not ticket:
             return {"ticket": None}
 
-        return {"ticket": ticket}
+        now = datetime.now()
+        settings = get_system_settings_dict(db)
+        ticket_payload = jsonable_encoder(ticket)
+        ticket_payload["finish_remaining_seconds"] = (
+            called_ticket_wait_remaining_seconds(
+                ticket,
+                settings["called_ticket_min_wait_seconds"],
+                now=now,
+            )
+        )
+        ticket_payload["recall_remaining_seconds"] = (
+            recall_cooldown_remaining_seconds(ticket, now=now)
+        )
+        return {"ticket": ticket_payload}
     finally:
         db.close()
