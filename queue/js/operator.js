@@ -855,6 +855,11 @@ async function refreshQueueAndAutoCall() {
     ]);
     if (!operatorSettings.auto_call_enabled || hasCurrentTicket()) return;
 
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
+        renderAutoDispatchCountdown();
+        return;
+    }
+
     if (!Array.isArray(tickets) || tickets.length === 0) {
         stopAutoCall("Очередь пуста");
         return;
@@ -2152,6 +2157,13 @@ function getAutoCallStatusDisplay() {
 function renderAutoDispatchCountdown() {
     if (!operatorSettings.auto_call_enabled || !isOperatorOnline()) return;
     if (hasCurrentTicket()) return;
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
+        updateAutoCallStatus(
+            `Автовызов остановлен: достигнут лимит отложенных талонов (${deferredTicketCount} из ${operatorSettings.max_deferred_tickets_per_operator}). Верните или отмените один из них.`,
+            {state: "paused"}
+        );
+        return;
+    }
     if (queueHasCallableTickets === false) {
         updateAutoCallStatus("Очередь пуста", {state: "empty"});
         return;

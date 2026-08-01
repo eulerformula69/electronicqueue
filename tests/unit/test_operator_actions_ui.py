@@ -244,6 +244,9 @@ def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatc
     render_section = source.split("function renderAutoDispatchCountdown", 1)[1]
     render_section = render_section.split("async function loadAutoDispatchState", 1)[0]
     assert "queueHasCallableTickets === false" in render_section
+    assert "deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator" in render_section
+    assert "Автовызов остановлен: достигнут лимит отложенных талонов" in render_section
+    assert "Верните или отмените один из них" in render_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
