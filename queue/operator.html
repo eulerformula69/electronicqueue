@@ -20,13 +20,16 @@
 
 <header class="header-panel">
     <div class="button-group">
-		<button
-			id="window-status-toggle"
-			class="window-status-toggle btn-success"
-			type="button"
-			onclick="toggleWindowStatus()"
-			aria-describedby="status-text"
-		>НАЧАТЬ РАБОТУ</button>
+		<label class="window-status-switch">
+			<input
+				id="window-status-toggle"
+				type="checkbox"
+				onchange="toggleWindowStatus(this)"
+				aria-describedby="status-text"
+			>
+			<span class="window-status-switch-track" aria-hidden="true"></span>
+			<strong>Работа</strong>
+		</label>
 		
 		<div id="status-info-block" class="info-status" aria-live="polite">
 			<div id="status-dot" class="dot"></div>

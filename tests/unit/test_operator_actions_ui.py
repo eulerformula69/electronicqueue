@@ -190,12 +190,14 @@ def test_operator_uses_one_direct_status_toggle():
     ui_state = read_text("queue/js/operator-ui-state.js")
 
     assert 'id="window-status-toggle"' in html
-    assert 'onclick="toggleWindowStatus()"' in html
+    assert 'type="checkbox"' in html
+    assert 'onchange="toggleWindowStatus(this)"' in html
+    assert 'class="window-status-switch-track"' in html
     assert 'id="btn-start"' not in html
     assert 'id="btn-stop"' not in html
-    assert 'currentWindowStatus === "online" ? "break" : "online"' in source
-    assert 'statusToggle.textContent = "УЙТИ НА ПЕРЕРЫВ"' in source
-    assert source.count('statusToggle.textContent = "НАЧАТЬ РАБОТУ"') == 2
+    assert 'control.checked ? "online" : "break"' in source
+    assert 'statusToggle.checked = currentWindowStatus === "online"' in source
+    assert 'if (!changed) updateStatusButtons(currentWindowStatus)' in source
     assert 'statusToggle.disabled = busy' in ui_state
 
 

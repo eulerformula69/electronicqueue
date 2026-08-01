@@ -1454,13 +1454,13 @@ function cancelRedirect() { closeRedirectModal(); }
 function cancelRedirectToWindow() { closeRedirectModal(); }
 
 async function changeWindowStatus(newStatus) {
-    if (!beginOperatorRequest("window-status")) return;
+    if (!beginOperatorRequest("window-status")) return false;
     try {
         const sessionId = sessionStorage.getItem("session_id");
         if (!sessionId) {
             showToast("Сессия не найдена. Перезайдите.", "danger");
             window.location.href = "/queue/login.html";
-            return;
+            return false;
         }
 
         // Получаем данные о текущем операторе и его окне одним запросом
@@ -1470,7 +1470,7 @@ async function changeWindowStatus(newStatus) {
 
         if (!resDetails.ok) {
             showToast("Не удалось получить данные оператора", "danger");
-            return;
+            return false;
         }
 
         const details = await resDetails.json();
@@ -1478,13 +1478,13 @@ async function changeWindowStatus(newStatus) {
         // Проверяем, привязано ли вообще окно
         if (!details.window_id) {
             showToast("За вами не закреплено активное рабочее место", "warning");
-            return;
+            return false;
         }
 
         // Проверка: если статус уже такой же, ничего не делаем
         if (details.window_status === newStatus) {
             console.log("Статус уже установлен, пропускаем запрос.");
-            return; 
+            return true;
         }
 
         // Отправляем запрос на смену статуса
@@ -1503,7 +1503,7 @@ async function changeWindowStatus(newStatus) {
         if (!res.ok) {
             const err = await res.json();
             showToast(err.detail || "Ошибка при смене статуса", "danger");
-            return;
+            return false;
         }
 
         const result = await res.json();
@@ -1515,18 +1515,20 @@ async function changeWindowStatus(newStatus) {
         } else {
             scheduleAutoCallAfterWorkspaceFreed();
         }
+        return true;
 
     } catch (e) {
         console.error(e);
         showToast("Ошибка при смене статуса", "danger");
+        return false;
     } finally {
         endOperatorRequest("window-status");
     }
 }
 
-function toggleWindowStatus() {
-    const nextStatus = currentWindowStatus === "online" ? "break" : "online";
-    return changeWindowStatus(nextStatus);
+async function toggleWindowStatus(control) {
+    const changed = await changeWindowStatus(control.checked ? "online" : "break");
+    if (!changed) updateStatusButtons(currentWindowStatus);
 }
 
 function updateStatusButtons(status) {
@@ -1540,15 +1542,12 @@ function updateStatusButtons(status) {
     }
 
     // Базовый сброс для всех состояний
-    statusToggle.classList.remove("btn-success", "btn-warning-active");
+    statusToggle.checked = currentWindowStatus === "online";
     statusDot.className = "dot";
     statusDot.style.boxShadow = "none";
     statusDot.style.backgroundColor = "";
 
     if (currentWindowStatus === "online") {
-        statusToggle.textContent = "УЙТИ НА ПЕРЕРЫВ";
-        statusToggle.classList.add("btn-warning-active");
-        statusToggle.dataset.nextStatus = "break";
         statusDot.className = "dot online";
         statusText.textContent = "На линии";
         statusText.style.color = "var(--success)";
@@ -1556,9 +1555,6 @@ function updateStatusButtons(status) {
     }
 
     if (currentWindowStatus === "break") {
-        statusToggle.textContent = "НАЧАТЬ РАБОТУ";
-        statusToggle.classList.add("btn-success");
-        statusToggle.dataset.nextStatus = "online";
         statusDot.style.backgroundColor = "var(--warning)";
         statusDot.style.boxShadow = "0 0 8px var(--warning)";
         statusText.textContent = "На перерыве";
@@ -1566,9 +1562,6 @@ function updateStatusButtons(status) {
         return;
     }
     // offline / неизвестный статус
-    statusToggle.textContent = "НАЧАТЬ РАБОТУ";
-    statusToggle.classList.add("btn-success");
-    statusToggle.dataset.nextStatus = "online";
     statusText.textContent = "Оффлайн";
     statusText.style.color = "var(--text-muted)";
 }
