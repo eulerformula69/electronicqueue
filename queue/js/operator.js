@@ -211,7 +211,8 @@ let currentTicketRecallRemainingSeconds = 0;
 let currentTicketFinishCountdownStartedAt = performance.now();
 let currentTicketRecallCountdownStartedAt = performance.now();
 let currentTicketRecallCount = 0;
-let currentTicketReturnedToQueueCount = null;
+const MAX_TICKET_REDIRECTS = 3;
+let currentTicketRedirectCount = null;
 let allServices = [];
 let allWindows = [];
 const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
@@ -298,7 +299,7 @@ function setCurrentTicket(ticket) {
 
     currentTicketId = ticket.id;
     currentTicketStatus = ticket.status || "called";
-    currentTicketReturnedToQueueCount = Number.isFinite(returnedToQueueCount)
+    currentTicketRedirectCount = Number.isFinite(returnedToQueueCount)
         ? returnedToQueueCount
         : null;
     currentTicketCalledAt = parseTicketCalledAt(ticket);
@@ -334,7 +335,7 @@ function clearCurrentTicket() {
     currentTicketFinishCountdownStartedAt = performance.now();
     currentTicketRecallCountdownStartedAt = performance.now();
     currentTicketRecallCount = 0;
-    currentTicketReturnedToQueueCount = null;
+    currentTicketRedirectCount = null;
     refreshOperatorUiState();
     syncCalledTicketTimers();
     syncRecallCooldown();
@@ -1083,6 +1084,10 @@ async function showRedirectModal() {
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
+    if ((currentTicketRedirectCount || 0) >= MAX_TICKET_REDIRECTS) {
+        showToast("Этот талон больше нельзя перенаправлять", "warning");
+        return;
+    }
 
     if (!allServices.length) {
         await loadAllServices();
@@ -1897,55 +1902,7 @@ async function returnCurrentToQueue() {
     }
     if (!ensureClientOperationsAllowed()) return;
 
-    const returnedToQueueCount = await getCurrentTicketReturnedToQueueCount();
-
-    if (returnedToQueueCount > 0) {
-        showRepeatedReturnWarning();
-        return;
-    }
-
     await confirmReturnCurrentToQueue();
-    return;
-}
-
-async function getCurrentTicketReturnedToQueueCount() {
-    if (currentTicketReturnedToQueueCount !== null) {
-        return currentTicketReturnedToQueueCount;
-    }
-
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/tickets/current`, {
-            headers: { "session-id": sessionId }
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (res.ok && data.ticket && data.ticket.id === currentTicketId) {
-            setCurrentTicket(data.ticket);
-            return currentTicketReturnedToQueueCount || 0;
-        }
-    } catch (e) {
-        console.error("Ticket return count check error:", e);
-    }
-
-    return 0;
-}
-
-function showRepeatedReturnWarning() {
-    showOperatorPopup({
-        title: "Вернуть в очередь?",
-        message: "Похоже, этого клиента возвращают в очередь не в первый раз. Возврат нужен только если талон действительно нужно снова поставить в ожидание. Если нужно отменить вызов, перейдите в «Дополнительно» → «Отменить вызов». Если обслуживание завершено, используйте «Завершить».",
-        actions: [
-            {
-                text: "Вернуть в очередь",
-                className: "btn-primary",
-                onClick: confirmReturnCurrentToQueue
-            },
-            {
-                text: "Отмена",
-                className: "btn-outline"
-            }
-        ]
-    });
 }
 
 async function confirmReturnCurrentToQueue() {

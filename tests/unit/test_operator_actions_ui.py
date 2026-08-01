@@ -59,8 +59,21 @@ def test_operator_return_to_queue_is_not_primary_but_legacy_function_stays():
     source = read_text("queue/js/operator.js")
 
     assert "returnCurrentToQueue" in source
-    assert "showRepeatedReturnWarning()" in source
     assert "confirmReturnCurrentToQueue" in source
+
+
+def test_redirect_limit_is_checked_before_modal_opens():
+    source = read_text("queue/js/operator.js")
+    show_modal = source.split("async function showRedirectModal()", 1)[1].split(
+        "function renderRedirectModal()", 1
+    )[0]
+
+    assert "MAX_TICKET_REDIRECTS = 3" in source
+    assert "currentTicketRedirectCount" in show_modal
+    assert "Этот талон больше нельзя перенаправлять" in show_modal
+    assert show_modal.index("Этот талон больше нельзя перенаправлять") < show_modal.index(
+        "renderRedirectModal();"
+    )
 
 
 def test_operator_finish_warning_can_route_to_cancel_or_finish():

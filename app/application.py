@@ -28,7 +28,6 @@ from app.migrations import (
 from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
 from app.services.operators import cleanup_sessions
-from app.services.tickets import auto_cancel_returned_tickets_worker
 
 TESTING = os.getenv("TESTING", "").lower() in {"1", "true", "yes", "on"}
 
@@ -76,4 +75,3 @@ async def startup():
     if not TESTING:
         await start_media_processor()
         asyncio.create_task(cleanup_sessions())
-        asyncio.create_task(auto_cancel_returned_tickets_worker())

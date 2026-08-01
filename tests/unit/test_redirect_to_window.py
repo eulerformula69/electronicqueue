@@ -109,12 +109,40 @@ def test_redirect_to_available_window_creates_ticket_for_selected_service(
     redirected_ticket = result["ticket"]
     assert redirected_ticket.service_id == 3
     assert redirected_ticket.target_window_id == 7
+    assert redirected_ticket.returned_to_queue_count == 1
     assert source_ticket.status == "finished"
     assert source_ticket.completion_reason == "redirected"
     assert db.added == [redirected_ticket]
     assert db.committed is True
     assert db.closed is True
     assert broadcasts == [("queue", {"type": "queue_updated"}), ("board", None)]
+
+
+def test_redirect_to_window_rejects_ticket_after_three_redirects(monkeypatch):
+    source_ticket = Ticket(
+        id=10,
+        number=42,
+        service_id=1,
+        status="called",
+        window_id=5,
+        returned_to_queue_count=3,
+    )
+    operator = Operator(id=2, window_id=5)
+    db = FakeDb(tickets=[source_ticket], windows=[], services=[], window_services=[])
+    monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            tickets_router.redirect_ticket_to_window(
+                RedirectToWindowRequest(ticket_id=10, window_id=7, new_service_id=3),
+                operator=operator,
+            )
+        )
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "Этот талон больше нельзя перенаправлять"
+    assert db.added == []
+    assert db.committed is False
 
 
 def test_redirect_to_window_rejects_service_not_supported_by_window(monkeypatch):

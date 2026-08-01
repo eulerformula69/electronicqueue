@@ -12,10 +12,8 @@ from app.models import (
 )
 from app.services.settings import get_system_settings_dict
 
-RETURN_TO_QUEUE_DELAY_MINUTES = 15
-AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES = 30
-AUTO_CANCEL_RETURNED_TICKETS_INTERVAL_SECONDS = 60
 RECALL_COOLDOWN_SECONDS = 10
+MAX_TICKET_REDIRECTS = 3
 
 
 def called_ticket_wait_remaining_seconds(
@@ -216,7 +214,6 @@ def claim_next_ticket(
 
 def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     returned_at = now or datetime.now()
-    was_returned_before = (ticket.returned_to_queue_count or 0) > 0
 
     ticket.status = "waiting"
     ticket.completion_reason = None
@@ -228,10 +225,7 @@ def return_ticket_to_queue(ticket: Ticket, *, now: datetime | None = None):
     ticket.defer_reason = None
     ticket.deferred_at = None
     ticket.cancel_reason = None
-    ticket.queue_entered_at = returned_at + timedelta(minutes=RETURN_TO_QUEUE_DELAY_MINUTES)
-    ticket.returned_to_queue_count = (ticket.returned_to_queue_count or 0) + 1
-
-    return was_returned_before
+    ticket.queue_entered_at = returned_at
 
 
 def defer_ticket(
@@ -307,59 +301,6 @@ def resume_cancelled_ticket(
     )
 
 
-def cancel_expired_returned_tickets(db: Session, *, now: datetime | None = None) -> int:
-    cancelled_at = now or datetime.now()
-    cutoff = cancelled_at - timedelta(minutes=AUTO_CANCEL_RETURNED_TICKET_AFTER_MINUTES)
-
-    tickets = db.query(Ticket).filter(
-        Ticket.status == "waiting",
-        Ticket.returned_to_queue_count == 1,
-        Ticket.queue_entered_at <= cutoff,
-    ).all()
-
-    for ticket in tickets:
-        ticket.status = "finished"
-        ticket.completion_reason = "cancelled"
-        ticket.cancel_reason = "returned_timeout"
-        ticket.finished_at = cancelled_at
-
-    return len(tickets)
-
-
-async def cancel_expired_returned_tickets_once(
-    *, now: datetime | None = None
-) -> int:
-    db = SessionLocal()
-    try:
-        cancelled_count = cancel_expired_returned_tickets(db, now=now)
-        if cancelled_count:
-            db.commit()
-        else:
-            db.rollback()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
-    if cancelled_count:
-        await manager.broadcast({"type": "queue_updated"})
-        await broadcast_board()
-
-    return cancelled_count
-
-
-async def auto_cancel_returned_tickets_worker(
-    interval_seconds: int = AUTO_CANCEL_RETURNED_TICKETS_INTERVAL_SECONDS,
-):
-    while True:
-        try:
-            await cancel_expired_returned_tickets_once()
-        except Exception:
-            pass
-        await asyncio.sleep(interval_seconds)
-
-
 def create_window_redirect_ticket(
     ticket: Ticket,
     *,
@@ -370,6 +311,7 @@ def create_window_redirect_ticket(
 ) -> Ticket:
     redirected_at = now or datetime.now()
     root_ticket_id = ticket.root_ticket_id or ticket.id
+    redirect_count = (ticket.returned_to_queue_count or 0) + 1
 
     ticket.root_ticket_id = root_ticket_id
     ticket.status = "finished"
@@ -392,6 +334,7 @@ def create_window_redirect_ticket(
         queue_entered_at=redirected_at,
         called_at=None,
         finished_at=None,
+        returned_to_queue_count=redirect_count,
     )
 
 
