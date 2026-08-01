@@ -105,6 +105,14 @@
 
                     </div>
 
+                    <button
+                        id="call-by-number-btn"
+                        class="btn-outline operator-settings-wide-button"
+                        data-call-action
+                        type="button"
+                        onclick="promptCallByNumber()"
+                    >Вызвать по номеру</button>
+
                     <button class="btn-outline operator-settings-wide-button" type="button" onclick="openOperatorChangelogHistory()">ОБНОВЛЕНИЯ</button>
                 </div>
             </div>
@@ -156,25 +164,17 @@
 			
 	<div class="button-group primary-actions">
 		<button id="next-btn" class="btn-primary" data-call-action onclick="callNext()">Вызвать следующего</button>
-		<button id="start-service-btn" class="btn-primary" data-current-ticket-action onclick="startService()">Начать обслуживание</button>
 		<button class="btn-primary" id="finish-btn" data-current-ticket-action onclick="finishCurrent()">Завершить обслуживание</button>
 	</div>
 
-	<div class="button-group secondary-actions secondary-critical-actions">
-		<button class="btn-outline" id="defer-ticket-btn" data-current-ticket-action onclick="showDeferReasonPopup()">Отложить</button>
-		<button class="btn-outline btn-danger-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent()">Отменить талон</button>
+	<div class="button-group secondary-actions called-actions">
+		<button id="start-service-btn" class="btn-outline" data-current-ticket-action onclick="startService()">Начать обслуживание</button>
+		<button class="btn-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent({reason: 'no_show'})">Отменить (не явился)</button>
 	</div>
 
-	<div class="button-group secondary-actions tertiary-actions">
-		<button class="btn-outline" id="recall-btn" data-current-ticket-action onclick="recallCurrent()">Повторить вызов</button>
-		<button class="btn-outline" id="call-by-number-btn" data-call-action type="button" onclick="promptCallByNumber()">Вызвать по номеру</button>
+	<div class="button-group secondary-actions serving-actions">
 		<button class="btn-outline" id="redirect-btn" data-current-ticket-action onclick="showRedirectModal()">Перенаправить</button>
-		<!---<div class="operator-more-actions">
-			<button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
-			<div id="operator-more-menu" class="operator-more-menu">
-
-			</div>
-		</div> --->
+		<button class="btn-outline" id="defer-ticket-btn" data-current-ticket-action onclick="showDeferReasonPopup()">Отложить</button>
 	</div>
 
     <div id="auto-call-info-block" class="auto-call-info-block" aria-live="polite" style="display:none;">

@@ -38,8 +38,12 @@ def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     assert "return-to-queue-btn" not in primary_actions
     assert "defer-ticket-btn" in actions_area
     assert "showDeferReasonPopup()" in actions_area
-    assert "Вызвать по номеру" in actions_area
-    assert 'onclick="cancelCurrent()"' in actions_area
+    settings_area = source.split('<div id="operator-settings-popup"', 1)[1].split(
+        '</header>', 1
+    )[0]
+    assert "Вызвать по номеру" not in actions_area
+    assert "Вызвать по номеру" in settings_area
+    assert "cancelCurrent({reason: 'no_show'})" in actions_area
 
 
 def test_operator_has_four_clickable_queue_columns():
@@ -77,16 +81,16 @@ def test_redirect_limit_is_checked_before_modal_opens():
     )
 
 
-def test_operator_finish_warning_can_route_to_cancel_or_finish():
+def test_operator_finish_warning_can_continue_or_confirm_finish():
     source = read_text("queue/js/operator.js")
 
     assert "SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000" in source
     assert "RECALL_FINISH_WARNING_COUNT = 2" in source
     assert "showFinishWarningPopup()" in source
-    assert 'text: "Завершить"' in source
-    assert 'text: "Клиент не явился"' in source
+    assert 'title: "Обслуживание завершено слишком быстро?"' in source
+    assert 'text: "Подтвердить завершение"' in source
+    assert 'text: "Продолжить обслуживание"' in source
     assert "finishCurrent({ skipWarning: true })" in source
-    assert 'cancelCurrent({ reason: "no_show" })' in source
 
 
 def test_operator_actions_keep_existing_ticket_endpoints():
@@ -377,8 +381,8 @@ def test_operator_ui_uses_one_state_refresh_for_action_availability():
     assert 'document.querySelectorAll("[data-call-action]")' in source
     assert 'document.querySelectorAll("[data-current-ticket-action]")' in source
     assert "button.disabled = !online || hasTicket || busy" in source
-    assert "button.disabled = !online || !hasTicket || !statusAllowsAction || busy" in source
-    assert 'displayZone.classList.toggle("operator-work-disabled", !online)' in source
+    assert "button.disabled = !hasTicket || !statusAllowsAction || busy" in source
+    assert 'displayZone.classList.toggle("operator-work-disabled", !online && !hasTicket)' in source
     assert "data-call-action" in html
     assert "data-current-ticket-action" in html
     assert 'data-ticket-status="called"' in css
@@ -394,13 +398,28 @@ def test_operator_ui_follows_contextual_action_audit():
     assert ">Начать обслуживание<" in html
     assert ">Завершить обслуживание<" in html
     assert 'class="btn-primary" id="finish-btn"' in html
-    assert "btn-danger-outline" in html
+    assert 'class="button-group secondary-actions called-actions"' in html
+    assert 'class="button-group secondary-actions serving-actions"' in html
+    assert html.index('id="redirect-btn"') < html.index('id="defer-ticket-btn"')
+    assert "Отменить (не явился)" in html
     assert 'data-ticket-status="serving"' in css
     assert "grid-template-columns: minmax(0, 1fr);" in css
     assert "transition: all" not in css
     assert "prefers-reduced-motion: reduce" in css
     assert "@media (max-width: 760px)" in css
     assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
+
+
+def test_break_allows_finishing_active_ticket_but_not_starting_another():
+    ui_state = read_text("queue/js/operator-ui-state.js")
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+
+    assert "button.disabled = !online || hasTicket || busy" in ui_state
+    assert "button.disabled = !hasTicket || !statusAllowsAction || busy" in ui_state
+    assert "if (!isOperatorOnBreak() || currentTicketId) return true;" in source
+    assert "Ticket.status.in_(ACTIVE_TICKET_STATUSES)" in backend
+    assert "if active_ticket:" in backend
 
 
 def test_operator_mutations_share_double_click_guard():

@@ -39,7 +39,7 @@ function refreshOperatorUiState() {
             button.id === "finish-btn" && isCalledTicketWaitActive()
         );
         const waitingBeforeRecall = button.id === "recall-btn" && recallCooldown;
-        button.disabled = !online || !hasTicket || !statusAllowsAction || busy || (
+        button.disabled = !hasTicket || !statusAllowsAction || busy || (
             waitingBeforeRecall
         ) || waitingBeforeFinish;
         button.classList.toggle(
@@ -54,7 +54,7 @@ function refreshOperatorUiState() {
     const displayZone = document.querySelector(".display-zone");
     if (displayZone) {
         displayZone.classList.toggle("current-ticket-actions-inactive", !hasTicket);
-        displayZone.classList.toggle("operator-work-disabled", !online);
+        displayZone.classList.toggle("operator-work-disabled", !online && !hasTicket);
         displayZone.dataset.ticketStatus = currentTicketStatus || "none";
     }
 

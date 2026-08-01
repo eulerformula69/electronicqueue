@@ -86,8 +86,17 @@ def operator_window_is_on_break(db: Session, operator: Operator) -> bool:
 
 
 def ensure_client_operations_allowed(db: Session, operator: Operator) -> None:
-    if operator_window_is_on_break(db, operator):
-        raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
+    if not operator_window_is_on_break(db, operator):
+        return
+
+    active_ticket = db.query(Ticket.id).filter(
+        Ticket.window_id == operator.window_id,
+        Ticket.status.in_(ACTIVE_TICKET_STATUSES),
+    ).first()
+    if active_ticket:
+        return
+
+    raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
 
 
 def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) -> dict:

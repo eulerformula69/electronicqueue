@@ -904,21 +904,16 @@ function shouldWarnBeforeFinish() {
 
 function showFinishWarningPopup() {
     showOperatorPopup({
-        title: "Проверьте действие",
-        message: "Похоже, клиент мог не подойти. Если клиент не подошёл, выберите «Клиент не явился». Если обслуживание действительно завершено, подтвердите завершение.",
+        title: "Обслуживание завершено слишком быстро?",
+        message: "Кажется, вы обслужили клиента слишком быстро. Возможно, завершение нажато случайно. Вы можете отменить действие и продолжить работу с клиентом или подтвердить завершение.",
         actions: [
             {
-                text: "Завершить",
-                className: "btn-danger",
+                text: "Подтвердить завершение",
+                className: "btn-primary",
                 onClick: () => finishCurrent({ skipWarning: true })
             },
             {
-                text: "Клиент не явился",
-                className: "btn-outline",
-                onClick: () => cancelCurrent({ reason: "no_show" })
-            },
-            {
-                text: "Отмена",
+                text: "Продолжить обслуживание",
                 className: "btn-outline"
             }
         ]
@@ -2087,7 +2082,7 @@ function getAutoCallPausedMessage() {
 }
 
 function ensureClientOperationsAllowed() {
-    if (!isOperatorOnBreak()) return true;
+    if (!isOperatorOnBreak() || currentTicketId) return true;
 
     showToast(CLIENT_OPERATIONS_ON_BREAK_MESSAGE, "warning");
     return false;
@@ -2171,6 +2166,7 @@ function scheduleAutoCallAfterWorkspaceFreed() {
 ========================= */
 async function promptCallByNumber() {
     closeOperatorMoreMenu();
+    closeOperatorSettingsPopup();
 
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");

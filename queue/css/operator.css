@@ -261,40 +261,9 @@ body.operator-page .secondary-actions button{
     min-width: 0;
 }
 
-body.operator-page .secondary-critical-actions{
+body.operator-page .called-actions,
+body.operator-page .serving-actions{
     grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-body.operator-page .secondary-critical-actions #defer-ticket-btn{
-    grid-column: auto;
-}
-
-body.operator-page .secondary-critical-actions #cancel-btn{
-    grid-column: auto;
-}
-
-body.operator-page .button-group.tertiary-actions{
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    width: 100%;
-}
-
-body.operator-page .tertiary-actions #recall-btn{
-    grid-column: auto;
-}
-
-body.operator-page .tertiary-actions{
-    grid-column: 2 / 3;
-}
-
-body.operator-page .tertiary-actions #redirect-btn{
-    grid-column: auto;
-}
-
-body.operator-page .tertiary-actions button{
-	
-    width: 100%;
 }
 
 body.operator-page .operator-more-actions{
@@ -644,8 +613,14 @@ body.operator-page .operator-work-disabled [data-current-ticket-action]{
 }
 
 body.operator-page .display-zone[data-ticket-status="none"] [data-current-ticket-action],
+body.operator-page .display-zone[data-ticket-status="none"] .called-actions,
+body.operator-page .display-zone[data-ticket-status="none"] .serving-actions,
+body.operator-page .display-zone[data-ticket-status="called"] .serving-actions,
+body.operator-page .display-zone[data-ticket-status="serving"] .called-actions,
 body.operator-page .display-zone[data-ticket-status="called"] #finish-btn,
 body.operator-page .display-zone[data-ticket-status="called"] #redirect-btn,
+body.operator-page .display-zone[data-ticket-status="called"] #defer-ticket-btn,
+body.operator-page .display-zone[data-ticket-status="called"] #recall-btn,
 body.operator-page .display-zone[data-ticket-status="serving"] #start-service-btn,
 body.operator-page .display-zone[data-ticket-status="serving"] #recall-btn,
 body.operator-page .display-zone[data-ticket-status="serving"] #cancel-btn,
@@ -1194,8 +1169,8 @@ body.operator-page .queue-resume-btn{
         font-size: clamp(4rem, 22vw, 7rem);
     }
 
-    body.operator-page .secondary-critical-actions,
-    body.operator-page .button-group.tertiary-actions {
+    body.operator-page .called-actions,
+    body.operator-page .serving-actions {
         grid-template-columns: minmax(0, 1fr);
     }
 }
