@@ -6,7 +6,7 @@ from sqlalchemy import or_, text
 
 from app.connections import manager
 from app.database import SessionLocal
-from app.models import Operator, Ticket, Window
+from app.models import Operator, Ticket, Window, WindowService
 from app.services.operators import resolve_operator_auto_call_enabled
 from app.services.settings import get_system_settings_dict
 from app.services.ticket_lifecycle import ACTIVE_TICKET_STATUSES
@@ -20,11 +20,28 @@ from app.services.tickets import (
 LOGGER = logging.getLogger(__name__)
 DISPATCHER_LOCK_ID = 71620412
 DISPATCHER_INTERVAL_SECONDS = 1
-EMPTY_QUEUE_RETRY_SECONDS = 2
 
 
 def _next_deadline(now: datetime, delay_seconds: int) -> datetime:
     return now + timedelta(seconds=max(0, delay_seconds))
+
+
+def _has_waiting_ticket_for_operator(db, operator: Operator) -> bool:
+    targeted_ticket = db.query(Ticket.id).filter(
+        Ticket.status == "waiting",
+        Ticket.target_window_id == operator.window_id,
+    ).first()
+    if targeted_ticket:
+        return True
+
+    return db.query(Ticket.id).join(
+        WindowService,
+        Ticket.service_id == WindowService.service_id,
+    ).filter(
+        WindowService.window_id == operator.window_id,
+        Ticket.status == "waiting",
+        Ticket.target_window_id.is_(None),
+    ).first() is not None
 
 
 async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
@@ -85,6 +102,8 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
                 continue
 
             if operator.next_auto_call_at is None:
+                if not _has_waiting_ticket_for_operator(db, operator):
+                    continue
                 operator.next_auto_call_at = _next_deadline(current_time, delay_seconds)
                 deadlines_created = True
 
@@ -104,10 +123,7 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
             elif ticket:
                 operator.next_auto_call_at = None
             else:
-                operator.next_auto_call_at = _next_deadline(
-                    current_time,
-                    EMPTY_QUEUE_RETRY_SECONDS,
-                )
+                operator.next_auto_call_at = None
 
         db.commit()
 

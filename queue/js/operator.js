@@ -864,7 +864,7 @@ async function refreshQueueAndAutoCall() {
         isOperatorOnline() &&
         autoCallState === "empty"
     ) {
-        scheduleAutoCallAfterWorkspaceFreed();
+        startAutoCallAfterFinish();
     }
 }
 
@@ -2152,6 +2152,10 @@ function getAutoCallStatusDisplay() {
 function renderAutoDispatchCountdown() {
     if (!operatorSettings.auto_call_enabled || !isOperatorOnline()) return;
     if (hasCurrentTicket()) return;
+    if (queueHasCallableTickets === false) {
+        updateAutoCallStatus("Очередь пуста", {state: "empty"});
+        return;
+    }
     if (autoDispatchDeadlineMs === null) {
         updateAutoCallStatus("Подготовка системного вызова...", {state: "countdown"});
         return;

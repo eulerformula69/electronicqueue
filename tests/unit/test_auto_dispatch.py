@@ -81,7 +81,13 @@ class FakeDb:
         self.closed = True
 
 
-def configure_dispatch(monkeypatch, db, *, claim_result=(None, False)):
+def configure_dispatch(
+    monkeypatch,
+    db,
+    *,
+    claim_result=(None, False),
+    has_waiting_ticket=True,
+):
     monkeypatch.setattr(auto_dispatch, "SessionLocal", lambda: db)
     monkeypatch.setattr(
         auto_dispatch,
@@ -93,6 +99,11 @@ def configure_dispatch(monkeypatch, db, *, claim_result=(None, False)):
         },
     )
     monkeypatch.setattr(auto_dispatch, "claim_next_ticket", lambda *args, **kwargs: claim_result)
+    monkeypatch.setattr(
+        auto_dispatch,
+        "_has_waiting_ticket_for_operator",
+        lambda *args, **kwargs: has_waiting_ticket,
+    )
 
     async def noop(*args, **kwargs):
         return None
@@ -176,7 +187,7 @@ async def test_dispatcher_clears_deadline_for_offline_operator(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_dispatcher_retries_soon_when_queue_is_empty(monkeypatch):
+async def test_dispatcher_clears_deadline_when_queue_is_empty(monkeypatch):
     now = datetime(2026, 8, 1, 12, 0)
     operator = Operator(
         id=1,
@@ -185,12 +196,12 @@ async def test_dispatcher_retries_soon_when_queue_is_empty(monkeypatch):
         next_auto_call_at=now,
     )
     db = FakeDb(operator=operator, window=Window(id=3, status="online"))
-    configure_dispatch(monkeypatch, db)
+    configure_dispatch(monkeypatch, db, has_waiting_ticket=False)
 
     dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
 
     assert dispatched == 0
-    assert operator.next_auto_call_at == now + timedelta(seconds=2)
+    assert operator.next_auto_call_at is None
 
 
 @pytest.mark.asyncio
@@ -252,7 +263,7 @@ async def test_dispatcher_can_continue_below_deferred_limit(monkeypatch):
     dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
 
     assert dispatched == 0
-    assert operator.next_auto_call_at == now + timedelta(seconds=2)
+    assert operator.next_auto_call_at is None
 
 
 def test_browser_does_not_own_server_managed_auto_call_timer():

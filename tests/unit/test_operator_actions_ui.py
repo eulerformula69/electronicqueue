@@ -238,9 +238,12 @@ def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatc
     assert "refreshQueueAndAutoCall();" in websocket_section
     assert 'stopAutoCall("Очередь пуста");' in refresh_section
     assert 'autoCallState === "empty"' in refresh_section
-    assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
+    assert "startAutoCallAfterFinish();" in refresh_section
     assert "if (queueHasCallableTickets === false)" not in start_section
     assert "renderAutoDispatchCountdown();" in start_section
+    render_section = source.split("function renderAutoDispatchCountdown", 1)[1]
+    render_section = render_section.split("async function loadAutoDispatchState", 1)[0]
+    assert "queueHasCallableTickets === false" in render_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
