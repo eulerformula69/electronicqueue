@@ -128,6 +128,15 @@ def test_operator_changelog_popup_can_show_previous_entries():
     assert "max-height: min(58vh, 520px);" in css
 
 
+def test_operator_changelog_uses_playful_read_confirmation():
+    source = read_text("queue/js/operator-changelog.js")
+    css = read_text("queue/css/operator.css")
+
+    assert "Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления" in source
+    assert ".operator-changelog-actions .btn-primary" in css
+    assert "white-space: normal" in css
+
+
 def test_operator_changelog_json_has_operator_facing_russian_text():
     data = json.loads(read_text("queue/changelog/operator.json"))
 

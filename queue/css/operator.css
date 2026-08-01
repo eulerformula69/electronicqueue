@@ -538,6 +538,12 @@ body.operator-page .operator-changelog-actions{
     justify-content: center;
     margin-top: 22px;
 }
+body.operator-page .operator-changelog-actions .btn-primary{
+    width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+    padding: 14px 18px;
+}
 body.operator-page .info-status{
     display: flex;
     align-items: center;
