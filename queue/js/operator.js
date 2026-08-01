@@ -938,6 +938,37 @@ async function finishCurrent(options = {}) {
     }
 }
 
+async function startService() {
+    if (!currentTicketId || currentTicketStatus !== "called") return;
+    if (!ensureClientOperationsAllowed()) return;
+    if (!beginOperatorRequest("start-service")) return;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/start-service`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            }
+        });
+        const result = await res.json();
+        if (!res.ok) {
+            showToast(result.detail || "Не удалось начать обслуживание", "danger");
+            return;
+        }
+
+        currentTicketStatus = result.status;
+        refreshOperatorUiState();
+        syncCalledTicketTimers();
+        showToast("Обслуживание начато", "success");
+    } catch (e) {
+        console.error(e);
+        showToast("Ошибка соединения с сервером", "danger");
+    } finally {
+        endOperatorRequest("start-service");
+    }
+}
+
 /* =========================
    Загрузка всех услуг
 ========================= */

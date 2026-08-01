@@ -13,6 +13,7 @@ from app.models import (
     UserSession, Window, WindowService, record_operator_status,
 )
 from app.services.settings import get_system_settings_dict
+from app.services.ticket_lifecycle import ACTIVE_TICKET_STATUSES
 from app.services.tickets import (
     broadcast_board, queue_order_expr, return_ticket_to_queue,
 )
@@ -104,7 +105,7 @@ def get_operator_state(operator_id: int):
         )
 
         current_ticket = db.query(Ticket)\
-            .filter(Ticket.window_id == operator.window_id, Ticket.status == "called")\
+            .filter(Ticket.window_id == operator.window_id, Ticket.status.in_(ACTIVE_TICKET_STATUSES))\
             .first()
 
         # Услуги с приоритетами
@@ -219,7 +220,7 @@ async def cleanup_sessions():
                             if settings["active_ticket_on_operator_logout"] == "return_to_queue":
                                 active_ticket = db.query(Ticket).filter(
                                     Ticket.window_id == operator.window_id,
-                                    Ticket.status == "called"
+                                    Ticket.status.in_(ACTIVE_TICKET_STATUSES)
                                 ).first()
 
                                 if active_ticket:

@@ -329,6 +329,20 @@ def migrate_ticket_recall_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_ticket_service_started_schema(engine):
+    """Add the factual start time for the called -> serving transition."""
+    ddl = """
+    ALTER TABLE tickets
+        ADD COLUMN IF NOT EXISTS service_started_at timestamp without time zone;
+
+    CREATE INDEX IF NOT EXISTS ix_tickets_status_service_started_at
+        ON tickets (status, service_started_at);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_operator_status_periods_schema(engine):
     """Create operator status history and migrate older column types."""
     ddl = """

@@ -24,11 +24,22 @@ function refreshOperatorUiState() {
         button.disabled = !online || hasTicket || busy;
     });
     document.querySelectorAll("[data-current-ticket-action]").forEach(button => {
+        const isCalled = currentTicketStatus === "called";
+        const isServing = currentTicketStatus === "serving";
+        const statusAllowsAction = {
+            "start-service-btn": isCalled,
+            "finish-btn": isServing,
+            "redirect-btn": isServing,
+            "recall-btn": isCalled,
+            "cancel-btn": isCalled,
+            "defer-ticket-btn": isCalled || isServing,
+            "return-to-queue-btn": isCalled || isServing
+        }[button.id] ?? (isCalled || isServing);
         const waitingBeforeFinish = (
             button.id === "finish-btn" && isCalledTicketWaitActive()
         );
         const waitingBeforeRecall = button.id === "recall-btn" && recallCooldown;
-        button.disabled = !online || !hasTicket || busy || (
+        button.disabled = !online || !hasTicket || !statusAllowsAction || busy || (
             waitingBeforeRecall
         ) || waitingBeforeFinish;
         button.classList.toggle(

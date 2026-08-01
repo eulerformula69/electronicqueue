@@ -636,6 +636,11 @@ body.operator-page .operator-work-disabled [data-current-ticket-action]{
     filter: grayscale(0.8);
 }
 
+body.operator-page .display-zone:not([data-ticket-status="called"]) #start-service-btn,
+body.operator-page .display-zone[data-ticket-status="called"] #finish-btn {
+    display: none;
+}
+
 body.operator-page .icon-button {
     display: inline-flex;
     align-items: center;

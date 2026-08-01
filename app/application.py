@@ -17,6 +17,7 @@ from app.migrations import (
     migrate_ticket_return_count_schema,
     migrate_ticket_defer_schema,
     migrate_ticket_recall_schema,
+    migrate_ticket_service_started_schema,
     migrate_service_groups_schema,
     migrate_service_terminal_visibility_schema,
     migrate_operator_service_notifications_schema,
@@ -62,6 +63,7 @@ async def startup():
     migrate_ticket_return_count_schema(engine)
     migrate_ticket_defer_schema(engine)
     migrate_ticket_recall_schema(engine)
+    migrate_ticket_service_started_schema(engine)
     migrate_ticket_notice_settings_schema(engine)
     migrate_board_ticker_settings_schema(engine)
     migrate_ticket_reason_settings_schema(engine)

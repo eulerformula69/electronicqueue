@@ -375,10 +375,12 @@ def test_operator_ui_uses_one_state_refresh_for_action_availability():
     assert 'document.querySelectorAll("[data-call-action]")' in source
     assert 'document.querySelectorAll("[data-current-ticket-action]")' in source
     assert "button.disabled = !online || hasTicket || busy" in source
-    assert "button.disabled = !online || !hasTicket || busy" in source
+    assert "button.disabled = !online || !hasTicket || !statusAllowsAction || busy" in source
     assert 'displayZone.classList.toggle("operator-work-disabled", !online)' in source
     assert "data-call-action" in html
     assert "data-current-ticket-action" in html
+    assert 'data-ticket-status="called"' in css
+    assert "#start-service-btn" in css
     assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
 
 
