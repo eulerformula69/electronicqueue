@@ -68,8 +68,9 @@ def test_redirect_limit_is_checked_before_modal_opens():
         "function renderRedirectModal()", 1
     )[0]
 
-    assert "MAX_TICKET_REDIRECTS = 3" in source
+    assert "max_ticket_redirects: 3" in source
     assert "currentTicketRedirectCount" in show_modal
+    assert "operatorSettings.max_ticket_redirects" in show_modal
     assert "Этот талон больше нельзя перенаправлять" in show_modal
     assert show_modal.index("Этот талон больше нельзя перенаправлять") < show_modal.index(
         "renderRedirectModal();"

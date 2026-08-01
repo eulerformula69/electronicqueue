@@ -48,7 +48,7 @@ from app.services.tickets import (
     broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_cancelled_ticket, resume_deferred_ticket,
-    recall_cooldown_remaining_seconds, MAX_TICKET_REDIRECTS,
+    recall_cooldown_remaining_seconds,
     return_ticket_to_queue,
 )
 from app.services.operators import resolve_operator_auto_call_enabled
@@ -58,8 +58,8 @@ router = APIRouter()
 REDIRECT_LIMIT_DETAIL = "Этот талон больше нельзя перенаправлять"
 
 
-def ensure_ticket_redirect_allowed(ticket: Ticket) -> None:
-    if (ticket.returned_to_queue_count or 0) >= MAX_TICKET_REDIRECTS:
+def ensure_ticket_redirect_allowed(ticket: Ticket, max_redirects: int) -> None:
+    if (ticket.returned_to_queue_count or 0) >= max_redirects:
         raise HTTPException(status_code=409, detail=REDIRECT_LIMIT_DETAIL)
 
 CLIENT_OPERATIONS_ON_BREAK_DETAIL = "Нельзя выполнять операции с клиентом, пока оператор на перерыве"
@@ -929,12 +929,12 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         if ticket.window_id != operator.window_id:
             raise HTTPException(status_code=403, detail="Этот билет не является текущим билетом вашего окна")
 
-        ensure_ticket_redirect_allowed(ticket)
+        settings = get_system_settings_dict(db)
+        ensure_ticket_redirect_allowed(ticket, settings["max_ticket_redirects"])
 
         target_window = db.query(Window).filter(Window.id == data.window_id).first()
         if not target_window:
             raise HTTPException(status_code=404, detail="Рабочее место для перенаправления не найдено")
-        settings = get_system_settings_dict(db)
         allowed_statuses = ["online"]
         if settings["redirect_allow_break"]:
             allowed_statuses.append("break")
@@ -1011,7 +1011,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
                 detail="Этот билет не является текущим билетом вашего рабочего места",
             )
 
-        ensure_ticket_redirect_allowed(ticket)
+        ensure_ticket_redirect_allowed(ticket, settings["max_ticket_redirects"])
 
         service = (
             db.query(Service)

@@ -128,6 +128,10 @@ export async function loadExtraSettings() {
                     <span class="settings-label">Минимальное ожидание после вызова, секунд:</span>
                     <input id="setting-called-ticket-min-wait" class="settings-input" type="number" min="0" max="3600" step="1" value="${settings.called_ticket_min_wait_seconds ?? 180}">
                 </label>
+                <label class="settings-field-row">
+                    <span class="settings-label">Максимум перенаправлений одного талона:</span>
+                    <input id="setting-max-ticket-redirects" class="settings-input" type="number" min="1" max="20" step="1" value="${settings.max_ticket_redirects ?? 3}">
+                </label>
                 <label class="settings-field-row"><span class="settings-label">Балансировка автовызова:</span><input id="setting-auto-call-balance-enabled" type="checkbox" ${settings.auto_call_balance_enabled !== false ? "checked" : ""}></label>
                 <label class="settings-field-row"><span class="settings-label">Максимум талонов для балансировки:</span><input id="setting-auto-call-balance-threshold" class="settings-input" type="number" min="1" max="100" value="${settings.auto_call_balance_queue_threshold ?? 3}"></label>
                 <label class="settings-field-row"><span class="settings-label">Минимум свободных операторов:</span><input id="setting-auto-call-balance-min-operators" class="settings-input" type="number" min="2" max="100" value="${settings.auto_call_balance_min_free_operators ?? 2}"></label>
@@ -216,6 +220,7 @@ export async function saveExtraSettings() {
         auto_call_enabled: currentSettings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(currentSettings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(document.getElementById("setting-called-ticket-min-wait").value),
+        max_ticket_redirects: Number(document.getElementById("setting-max-ticket-redirects").value),
         auto_call_balance_enabled: document.getElementById("setting-auto-call-balance-enabled").checked,
         auto_call_balance_queue_threshold: Number(document.getElementById("setting-auto-call-balance-threshold").value),
         auto_call_balance_min_free_operators: Number(document.getElementById("setting-auto-call-balance-min-operators").value),
@@ -247,6 +252,10 @@ export async function saveExtraSettings() {
         payload.called_ticket_min_wait_seconds > 3600
     ) {
         alert("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд");
+        return;
+    }
+    if (!Number.isInteger(payload.max_ticket_redirects) || payload.max_ticket_redirects < 1 || payload.max_ticket_redirects > 20) {
+        alert("Лимит перенаправлений должен быть целым числом от 1 до 20");
         return;
     }
 

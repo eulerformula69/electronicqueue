@@ -14,7 +14,11 @@ def redirect_settings(monkeypatch):
     monkeypatch.setattr(
         tickets_router,
         "get_system_settings_dict",
-        lambda db: {"redirect_allow_break": True, "redirect_allow_offline": False},
+        lambda db: {
+            "redirect_allow_break": True,
+            "redirect_allow_offline": False,
+            "max_ticket_redirects": 3,
+        },
     )
 
 
@@ -118,18 +122,27 @@ def test_redirect_to_available_window_creates_ticket_for_selected_service(
     assert broadcasts == [("queue", {"type": "queue_updated"}), ("board", None)]
 
 
-def test_redirect_to_window_rejects_ticket_after_three_redirects(monkeypatch):
+def test_redirect_to_window_uses_configured_redirect_limit(monkeypatch):
     source_ticket = Ticket(
         id=10,
         number=42,
         service_id=1,
         status="called",
         window_id=5,
-        returned_to_queue_count=3,
+        returned_to_queue_count=2,
     )
     operator = Operator(id=2, window_id=5)
     db = FakeDb(tickets=[source_ticket], windows=[], services=[], window_services=[])
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda db: {
+            "redirect_allow_break": True,
+            "redirect_allow_offline": False,
+            "max_ticket_redirects": 2,
+        },
+    )
 
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
@@ -217,7 +230,11 @@ def test_redirect_to_window_allows_offline_window_when_enabled(monkeypatch):
     monkeypatch.setattr(
         tickets_router,
         "get_system_settings_dict",
-        lambda db: {"redirect_allow_break": True, "redirect_allow_offline": True},
+        lambda db: {
+            "redirect_allow_break": True,
+            "redirect_allow_offline": True,
+            "max_ticket_redirects": 3,
+        },
     )
 
     async def noop(*args, **kwargs):

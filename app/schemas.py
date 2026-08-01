@@ -247,6 +247,7 @@ class SystemSettingsUpdate(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool = True
     redirect_allow_offline: bool = False
+    max_ticket_redirects: int = Field(default=3, ge=1, le=20)
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
@@ -280,6 +281,7 @@ class SystemSettingsResponse(BaseModel):
     hide_services_without_online_operators: bool
     redirect_allow_break: bool
     redirect_allow_offline: bool
+    max_ticket_redirects: int
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str
@@ -306,6 +308,7 @@ class PublicSettingsResponse(BaseModel):
     ticket_notice_unprinted_text: str
     redirect_allow_break: bool
     redirect_allow_offline: bool
+    max_ticket_redirects: int
     board_ticket_template: str
     board_ticker_text: str
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)

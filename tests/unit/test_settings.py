@@ -111,6 +111,14 @@ def test_redirect_status_settings_are_exposed_to_operator_ui():
         assert "redirect_allow_offline" in _schema_fields(schema)
 
 
+def test_max_ticket_redirects_is_in_settings_schemas_with_default():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "max_ticket_redirects" in _schema_fields(schema)
+
+    field = _schema_fields(SystemSettingsUpdate)["max_ticket_redirects"]
+    assert field.default == 3
+
+
 def test_system_settings_dict_includes_board_ticker_text():
     engine = create_engine("sqlite:///:memory:")
     SystemSettings.__table__.create(engine)

@@ -500,6 +500,20 @@ def migrate_called_ticket_min_wait_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_max_ticket_redirects_schema(engine):
+    """Add the configurable ticket redirect limit."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS max_ticket_redirects integer DEFAULT 3;
+
+    UPDATE system_settings
+    SET max_ticket_redirects = COALESCE(max_ticket_redirects, 3);
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_auto_call_balance_and_board_cancel_schema(engine):
     """Add low-load auto-call balancing and board cancellation settings."""
     ddl = """

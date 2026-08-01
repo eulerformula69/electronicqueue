@@ -70,7 +70,8 @@ let operatorSettings = {
     auto_call_delay_seconds: 60,
     called_ticket_min_wait_seconds: 180,
     redirect_allow_break: true,
-    redirect_allow_offline: false
+    redirect_allow_offline: false,
+    max_ticket_redirects: 3
 };
 let autoCallSettingsLoaded = false;
 let recallCooldown = false;
@@ -211,7 +212,6 @@ let currentTicketRecallRemainingSeconds = 0;
 let currentTicketFinishCountdownStartedAt = performance.now();
 let currentTicketRecallCountdownStartedAt = performance.now();
 let currentTicketRecallCount = 0;
-const MAX_TICKET_REDIRECTS = 3;
 let currentTicketRedirectCount = null;
 let allServices = [];
 let allWindows = [];
@@ -241,7 +241,8 @@ async function loadOperatorReasonSettings() {
                 settings.called_ticket_min_wait_seconds
             ),
             redirect_allow_break: settings.redirect_allow_break === true,
-            redirect_allow_offline: settings.redirect_allow_offline === true
+            redirect_allow_offline: settings.redirect_allow_offline === true,
+            max_ticket_redirects: Number(settings.max_ticket_redirects) || 3
         };
         if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.setReasonOptions) {
             OperatorQueueSections.setReasonOptions(settings);
@@ -1084,7 +1085,7 @@ async function showRedirectModal() {
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
-    if ((currentTicketRedirectCount || 0) >= MAX_TICKET_REDIRECTS) {
+    if ((currentTicketRedirectCount || 0) >= operatorSettings.max_ticket_redirects) {
         showToast("Этот талон больше нельзя перенаправлять", "warning");
         return;
     }

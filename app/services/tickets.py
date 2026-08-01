@@ -13,7 +13,6 @@ from app.models import (
 from app.services.settings import get_system_settings_dict
 
 RECALL_COOLDOWN_SECONDS = 10
-MAX_TICKET_REDIRECTS = 3
 
 
 def called_ticket_wait_remaining_seconds(

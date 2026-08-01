@@ -37,6 +37,7 @@ function render() {
                 ], settings.active_ticket_on_operator_logout))}
                 ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
                 ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
+                ${ctx.ui.field("Максимум перенаправлений одного талона", ctx.ui.input("max_ticket_redirects", settings.max_ticket_redirects ?? 3, "type=\"number\" min=\"1\" max=\"20\" step=\"1\""))}
                 ${ctx.ui.field("Минимальное ожидание после вызова, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка автовызова при низкой нагрузке", ctx.ui.switchField("auto_call_balance_enabled", settings.auto_call_balance_enabled ?? true))}
                 ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
@@ -171,6 +172,7 @@ async function save() {
         hide_services_without_online_operators: data.unavailable_services_mode === "hide",
         redirect_allow_break: Boolean(data.redirect_allow_break),
         redirect_allow_offline: Boolean(data.redirect_allow_offline),
+        max_ticket_redirects: Number(data.max_ticket_redirects),
         auto_call_enabled: settings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(data.called_ticket_min_wait_seconds),
@@ -198,6 +200,9 @@ async function save() {
     }
     if (!validCalledTicketMinWait(payload.called_ticket_min_wait_seconds)) {
         return ctx.toast("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд", "error");
+    }
+    if (!Number.isInteger(payload.max_ticket_redirects) || payload.max_ticket_redirects < 1 || payload.max_ticket_redirects > 20) {
+        return ctx.toast("Лимит перенаправлений должен быть целым числом от 1 до 20", "error");
     }
     if (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>")) {
         return ctx.toast("Тексты терминала должны содержать <number>", "error");

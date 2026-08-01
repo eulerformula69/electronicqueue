@@ -13,6 +13,9 @@ MAX_AUTO_CALL_DELAY_SECONDS = 600
 DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
 MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
 MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
+DEFAULT_MAX_TICKET_REDIRECTS = 3
+MIN_MAX_TICKET_REDIRECTS = 1
+MAX_MAX_TICKET_REDIRECTS = 20
 DEFAULT_CANCELLED_TICKET_BOARD_MESSAGE_TEMPLATE = (
     "⚠ Талон <number>: вызов отменён оператором окна <window>. "
     "Вернулись? Сообщите номер оператору."
@@ -72,6 +75,12 @@ def _normalize_called_ticket_min_wait_seconds(value: int | None) -> int:
         MIN_CALLED_TICKET_MIN_WAIT_SECONDS,
         min(MAX_CALLED_TICKET_MIN_WAIT_SECONDS, int(value)),
     )
+
+
+def _normalize_max_ticket_redirects(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_MAX_TICKET_REDIRECTS
+    return max(MIN_MAX_TICKET_REDIRECTS, min(MAX_MAX_TICKET_REDIRECTS, int(value)))
 
 
 def normalize_board_ticker_messages(messages, legacy_text: str | None = "") -> list[dict]:
@@ -227,6 +236,7 @@ def get_system_settings_dict(db: Session) -> dict:
         ),
         "redirect_allow_break": _str_to_bool(settings.redirect_allow_break, default=True),
         "redirect_allow_offline": _str_to_bool(settings.redirect_allow_offline, default=False),
+        "max_ticket_redirects": _normalize_max_ticket_redirects(settings.max_ticket_redirects),
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
         "board_ticker_text": build_board_ticker_text(board_ticker_messages),

@@ -241,6 +241,7 @@ class SystemSettings(Base):
     hide_services_without_online_operators = Column(String, default="true")
     redirect_allow_break = Column(String, default="true")
     redirect_allow_offline = Column(String, default="false")
+    max_ticket_redirects = Column(Integer, default=3)
 
     call_message_template = Column(
         String,
