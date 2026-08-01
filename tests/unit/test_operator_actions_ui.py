@@ -84,13 +84,14 @@ def test_redirect_limit_is_checked_before_modal_opens():
 def test_operator_finish_warning_can_continue_or_confirm_finish():
     source = read_text("queue/js/operator.js")
 
-    assert "SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000" in source
-    assert "RECALL_FINISH_WARNING_COUNT = 2" in source
+    assert "operatorSettings.short_service_warning_minutes" in source
+    assert "warningMinutes * 60 * 1000" in source
     assert "showFinishWarningPopup()" in source
     assert 'title: "Обслуживание завершено слишком быстро?"' in source
     assert 'text: "Подтвердить завершение"' in source
     assert 'text: "Продолжить обслуживание"' in source
     assert "finishCurrent({ skipWarning: true })" in source
+    assert "быстрее чем за ${warningMinutes} мин." in source
 
 
 def test_operator_actions_keep_existing_ticket_endpoints():
@@ -402,6 +403,8 @@ def test_operator_ui_follows_contextual_action_audit():
     assert 'class="button-group secondary-actions serving-actions"' in html
     assert html.index('id="redirect-btn"') < html.index('id="defer-ticket-btn"')
     assert "Отменить (не явился)" in html
+    assert 'id="start-service-btn" class="btn-primary"' in html
+    assert html.index('id="recall-btn"') < html.index('id="cancel-btn"')
     assert 'data-ticket-status="serving"' in css
     assert "grid-template-columns: minmax(0, 1fr);" in css
     assert "transition: all" not in css
@@ -420,6 +423,30 @@ def test_break_allows_finishing_active_ticket_but_not_starting_another():
     assert "if (!isOperatorOnBreak() || currentTicketId) return true;" in source
     assert "Ticket.status.in_(ACTIVE_TICKET_STATUSES)" in backend
     assert "if active_ticket:" in backend
+
+
+def test_break_with_active_ticket_offers_deferred_or_immediate_break():
+    source = read_text("queue/js/operator.js")
+
+    assert "showBreakWithActiveTicketPopup()" in source
+    assert "Уйти после завершения обслуживания" in source
+    assert "Вернуть талон в очередь и уйти" in source
+    assert 'sessionStorage.setItem(PENDING_BREAK_STORAGE_KEY, "true")' in source
+    assert 'confirmReturnCurrentToQueue({scheduleNext: false})' in source
+    assert 'await changeWindowStatus("break")' in source
+
+
+def test_deferred_ticket_limit_and_reminder_are_configurable():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+    settings_view = read_text("queue/js/admin/views/settings.view.js")
+
+    assert 'id="deferred-reminder"' in html
+    assert "У вас всё ещё есть отложенные талоны" in source
+    assert 'settings["max_deferred_tickets_per_operator"]' in backend
+    assert "max_deferred_tickets_per_operator" in settings_view
+    assert "short_service_warning_minutes" in settings_view
 
 
 def test_operator_mutations_share_double_click_guard():

@@ -129,6 +129,14 @@ export async function loadExtraSettings() {
                     <input id="setting-called-ticket-min-wait" class="settings-input" type="number" min="0" max="3600" step="1" value="${settings.called_ticket_min_wait_seconds ?? 180}">
                 </label>
                 <label class="settings-field-row">
+                    <span class="settings-label">Порог быстрого обслуживания, минут (0 — отключить):</span>
+                    <input id="setting-short-service-warning-minutes" class="settings-input" type="number" min="0" max="60" step="1" value="${settings.short_service_warning_minutes ?? 5}">
+                </label>
+                <label class="settings-field-row">
+                    <span class="settings-label">Максимум отложенных талонов у оператора:</span>
+                    <input id="setting-max-deferred-tickets" class="settings-input" type="number" min="1" max="50" step="1" value="${settings.max_deferred_tickets_per_operator ?? 3}">
+                </label>
+                <label class="settings-field-row">
                     <span class="settings-label">Максимум перенаправлений одного талона:</span>
                     <input id="setting-max-ticket-redirects" class="settings-input" type="number" min="1" max="20" step="1" value="${settings.max_ticket_redirects ?? 3}">
                 </label>
@@ -220,6 +228,8 @@ export async function saveExtraSettings() {
         auto_call_enabled: currentSettings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(currentSettings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(document.getElementById("setting-called-ticket-min-wait").value),
+        short_service_warning_minutes: Number(document.getElementById("setting-short-service-warning-minutes").value),
+        max_deferred_tickets_per_operator: Number(document.getElementById("setting-max-deferred-tickets").value),
         max_ticket_redirects: Number(document.getElementById("setting-max-ticket-redirects").value),
         auto_call_balance_enabled: document.getElementById("setting-auto-call-balance-enabled").checked,
         auto_call_balance_queue_threshold: Number(document.getElementById("setting-auto-call-balance-threshold").value),
@@ -252,6 +262,14 @@ export async function saveExtraSettings() {
         payload.called_ticket_min_wait_seconds > 3600
     ) {
         alert("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд");
+        return;
+    }
+    if (!Number.isInteger(payload.short_service_warning_minutes) || payload.short_service_warning_minutes < 0 || payload.short_service_warning_minutes > 60) {
+        alert("Порог быстрого обслуживания должен быть от 0 до 60 минут");
+        return;
+    }
+    if (!Number.isInteger(payload.max_deferred_tickets_per_operator) || payload.max_deferred_tickets_per_operator < 1 || payload.max_deferred_tickets_per_operator > 50) {
+        alert("Лимит отложенных талонов должен быть от 1 до 50");
         return;
     }
     if (!Number.isInteger(payload.max_ticket_redirects) || payload.max_ticket_redirects < 1 || payload.max_ticket_redirects > 20) {

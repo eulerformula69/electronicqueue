@@ -92,6 +92,16 @@ def test_called_ticket_min_wait_is_in_settings_schemas_with_default():
     assert field.default == 180
 
 
+def test_operator_workflow_limits_are_in_settings_schemas_with_defaults():
+    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
+        assert "short_service_warning_minutes" in _schema_fields(schema)
+        assert "max_deferred_tickets_per_operator" in _schema_fields(schema)
+
+    fields = _schema_fields(SystemSettingsUpdate)
+    assert fields["short_service_warning_minutes"].default == 5
+    assert fields["max_deferred_tickets_per_operator"].default == 3
+
+
 def test_balance_and_cancelled_board_settings_are_exposed():
     fields = (
         "auto_call_balance_enabled",
@@ -190,6 +200,8 @@ def test_system_settings_dict_includes_auto_call_settings():
         assert result["auto_call_enabled"] is True
         assert result["auto_call_delay_seconds"] == 30
         assert result["called_ticket_min_wait_seconds"] == 180
+        assert result["short_service_warning_minutes"] == 5
+        assert result["max_deferred_tickets_per_operator"] == 3
     finally:
         db.close()
 

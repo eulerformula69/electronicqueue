@@ -695,6 +695,21 @@ async def defer_current_ticket(
         if not ticket:
             raise HTTPException(status_code=404, detail="Нет активного билета для отложения")
 
+        settings = get_system_settings_dict(db)
+        deferred_count = db.query(func.count(Ticket.id)).filter(
+            Ticket.operator_id == operator.id,
+            Ticket.status == "deferred",
+        ).scalar() or 0
+        deferred_limit = settings["max_deferred_tickets_per_operator"]
+        if deferred_count >= deferred_limit:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Количество отложенных талонов: {deferred_count}. "
+                    f"Сначала верните один из них в обслуживание (лимит: {deferred_limit})."
+                ),
+            )
+
         defer_ticket(
             ticket,
             operator_id=operator.id,

@@ -201,6 +201,9 @@ class ActiveTicketQuery:
     def first(self):
         return self.ticket
 
+    def scalar(self):
+        return 0
+
 
 class ActiveTicketDb:
     def __init__(self, ticket):
@@ -210,7 +213,6 @@ class ActiveTicketDb:
         self.closed = False
 
     def query(self, model):
-        assert model is Ticket
         return ActiveTicketQuery(self.ticket)
 
     def commit(self):
@@ -246,6 +248,7 @@ async def test_cancel_ticket_accepts_other_comment_reason(monkeypatch):
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
     monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+    monkeypatch.setattr(tickets_router, "ensure_client_operations_allowed", lambda *_: None)
 
     result = await tickets_router.cancel_current_ticket(
         CancelTicketRequest(reason="Другое: клиент ушёл"),
@@ -286,6 +289,12 @@ async def test_defer_ticket_accepts_other_comment_reason(monkeypatch):
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
     monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
     monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+    monkeypatch.setattr(tickets_router, "ensure_client_operations_allowed", lambda *_: None)
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda _db: {"max_deferred_tickets_per_operator": 3},
+    )
 
     result = await tickets_router.defer_current_ticket(
         DeferTicketRequest(reason="Другое: клиент вернётся позже"),

@@ -39,6 +39,8 @@ function render() {
                 ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
                 ${ctx.ui.field("Максимум перенаправлений одного талона", ctx.ui.input("max_ticket_redirects", settings.max_ticket_redirects ?? 3, "type=\"number\" min=\"1\" max=\"20\" step=\"1\""))}
                 ${ctx.ui.field("Минимальная длительность обслуживания, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
+                ${ctx.ui.field("Порог быстрого обслуживания, минут (0 — отключить)", ctx.ui.input("short_service_warning_minutes", settings.short_service_warning_minutes ?? 5, "type=\"number\" min=\"0\" max=\"60\" step=\"1\""))}
+                ${ctx.ui.field("Максимум отложенных талонов у оператора", ctx.ui.input("max_deferred_tickets_per_operator", settings.max_deferred_tickets_per_operator ?? 3, "type=\"number\" min=\"1\" max=\"50\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка автовызова при низкой нагрузке", ctx.ui.switchField("auto_call_balance_enabled", settings.auto_call_balance_enabled ?? true))}
                 ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}
@@ -176,6 +178,8 @@ async function save() {
         auto_call_enabled: settings.auto_call_enabled === true,
         auto_call_delay_seconds: Number(settings.auto_call_delay_seconds ?? 60),
         called_ticket_min_wait_seconds: Number(data.called_ticket_min_wait_seconds),
+        short_service_warning_minutes: Number(data.short_service_warning_minutes),
+        max_deferred_tickets_per_operator: Number(data.max_deferred_tickets_per_operator),
         auto_call_balance_enabled: Boolean(data.auto_call_balance_enabled),
         auto_call_balance_queue_threshold: Number(data.auto_call_balance_queue_threshold),
         auto_call_balance_min_free_operators: Number(data.auto_call_balance_min_free_operators),
@@ -200,6 +204,12 @@ async function save() {
     }
     if (!validCalledTicketMinWait(payload.called_ticket_min_wait_seconds)) {
         return ctx.toast("Минимальное ожидание должно быть целым числом от 0 до 3600 секунд", "error");
+    }
+    if (!Number.isInteger(payload.short_service_warning_minutes) || payload.short_service_warning_minutes < 0 || payload.short_service_warning_minutes > 60) {
+        return ctx.toast("Порог быстрого обслуживания должен быть от 0 до 60 минут", "error");
+    }
+    if (!Number.isInteger(payload.max_deferred_tickets_per_operator) || payload.max_deferred_tickets_per_operator < 1 || payload.max_deferred_tickets_per_operator > 50) {
+        return ctx.toast("Лимит отложенных талонов должен быть от 1 до 50", "error");
     }
     if (!Number.isInteger(payload.max_ticket_redirects) || payload.max_ticket_redirects < 1 || payload.max_ticket_redirects > 20) {
         return ctx.toast("Лимит перенаправлений должен быть целым числом от 1 до 20", "error");

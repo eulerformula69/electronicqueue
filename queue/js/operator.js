@@ -70,6 +70,8 @@ let operatorSettings = {
     auto_call_server_managed: false,
     auto_call_delay_seconds: 60,
     called_ticket_min_wait_seconds: 180,
+    short_service_warning_minutes: 5,
+    max_deferred_tickets_per_operator: 3,
     redirect_allow_break: true,
     redirect_allow_offline: false,
     max_ticket_redirects: 3
@@ -77,6 +79,7 @@ let operatorSettings = {
 let autoCallSettingsLoaded = false;
 let recallCooldown = false;
 const CLIENT_OPERATIONS_ON_BREAK_MESSAGE = "Нельзя выполнять операции с клиентом во время перерыва";
+const PENDING_BREAK_STORAGE_KEY = "operatorPendingBreak";
 
 async function init() {
     const sessionToken = sessionStorage.getItem("session_id");
@@ -234,8 +237,6 @@ let currentTicketRecallCount = 0;
 let currentTicketRedirectCount = null;
 let allServices = [];
 let allWindows = [];
-const SHORT_SERVICE_WARNING_MS = 5 * 60 * 1000;
-const RECALL_FINISH_WARNING_COUNT = 2;
 
 async function loadOperatorReasonSettings() {
     try {
@@ -258,6 +259,12 @@ async function loadOperatorReasonSettings() {
             ),
             called_ticket_min_wait_seconds: normalizeCalledTicketMinWait(
                 settings.called_ticket_min_wait_seconds
+            ),
+            short_service_warning_minutes: Math.max(
+                0, Number(settings.short_service_warning_minutes) || 0
+            ),
+            max_deferred_tickets_per_operator: Math.max(
+                1, Number(settings.max_deferred_tickets_per_operator) || 3
             ),
             redirect_allow_break: settings.redirect_allow_break === true,
             redirect_allow_offline: settings.redirect_allow_offline === true,
@@ -802,6 +809,14 @@ async function loadQueue(options = {}) {
             cancelled: [],
             served: []
         }, data.section_counts);
+        const deferredCount = Number(data.section_counts?.deferred) || 0;
+        const deferredReminder = document.getElementById("deferred-reminder");
+        if (deferredReminder) {
+            deferredReminder.hidden = deferredCount === 0;
+            deferredReminder.textContent = deferredCount === 1
+                ? "У вас всё ещё есть отложенный талон. Может, вернуть его в обслуживание?"
+                : `У вас всё ещё есть отложенные талоны (${deferredCount}). Может, вернуть их в обслуживание?`;
+        }
         if (data.tickets_served_today !== undefined) {
             const counter = document.getElementById("served-today-count");
             if (counter) counter.textContent = data.tickets_served_today;
@@ -895,17 +910,20 @@ function showToast(message, type = "danger") {
 function shouldWarnBeforeFinish() {
     if (!currentTicketId) return false;
 
+    const warningMinutes = operatorSettings.short_service_warning_minutes;
     const isShortService =
+        warningMinutes > 0 &&
         currentTicketServiceStartedAt &&
-        Date.now() - currentTicketServiceStartedAt.getTime() < SHORT_SERVICE_WARNING_MS;
+        Date.now() - currentTicketServiceStartedAt.getTime() < warningMinutes * 60 * 1000;
 
-    return isShortService || currentTicketRecallCount >= RECALL_FINISH_WARNING_COUNT;
+    return Boolean(isShortService);
 }
 
 function showFinishWarningPopup() {
+    const warningMinutes = operatorSettings.short_service_warning_minutes;
     showOperatorPopup({
         title: "Обслуживание завершено слишком быстро?",
-        message: "Кажется, вы обслужили клиента слишком быстро. Возможно, завершение нажато случайно. Вы можете отменить действие и продолжить работу с клиентом или подтвердить завершение.",
+        message: `Вы обслужили клиента быстрее чем за ${warningMinutes} мин. Возможно, завершение нажато случайно. Вы можете продолжить обслуживание или подтвердить завершение.`,
         actions: [
             {
                 text: "Подтвердить завершение",
@@ -1592,8 +1610,48 @@ async function changeWindowStatus(newStatus) {
 }
 
 async function toggleWindowStatus(control) {
+    if (!control.checked && currentTicketId) {
+        updateStatusButtons(currentWindowStatus);
+        showBreakWithActiveTicketPopup();
+        return;
+    }
+
+    if (control.checked) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
     const changed = await changeWindowStatus(control.checked ? "online" : "break");
     if (!changed) updateStatusButtons(currentWindowStatus);
+}
+
+function showBreakWithActiveTicketPopup() {
+    showOperatorPopup({
+        title: "Почему вы хотите уйти на перерыв с текущим талоном?",
+        message: "Выберите, что сделать с уже назначенным клиентом.",
+        actions: [
+            {
+                text: "Уйти после завершения обслуживания",
+                className: "btn-primary",
+                onClick: () => {
+                    sessionStorage.setItem(PENDING_BREAK_STORAGE_KEY, "true");
+                    showToast("Перерыв начнётся после завершения работы с клиентом", "success");
+                }
+            },
+            {
+                text: "Вернуть талон в очередь и уйти",
+                className: "btn-outline",
+                onClick: returnTicketAndStartBreak
+            },
+            {
+                text: "Остаться онлайн",
+                className: "btn-outline"
+            }
+        ]
+    });
+}
+
+async function returnTicketAndStartBreak() {
+    const returned = await confirmReturnCurrentToQueue({scheduleNext: false});
+    if (!returned) return;
+    sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
+    await changeWindowStatus("break");
 }
 
 function updateStatusButtons(status) {
@@ -1972,7 +2030,7 @@ async function returnCurrentToQueue() {
     await confirmReturnCurrentToQueue();
 }
 
-async function confirmReturnCurrentToQueue() {
+async function confirmReturnCurrentToQueue(options = {}) {
     if (!ensureClientOperationsAllowed()) return;
     if (!beginOperatorRequest("return-to-queue")) return;
 
@@ -1998,10 +2056,12 @@ async function confirmReturnCurrentToQueue() {
             "success"
         );
         await loadQueue();
-        scheduleAutoCallAfterWorkspaceFreed();
+        if (options.scheduleNext !== false) scheduleAutoCallAfterWorkspaceFreed();
+        return true;
     } catch (e) {
         console.error("Ошибка возврата билета в очередь:", e);
         showToast(e.message || "Не удалось вернуть клиента в очередь", "danger");
+        return false;
     } finally {
         if (button) button.disabled = isOperatorOnBreak();
         endOperatorRequest("return-to-queue");
@@ -2158,6 +2218,14 @@ function startAutoCallAfterFinish() {
 }
 
 function scheduleAutoCallAfterWorkspaceFreed() {
+    if (
+        !currentTicketId &&
+        sessionStorage.getItem(PENDING_BREAK_STORAGE_KEY) === "true"
+    ) {
+        sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
+        void changeWindowStatus("break");
+        return;
+    }
     startAutoCallAfterFinish();
 }
 

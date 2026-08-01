@@ -640,3 +640,18 @@ def migrate_operator_service_notifications_schema(engine):
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_operator_workflow_settings_schema(engine):
+    """Add configurable limits for operator ticket workflow."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS short_service_warning_minutes integer DEFAULT 5,
+        ADD COLUMN IF NOT EXISTS max_deferred_tickets_per_operator integer DEFAULT 3;
+
+    UPDATE system_settings
+    SET short_service_warning_minutes = COALESCE(short_service_warning_minutes, 5),
+        max_deferred_tickets_per_operator = COALESCE(max_deferred_tickets_per_operator, 3);
+    """
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

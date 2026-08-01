@@ -27,6 +27,7 @@ from app.migrations import (
     migrate_called_ticket_min_wait_schema,
     migrate_max_ticket_redirects_schema,
     migrate_auto_call_balance_and_board_cancel_schema,
+    migrate_operator_workflow_settings_schema,
 )
 from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
@@ -75,6 +76,7 @@ async def startup():
     migrate_called_ticket_min_wait_schema(engine)
     migrate_max_ticket_redirects_schema(engine)
     migrate_auto_call_balance_and_board_cancel_schema(engine)
+    migrate_operator_workflow_settings_schema(engine)
     init_ticket_numbering(engine)
     migrate_service_terminal_visibility_schema(engine)
     migrate_service_groups_schema(engine)

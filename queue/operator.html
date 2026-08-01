@@ -144,6 +144,7 @@
 				<strong id="queue-count-served">0</strong>
 			</button>
 		</div>
+		<button id="deferred-reminder" class="deferred-reminder" type="button" onclick="selectQueueSection('deferred')" hidden></button>
 		<div id="queue-list" class="queue-list" style="flex:1; overflow-y:auto; min-height:0;">Загрузка...</div>
 		<!---<div style="flex-shrink:0; padding-top:16px; border-top:1px solid #e2e8f0;">
 			<span style="font-size:0.95rem; text-transform:uppercase; font-weight:800; color:var(--text-main); letter-spacing:0.5px;">Обслужено сегодня:</span>
@@ -164,11 +165,12 @@
 			
 	<div class="button-group primary-actions">
 		<button id="next-btn" class="btn-primary" data-call-action onclick="callNext()">Вызвать следующего</button>
+		<button id="start-service-btn" class="btn-primary" data-current-ticket-action onclick="startService()">Начать обслуживание</button>
 		<button class="btn-primary" id="finish-btn" data-current-ticket-action onclick="finishCurrent()">Завершить обслуживание</button>
 	</div>
 
 	<div class="button-group secondary-actions called-actions">
-		<button id="start-service-btn" class="btn-outline" data-current-ticket-action onclick="startService()">Начать обслуживание</button>
+		<button class="btn-outline" id="recall-btn" data-current-ticket-action onclick="recallCurrent()">Повторить вызов</button>
 		<button class="btn-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent({reason: 'no_show'})">Отменить (не явился)</button>
 	</div>
 
