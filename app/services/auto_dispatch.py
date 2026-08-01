@@ -65,8 +65,19 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
                 Ticket.window_id == operator.window_id,
                 Ticket.status.in_(ACTIVE_TICKET_STATUSES),
             ).first()
+            has_deferred_ticket = db.query(Ticket).filter(
+                Ticket.operator_id == operator.id,
+                Ticket.window_id == operator.window_id,
+                Ticket.status == "deferred",
+            ).first()
 
-            if not enabled or not window or window.status != "online" or active_ticket:
+            if (
+                not enabled
+                or not window
+                or window.status != "online"
+                or active_ticket
+                or has_deferred_ticket
+            ):
                 operator.next_auto_call_at = None
                 continue
 

@@ -99,6 +99,19 @@ def ensure_client_operations_allowed(db: Session, operator: Operator) -> None:
     raise HTTPException(status_code=409, detail=CLIENT_OPERATIONS_ON_BREAK_DETAIL)
 
 
+def ensure_operator_has_no_deferred_tickets(db: Session, operator: Operator) -> None:
+    deferred_ticket = db.query(Ticket).filter(
+        Ticket.operator_id == operator.id,
+        Ticket.window_id == operator.window_id,
+        Ticket.status == "deferred",
+    ).first()
+    if deferred_ticket:
+        raise HTTPException(
+            status_code=409,
+            detail="У вас есть отложенные талоны. Сначала верните один из них в обслуживание.",
+        )
+
+
 def build_operator_queue_ticket_payload(ticket, operator_window_id: int | None) -> dict:
     return {
         "id": ticket.id,
@@ -449,6 +462,7 @@ async def call_next_ticket(
             return {"detail": "Оператору не назначено окно"}
 
         ensure_client_operations_allowed(db, operator)
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
         settings = get_system_settings_dict(db)
         is_auto_call = bool(data and data.auto_call)
@@ -506,6 +520,7 @@ async def call_specific_ticket(data: CallSpecificRequest, operator: Operator = D
             return {"detail": "Оператору не назначено окно"}
 
         ensure_client_operations_allowed(db, operator)
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
         # Проверяем, не обслуживается ли уже клиент
         current = db.query(Ticket).filter(
@@ -745,6 +760,8 @@ async def _resume_operator_ticket(
         raise HTTPException(status_code=400, detail="Оператору не назначено окно")
 
     ensure_client_operations_allowed(db, operator)
+    if source_status != "deferred":
+        ensure_operator_has_no_deferred_tickets(db, operator)
 
     current = db.query(Ticket).filter(
         Ticket.window_id == operator.window_id,
@@ -776,7 +793,7 @@ async def _resume_operator_ticket(
     await manager.broadcast({"type": "queue_updated"})
     await broadcast_board()
 
-    if window:
+    if window and source_status != "deferred":
         await broadcast_ticket_called(ticket, window)
 
     return {
@@ -784,6 +801,7 @@ async def _resume_operator_ticket(
         "number": ticket.number,
         "status": ticket.status,
         "called_at": ticket.called_at,
+        "service_started_at": ticket.service_started_at,
         "service_name": ticket.service.name if ticket.service else "Услуга не найдена",
     }
 
@@ -971,6 +989,10 @@ def get_my_queue(
         return {
             "tickets": result,
             "tickets_served_today": tickets_served_today,
+            "deferred_since": min(
+                (ticket.deferred_at for ticket in deferred_tickets if ticket.deferred_at),
+                default=None,
+            ),
             "sections": sections,
             "section_counts": {
                 key: len(value)

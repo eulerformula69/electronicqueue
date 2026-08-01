@@ -210,6 +210,29 @@ async def test_dispatcher_does_nothing_when_operator_feature_flag_is_disabled(mo
     assert operator.next_auto_call_at is None
 
 
+@pytest.mark.asyncio
+async def test_dispatcher_does_not_assign_new_ticket_while_operator_has_deferred_ticket(monkeypatch):
+    now = datetime(2026, 8, 1, 12, 0)
+    operator = Operator(
+        id=1,
+        window_id=3,
+        auto_call_mode="default",
+        next_auto_call_at=now,
+    )
+    deferred = Ticket(id=9, status="deferred", operator_id=1, window_id=3)
+    db = FakeDb(
+        operator=operator,
+        window=Window(id=3, status="online"),
+        tickets=[deferred],
+    )
+    configure_dispatch(monkeypatch, db)
+
+    dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
+
+    assert dispatched == 0
+    assert operator.next_auto_call_at is None
+
+
 def test_browser_does_not_own_server_managed_auto_call_timer():
     source = open("queue/js/operator.js", encoding="utf-8").read()
 

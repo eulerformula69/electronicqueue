@@ -449,6 +449,50 @@ def test_deferred_ticket_limit_and_reminder_are_configurable():
     assert "short_service_warning_minutes" in settings_view
 
 
+def test_deferred_tickets_block_new_calls_with_an_explanation():
+    source = read_text("queue/js/operator.js")
+    backend = read_text("app/routers/tickets.py")
+    dispatcher = read_text("app/services/auto_dispatch.py")
+
+    assert "deferredTicketCount > 0" in source
+    assert "Сначала верните отложенный талон в обслуживание" in source
+    assert 'OperatorQueueSections.select("deferred")' in source
+    assert "ensure_operator_has_no_deferred_tickets(db, operator)" in backend
+    assert "has_deferred_ticket" in dispatcher
+
+
+def test_deferred_reminder_waits_two_minutes():
+    source = read_text("queue/js/operator.js")
+
+    assert "function scheduleDeferredReminder(count, deferredSince)" in source
+    assert "+ 2 * 60 * 1000" in source
+    assert "reminder.hidden = true" in source
+
+
+def test_pending_break_runs_after_ticket_request_finishes():
+    source = read_text("queue/js/operator.js")
+    scheduler = source.split("function scheduleAutoCallAfterWorkspaceFreed()", 1)[1]
+    scheduler = scheduler.split("async function promptCallByNumber", 1)[0]
+
+    assert "setTimeout(async () =>" in scheduler
+    assert 'const changed = await changeWindowStatus("break")' in scheduler
+    assert "if (changed) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY)" in scheduler
+
+
+def test_operator_queue_scrolls_inside_desktop_viewport():
+    css = read_text("queue/css/operator.css")
+
+    body = css.split("body.operator-page{", 1)[1].split("}", 1)[0]
+    layout = css.split("body.operator-page .main-layout{", 1)[1].split("}", 1)[0]
+    queue = css.split("body.operator-page .queue-list{", 1)[1].split("}", 1)[0]
+
+    assert "height: 100dvh" in body
+    assert "overflow: hidden" in body
+    assert "min-height: 0" in layout
+    assert "overflow: hidden" in layout
+    assert "overflow-y: auto" in queue
+
+
 def test_operator_mutations_share_double_click_guard():
     source = read_text("queue/js/operator.js")
     ui_state = read_text("queue/js/operator-ui-state.js")

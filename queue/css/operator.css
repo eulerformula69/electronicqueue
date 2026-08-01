@@ -15,8 +15,9 @@ body.operator-page{
     display: flex;
     flex-direction: column;
 
+    height: 100dvh;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow: hidden;
 
     box-sizing: border-box;
 }
@@ -66,7 +67,7 @@ body.operator-page .main-layout{
     padding: 20px 20px 44px 20px; /* добавили запас снизу */
     flex: 1;
     min-height: 0;
-    overflow: visible;
+    overflow: hidden;
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
@@ -1133,8 +1134,15 @@ body.operator-page .deferred-reminder{
 }
 
 @media (max-width: 1100px) {
+    body.operator-page {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
     body.operator-page .main-layout {
         grid-template-columns: minmax(220px, 1fr) minmax(360px, 2fr);
+        overflow: visible;
     }
 
     body.operator-page .main-layout > .glass-card:last-child {
@@ -1143,6 +1151,12 @@ body.operator-page .deferred-reminder{
 }
 
 @media (max-width: 760px) {
+    body.operator-page {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
     body.operator-page .header-panel {
         align-items: flex-start;
         gap: 12px;

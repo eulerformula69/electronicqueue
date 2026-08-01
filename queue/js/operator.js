@@ -50,6 +50,8 @@ let queueSoundInitialized = false;
 // Храним известные тикеты из прошлой загрузки очереди
 let knownQueueTicketIds = new Set();
 let queueHasCallableTickets = null;
+let deferredTicketCount = 0;
+let deferredReminderTimer = null;
 
 // Антидребезг звукового оповещения
 let lastNewTicketSoundAt = 0;
@@ -809,14 +811,8 @@ async function loadQueue(options = {}) {
             cancelled: [],
             served: []
         }, data.section_counts);
-        const deferredCount = Number(data.section_counts?.deferred) || 0;
-        const deferredReminder = document.getElementById("deferred-reminder");
-        if (deferredReminder) {
-            deferredReminder.hidden = deferredCount === 0;
-            deferredReminder.textContent = deferredCount === 1
-                ? "У вас всё ещё есть отложенный талон. Может, вернуть его в обслуживание?"
-                : `У вас всё ещё есть отложенные талоны (${deferredCount}). Может, вернуть их в обслуживание?`;
-        }
+        deferredTicketCount = Number(data.section_counts?.deferred) || 0;
+        scheduleDeferredReminder(deferredTicketCount, data.deferred_since);
         if (data.tickets_served_today !== undefined) {
             const counter = document.getElementById("served-today-count");
             if (counter) counter.textContent = data.tickets_served_today;
@@ -827,6 +823,28 @@ async function loadQueue(options = {}) {
         console.error("Ошибка загрузки очереди:", e);
         return [];
     }
+}
+
+function scheduleDeferredReminder(count, deferredSince) {
+    const reminder = document.getElementById("deferred-reminder");
+    if (!reminder) return;
+    if (deferredReminderTimer) clearTimeout(deferredReminderTimer);
+    deferredReminderTimer = null;
+    reminder.hidden = true;
+
+    if (!count) return;
+
+    const deferredAt = deferredSince ? new Date(deferredSince).getTime() : Date.now();
+    const showAt = (Number.isFinite(deferredAt) ? deferredAt : Date.now()) + 2 * 60 * 1000;
+    const show = () => {
+        reminder.hidden = false;
+        reminder.textContent = count === 1
+            ? "У вас всё ещё есть отложенный талон. Может, вернуть его в обслуживание?"
+            : `У вас всё ещё есть отложенные талоны (${count}). Может, вернуть их в обслуживание?`;
+    };
+    const delay = Math.max(0, showAt - Date.now());
+    if (delay === 0) show();
+    else deferredReminderTimer = setTimeout(show, delay);
 }
 
 async function refreshQueueAndAutoCall() {
@@ -856,6 +874,14 @@ async function refreshQueueAndAutoCall() {
 async function callNext(options = {}) {
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
+        return;
+    }
+    if (deferredTicketCount > 0) {
+        showToast(
+            `Сначала верните отложенный талон в обслуживание. Отложено: ${deferredTicketCount}`,
+            "warning"
+        );
+        OperatorQueueSections.select("deferred");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;
@@ -2222,8 +2248,14 @@ function scheduleAutoCallAfterWorkspaceFreed() {
         !currentTicketId &&
         sessionStorage.getItem(PENDING_BREAK_STORAGE_KEY) === "true"
     ) {
-        sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
-        void changeWindowStatus("break");
+        setTimeout(async () => {
+            const changed = await changeWindowStatus("break");
+            if (changed) sessionStorage.removeItem(PENDING_BREAK_STORAGE_KEY);
+        }, 0);
+        return;
+    }
+    if (deferredTicketCount > 0) {
+        stopAutoCall(`Сначала верните отложенные талоны (${deferredTicketCount})`);
         return;
     }
     startAutoCallAfterFinish();
@@ -2238,6 +2270,19 @@ async function promptCallByNumber() {
 
     if (currentTicketId !== null && currentTicketId !== undefined) {
         showToast("Закончите с текущим клиентом!", "danger");
+        return;
+    }
+    if (sourceSection !== "deferred" && deferredTicketCount > 0) {
+        showToast("Сначала верните отложенный талон в обслуживание", "warning");
+        OperatorQueueSections.select("deferred");
+        return;
+    }
+    if (deferredTicketCount > 0) {
+        showToast(
+            `Нельзя вызвать нового клиента: у вас отложено ${deferredTicketCount}`,
+            "warning"
+        );
+        OperatorQueueSections.select("deferred");
         return;
     }
     if (!ensureClientOperationsAllowed()) return;

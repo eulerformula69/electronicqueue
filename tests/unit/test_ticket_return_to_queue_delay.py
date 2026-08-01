@@ -104,12 +104,13 @@ def test_resume_deferred_ticket_returns_ticket_to_service_without_general_queue(
         now=now,
     )
 
-    assert ticket.status == "called"
+    assert ticket.status == "serving"
     assert ticket.completion_reason is None
     assert ticket.operator_id == 7
     assert ticket.window_id == 3
     assert ticket.target_window_id is None
-    assert ticket.called_at == now
+    assert ticket.called_at == now - timedelta(minutes=20)
+    assert ticket.service_started_at == now
     assert ticket.defer_reason is None
     assert ticket.deferred_at is None
     assert ticket.finished_at is None

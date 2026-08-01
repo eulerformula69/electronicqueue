@@ -293,12 +293,18 @@ def resume_deferred_ticket(
     window_id: int,
     now: datetime | None = None,
 ) -> None:
-    resume_ticket_to_service(
-        ticket,
-        operator_id=operator_id,
-        window_id=window_id,
-        now=now,
-    )
+    service_started_at = now or datetime.now()
+    ticket.status = "serving"
+    ticket.completion_reason = None
+    ticket.operator_id = operator_id
+    ticket.window_id = window_id
+    ticket.target_window_id = None
+    ticket.service_started_at = service_started_at
+    ticket.last_recalled_at = None
+    ticket.finished_at = None
+    ticket.defer_reason = None
+    ticket.deferred_at = None
+    ticket.cancel_reason = None
 
 
 def resume_cancelled_ticket(
