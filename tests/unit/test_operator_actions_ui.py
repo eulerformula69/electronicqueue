@@ -197,6 +197,8 @@ def test_operator_uses_one_direct_status_toggle():
     assert 'id="btn-stop"' not in html
     assert 'control.checked ? "online" : "break"' in source
     assert 'statusToggle.checked = currentWindowStatus === "online"' in source
+    assert 'statusText.textContent = "Онлайн"' in source
+    assert "На линии" not in source
     assert 'if (!changed) updateStatusButtons(currentWindowStatus)' in source
     assert 'statusToggle.disabled = busy' in ui_state
 

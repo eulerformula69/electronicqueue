@@ -1549,7 +1549,7 @@ function updateStatusButtons(status) {
 
     if (currentWindowStatus === "online") {
         statusDot.className = "dot online";
-        statusText.textContent = "На линии";
+        statusText.textContent = "Онлайн";
         statusText.style.color = "var(--success)";
         return;
     }
