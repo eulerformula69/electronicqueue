@@ -876,7 +876,7 @@ async function callNext(options = {}) {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
-    if (deferredTicketCount > 0) {
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
         showToast(
             `Сначала верните отложенный талон в обслуживание. Отложено: ${deferredTicketCount}`,
             "warning"
@@ -2016,6 +2016,14 @@ async function resumeTicket(ticketId, sourceSection = "deferred") {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
+    if (
+        sourceSection !== "deferred" &&
+        deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator
+    ) {
+        showToast("Сначала верните отложенный талон в обслуживание", "warning");
+        OperatorQueueSections.select("deferred");
+        return;
+    }
     if (!ensureClientOperationsAllowed()) return;
     if (!beginOperatorRequest("resume-deferred")) return;
 
@@ -2254,7 +2262,7 @@ function scheduleAutoCallAfterWorkspaceFreed() {
         }, 0);
         return;
     }
-    if (deferredTicketCount > 0) {
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
         stopAutoCall(`Сначала верните отложенные талоны (${deferredTicketCount})`);
         return;
     }
@@ -2272,12 +2280,7 @@ async function promptCallByNumber() {
         showToast("Закончите с текущим клиентом!", "danger");
         return;
     }
-    if (sourceSection !== "deferred" && deferredTicketCount > 0) {
-        showToast("Сначала верните отложенный талон в обслуживание", "warning");
-        OperatorQueueSections.select("deferred");
-        return;
-    }
-    if (deferredTicketCount > 0) {
+    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
         showToast(
             `Нельзя вызвать нового клиента: у вас отложено ${deferredTicketCount}`,
             "warning"

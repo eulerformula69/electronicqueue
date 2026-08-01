@@ -65,18 +65,21 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
                 Ticket.window_id == operator.window_id,
                 Ticket.status.in_(ACTIVE_TICKET_STATUSES),
             ).first()
-            has_deferred_ticket = db.query(Ticket).filter(
+            deferred_count = len(db.query(Ticket).filter(
                 Ticket.operator_id == operator.id,
                 Ticket.window_id == operator.window_id,
                 Ticket.status == "deferred",
-            ).first()
+            ).all())
+            deferred_limit_reached = (
+                deferred_count >= settings["max_deferred_tickets_per_operator"]
+            )
 
             if (
                 not enabled
                 or not window
                 or window.status != "online"
                 or active_ticket
-                or has_deferred_ticket
+                or deferred_limit_reached
             ):
                 operator.next_auto_call_at = None
                 continue

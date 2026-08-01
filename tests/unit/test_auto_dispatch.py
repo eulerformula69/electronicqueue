@@ -89,6 +89,7 @@ def configure_dispatch(monkeypatch, db, *, claim_result=(None, False)):
         lambda session: {
             "auto_call_enabled": True,
             "auto_call_delay_seconds": 10,
+            "max_deferred_tickets_per_operator": 3,
         },
     )
     monkeypatch.setattr(auto_dispatch, "claim_next_ticket", lambda *args, **kwargs: claim_result)
@@ -211,7 +212,7 @@ async def test_dispatcher_does_nothing_when_operator_feature_flag_is_disabled(mo
 
 
 @pytest.mark.asyncio
-async def test_dispatcher_does_not_assign_new_ticket_while_operator_has_deferred_ticket(monkeypatch):
+async def test_dispatcher_does_not_assign_new_ticket_when_deferred_limit_is_reached(monkeypatch):
     now = datetime(2026, 8, 1, 12, 0)
     operator = Operator(
         id=1,
@@ -219,6 +220,27 @@ async def test_dispatcher_does_not_assign_new_ticket_while_operator_has_deferred
         auto_call_mode="default",
         next_auto_call_at=now,
     )
+    deferred = [
+        Ticket(id=ticket_id, status="deferred", operator_id=1, window_id=3)
+        for ticket_id in (9, 10, 11)
+    ]
+    db = FakeDb(
+        operator=operator,
+        window=Window(id=3, status="online"),
+        tickets=deferred,
+    )
+    configure_dispatch(monkeypatch, db)
+
+    dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
+
+    assert dispatched == 0
+    assert operator.next_auto_call_at is None
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_can_continue_below_deferred_limit(monkeypatch):
+    now = datetime(2026, 8, 1, 12, 0)
+    operator = Operator(id=1, window_id=3, auto_call_mode="default", next_auto_call_at=now)
     deferred = Ticket(id=9, status="deferred", operator_id=1, window_id=3)
     db = FakeDb(
         operator=operator,
@@ -230,7 +252,7 @@ async def test_dispatcher_does_not_assign_new_ticket_while_operator_has_deferred
     dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
 
     assert dispatched == 0
-    assert operator.next_auto_call_at is None
+    assert operator.next_auto_call_at == now + timedelta(seconds=2)
 
 
 def test_browser_does_not_own_server_managed_auto_call_timer():

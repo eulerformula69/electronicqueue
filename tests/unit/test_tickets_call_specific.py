@@ -10,6 +10,15 @@ from app.routers.tickets import call_specific_ticket
 from app.schemas import CallSpecificRequest
 
 
+@pytest.fixture(autouse=True)
+def configured_deferred_limit(monkeypatch):
+    monkeypatch.setattr(
+        tickets_router,
+        "get_system_settings_dict",
+        lambda _db: {"max_deferred_tickets_per_operator": 3},
+    )
+
+
 class FakeTicketQuery:
     def __init__(self, tickets):
         self._tickets = list(tickets)
@@ -49,6 +58,9 @@ class FakeTicketQuery:
             tickets = sorted(tickets, key=lambda ticket: ticket.finished_at, reverse=True)
         return tickets[0] if tickets else None
 
+    def scalar(self):
+        return len(self._tickets)
+
 
 class FakeDb:
     def __init__(self, tickets, windows=None, window_services=None):
@@ -65,7 +77,7 @@ class FakeDb:
             return FakeTicketQuery(self._windows)
         if model is WindowService:
             return FakeTicketQuery(self._window_services)
-        raise AssertionError(f"Unexpected model in test query: {model}")
+        return FakeTicketQuery(self._tickets)
 
     def commit(self):
         self.committed = True

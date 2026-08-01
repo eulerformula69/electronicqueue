@@ -100,15 +100,20 @@ def ensure_client_operations_allowed(db: Session, operator: Operator) -> None:
 
 
 def ensure_operator_has_no_deferred_tickets(db: Session, operator: Operator) -> None:
-    deferred_ticket = db.query(Ticket).filter(
+    settings = get_system_settings_dict(db)
+    deferred_limit = settings["max_deferred_tickets_per_operator"]
+    deferred_count = db.query(func.count(Ticket.id)).filter(
         Ticket.operator_id == operator.id,
         Ticket.window_id == operator.window_id,
         Ticket.status == "deferred",
-    ).first()
-    if deferred_ticket:
+    ).scalar() or 0
+    if deferred_count >= deferred_limit:
         raise HTTPException(
             status_code=409,
-            detail="У вас есть отложенные талоны. Сначала верните один из них в обслуживание.",
+            detail=(
+                f"Достигнут лимит отложенных талонов ({deferred_limit}). "
+                "Сначала верните один из них в обслуживание."
+            ),
         )
 
 

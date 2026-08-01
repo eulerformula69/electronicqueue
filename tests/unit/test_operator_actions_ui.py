@@ -454,11 +454,11 @@ def test_deferred_tickets_block_new_calls_with_an_explanation():
     backend = read_text("app/routers/tickets.py")
     dispatcher = read_text("app/services/auto_dispatch.py")
 
-    assert "deferredTicketCount > 0" in source
+    assert "deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator" in source
     assert "Сначала верните отложенный талон в обслуживание" in source
     assert 'OperatorQueueSections.select("deferred")' in source
     assert "ensure_operator_has_no_deferred_tickets(db, operator)" in backend
-    assert "has_deferred_ticket" in dispatcher
+    assert "deferred_limit_reached" in dispatcher
 
 
 def test_deferred_reminder_waits_two_minutes():
