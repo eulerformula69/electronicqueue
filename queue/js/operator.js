@@ -224,6 +224,7 @@ setInterval(() => {
 let currentTicketId = null;
 let currentTicketStatus = null;
 let currentTicketCalledAt = null;
+let currentTicketServiceStartedAt = null;
 let currentTicketLastRecalledAt = null;
 let currentTicketFinishRemainingSeconds = 0;
 let currentTicketRecallRemainingSeconds = 0;
@@ -305,6 +306,13 @@ function parseTicketCalledAt(ticket) {
     return Number.isNaN(calledAt.getTime()) ? null : calledAt;
 }
 
+function parseTicketServiceStartedAt(ticket) {
+    if (!ticket || !ticket.service_started_at) return null;
+
+    const serviceStartedAt = new Date(ticket.service_started_at);
+    return Number.isNaN(serviceStartedAt.getTime()) ? null : serviceStartedAt;
+}
+
 function parseTicketLastRecalledAt(ticket) {
     if (!ticket || !ticket.last_recalled_at) return null;
 
@@ -322,12 +330,15 @@ function setCurrentTicket(ticket) {
         ? returnedToQueueCount
         : null;
     currentTicketCalledAt = parseTicketCalledAt(ticket);
+    currentTicketServiceStartedAt = parseTicketServiceStartedAt(ticket);
     currentTicketLastRecalledAt = parseTicketLastRecalledAt(ticket);
     const finishRemaining = Number(ticket.finish_remaining_seconds);
     const recallRemaining = Number(ticket.recall_remaining_seconds);
     currentTicketFinishRemainingSeconds = Number.isFinite(finishRemaining)
         ? Math.max(0, finishRemaining)
-        : normalizeCalledTicketMinWait(operatorSettings.called_ticket_min_wait_seconds);
+        : currentTicketStatus === "serving"
+            ? normalizeCalledTicketMinWait(operatorSettings.called_ticket_min_wait_seconds)
+            : 0;
     currentTicketRecallRemainingSeconds = Number.isFinite(recallRemaining)
         ? Math.max(0, recallRemaining)
         : RECALL_COOLDOWN_SECONDS;
@@ -348,6 +359,7 @@ function clearCurrentTicket() {
     currentTicketId = null;
     currentTicketStatus = null;
     currentTicketCalledAt = null;
+    currentTicketServiceStartedAt = null;
     currentTicketLastRecalledAt = null;
     currentTicketFinishRemainingSeconds = 0;
     currentTicketRecallRemainingSeconds = 0;
@@ -884,8 +896,8 @@ function shouldWarnBeforeFinish() {
     if (!currentTicketId) return false;
 
     const isShortService =
-        currentTicketCalledAt &&
-        Date.now() - currentTicketCalledAt.getTime() < SHORT_SERVICE_WARNING_MS;
+        currentTicketServiceStartedAt &&
+        Date.now() - currentTicketServiceStartedAt.getTime() < SHORT_SERVICE_WARNING_MS;
 
     return isShortService || currentTicketRecallCount >= RECALL_FINISH_WARNING_COUNT;
 }
@@ -979,6 +991,12 @@ async function startService() {
         }
 
         currentTicketStatus = result.status;
+        currentTicketServiceStartedAt = parseTicketServiceStartedAt(result);
+        currentTicketFinishRemainingSeconds = Math.max(
+            0,
+            Number(result.finish_remaining_seconds) || 0
+        );
+        currentTicketFinishCountdownStartedAt = performance.now();
         refreshOperatorUiState();
         syncCalledTicketTimers();
         showToast("Обслуживание начато", "success");

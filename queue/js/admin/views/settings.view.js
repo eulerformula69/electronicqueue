@@ -38,7 +38,7 @@ function render() {
                 ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
                 ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
                 ${ctx.ui.field("Максимум перенаправлений одного талона", ctx.ui.input("max_ticket_redirects", settings.max_ticket_redirects ?? 3, "type=\"number\" min=\"1\" max=\"20\" step=\"1\""))}
-                ${ctx.ui.field("Минимальное ожидание после вызова, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
+                ${ctx.ui.field("Минимальная длительность обслуживания, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка автовызова при низкой нагрузке", ctx.ui.switchField("auto_call_balance_enabled", settings.auto_call_balance_enabled ?? true))}
                 ${ctx.ui.field("Балансировка: максимум талонов в очереди", ctx.ui.input("auto_call_balance_queue_threshold", settings.auto_call_balance_queue_threshold ?? 3, "type=\"number\" min=\"1\" max=\"100\" step=\"1\""))}
                 ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}

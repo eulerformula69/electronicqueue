@@ -421,6 +421,9 @@ async def start_service(operator: Operator = Depends(verify_session)):
             "number": ticket.number,
             "status": ticket.status,
             "service_started_at": ticket.service_started_at,
+            "finish_remaining_seconds": get_system_settings_dict(db)[
+                "called_ticket_min_wait_seconds"
+            ],
         }
     finally:
         db.close()

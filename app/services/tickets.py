@@ -22,11 +22,13 @@ def called_ticket_wait_remaining_seconds(
     *,
     now: datetime | None = None,
 ) -> int:
-    """Return the server-authoritative wait before finishing a called ticket."""
-    if not ticket.called_at:
+    """Return the server-authoritative minimum service time remaining."""
+    if not ticket.service_started_at:
         return 0
     current_time = now or datetime.now()
-    available_at = ticket.called_at + timedelta(seconds=max(0, min_wait_seconds))
+    available_at = ticket.service_started_at + timedelta(
+        seconds=max(0, min_wait_seconds)
+    )
     return max(0, math.ceil((available_at - current_time).total_seconds()))
 
 

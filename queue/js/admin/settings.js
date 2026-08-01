@@ -125,7 +125,7 @@ export async function loadExtraSettings() {
                 </label>
 
                 <label class="settings-field-row">
-                    <span class="settings-label">Минимальное ожидание после вызова, секунд:</span>
+                    <span class="settings-label">Минимальная длительность обслуживания, секунд:</span>
                     <input id="setting-called-ticket-min-wait" class="settings-input" type="number" min="0" max="3600" step="1" value="${settings.called_ticket_min_wait_seconds ?? 180}">
                 </label>
                 <label class="settings-field-row">

@@ -38,7 +38,7 @@ def test_operator_defer_replaces_return_to_queue_in_primary_actions():
     assert "return-to-queue-btn" not in primary_actions
     assert "defer-ticket-btn" in actions_area
     assert "showDeferReasonPopup()" in actions_area
-    assert "ВЫЗВАТЬ ПО НОМЕРУ" in actions_area
+    assert "Вызвать по номеру" in actions_area
     assert 'onclick="cancelCurrent()"' in actions_area
 
 
@@ -137,7 +137,7 @@ def test_idle_ticket_text_is_smaller_without_shifting_client_label():
 def test_operator_auto_call_uses_global_settings_without_local_toggle():
     html = read_text("queue/operator.html")
     source = read_text("queue/js/operator.js")
-    display_zone = html.split('<section class="glass-card display-zone">', 1)[1]
+    display_zone = html.split('<section class="glass-card display-zone"', 1)[1]
     display_zone = display_zone.split('<section class="glass-card">', 1)[0]
     assert 'id="auto-call-toggle"' not in html
     assert "autoCallActive" not in source
@@ -383,6 +383,23 @@ def test_operator_ui_uses_one_state_refresh_for_action_availability():
     assert "data-current-ticket-action" in html
     assert 'data-ticket-status="called"' in css
     assert "#start-service-btn" in css
+
+
+def test_operator_ui_follows_contextual_action_audit():
+    html = read_text("queue/operator.html")
+    css = read_text("queue/css/operator.css")
+
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    assert ">Вызвать следующего<" in html
+    assert ">Начать обслуживание<" in html
+    assert ">Завершить обслуживание<" in html
+    assert 'class="btn-primary" id="finish-btn"' in html
+    assert "btn-danger-outline" in html
+    assert 'data-ticket-status="serving"' in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
+    assert "transition: all" not in css
+    assert "prefers-reduced-motion: reduce" in css
+    assert "@media (max-width: 760px)" in css
     assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
 
 

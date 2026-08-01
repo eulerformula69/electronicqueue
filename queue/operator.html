@@ -3,6 +3,7 @@
 <head>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2328a745'/%3E%3Ccircle cx='5' cy='8' r='2' fill='white'/%3E%3Cpath d='M10,4 C12,6 12,10 10,12' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Рабочее место сотрудника</title>
     <link rel="stylesheet" href="/queue/css/base.css">
     <link rel="stylesheet" href="/queue/css/operator.css">
@@ -142,7 +143,7 @@
 		</div>--->
 	</section>
 
-    <section class="glass-card display-zone">
+    <section class="glass-card display-zone" data-ticket-status="none">
         <div class="current-client-panel">
             <div class="ticket-label">ТЕКУЩИЙ КЛИЕНТ</div>
             <div id="current" class="ticket-number">--</div>
@@ -154,20 +155,20 @@
         
 			
 	<div class="button-group primary-actions">
-		<button id="next-btn" class="btn-primary" data-call-action onclick="callNext()">ВЫЗВАТЬ КЛИЕНТА</button>
-		<button id="start-service-btn" class="btn-primary" data-current-ticket-action onclick="startService()">НАЧАТЬ ОБСЛУЖИВАНИЕ</button>
-		<button class="btn-danger" id="finish-btn" data-current-ticket-action onclick="finishCurrent()">ЗАВЕРШИТЬ</button>
+		<button id="next-btn" class="btn-primary" data-call-action onclick="callNext()">Вызвать следующего</button>
+		<button id="start-service-btn" class="btn-primary" data-current-ticket-action onclick="startService()">Начать обслуживание</button>
+		<button class="btn-primary" id="finish-btn" data-current-ticket-action onclick="finishCurrent()">Завершить обслуживание</button>
 	</div>
 
 	<div class="button-group secondary-actions secondary-critical-actions">
-		<button class="btn-outline" id="defer-ticket-btn" data-current-ticket-action onclick="showDeferReasonPopup()">ОТЛОЖИТЬ</button>
-		<button class="btn-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent()">ОТМЕНИТЬ</button>
+		<button class="btn-outline" id="defer-ticket-btn" data-current-ticket-action onclick="showDeferReasonPopup()">Отложить</button>
+		<button class="btn-outline btn-danger-outline" id="cancel-btn" data-current-ticket-action onclick="cancelCurrent()">Отменить талон</button>
 	</div>
 
 	<div class="button-group secondary-actions tertiary-actions">
-		<button class="btn-outline" id="recall-btn" data-current-ticket-action onclick="recallCurrent()">ПОВТОРИТЬ ВЫЗОВ</button>
-		<button class="btn-outline" id="call-by-number-btn" data-call-action type="button" onclick="promptCallByNumber()">ВЫЗВАТЬ ПО НОМЕРУ</button>
-		<button class="btn-outline" id="redirect-btn" data-current-ticket-action onclick="showRedirectModal()">ПЕРЕНАПРАВИТЬ</button>
+		<button class="btn-outline" id="recall-btn" data-current-ticket-action onclick="recallCurrent()">Повторить вызов</button>
+		<button class="btn-outline" id="call-by-number-btn" data-call-action type="button" onclick="promptCallByNumber()">Вызвать по номеру</button>
+		<button class="btn-outline" id="redirect-btn" data-current-ticket-action onclick="showRedirectModal()">Перенаправить</button>
 		<!---<div class="operator-more-actions">
 			<button class="btn-outline" type="button" onclick="toggleOperatorMoreMenu()">⋯ ДОПОЛНИТЕЛЬНО</button>
 			<div id="operator-more-menu" class="operator-more-menu">
