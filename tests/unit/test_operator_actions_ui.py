@@ -149,7 +149,7 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "startAutoCallAfterFinish();" in source
     assert "runAutoCallNow" not in source
     assert "await callNext({ autoCall: true });" not in source
-    assert 'updateAutoCallStatus("Ожидание системного вызова"' in source
+    assert "Следующий клиент через ${remaining} сек." in source
     assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
     assert "auto_call_server_managed" in source
     assert "Очередь пуста" in source
@@ -235,7 +235,7 @@ def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatc
     assert 'autoCallState === "empty"' in refresh_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
     assert "if (queueHasCallableTickets === false)" not in start_section
-    assert 'updateAutoCallStatus("Ожидание системного вызова"' in start_section
+    assert "renderAutoDispatchCountdown();" in start_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():

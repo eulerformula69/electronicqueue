@@ -31,6 +31,7 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
     """Reconcile deadlines and dispatch every operator that is due."""
     current_time = now or datetime.now()
     dispatched: list[tuple[Ticket, Window]] = []
+    deadlines_created = False
     db = SessionLocal()
     try:
         settings = get_system_settings_dict(db)
@@ -71,6 +72,7 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
 
             if operator.next_auto_call_at is None:
                 operator.next_auto_call_at = _next_deadline(current_time, delay_seconds)
+                deadlines_created = True
 
             if operator.next_auto_call_at > current_time:
                 continue
@@ -101,6 +103,8 @@ async def run_auto_dispatch_once(*, now: datetime | None = None) -> int:
         if dispatched:
             await manager.broadcast({"type": "queue_updated"})
             await broadcast_board()
+        elif deadlines_created:
+            await manager.broadcast({"type": "auto_dispatch_updated"})
         return len(dispatched)
     except Exception:
         db.rollback()

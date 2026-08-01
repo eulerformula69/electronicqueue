@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -65,6 +66,45 @@ def build_service_notification_payload(service_id, service_name, priority, enabl
         "priority": priority,
         "enabled": bool(enabled),
     }
+
+
+@router.get("/operators/auto-dispatch-state", tags=["Operators"])
+def get_auto_dispatch_state(operator: Operator = Depends(verify_session)):
+    db = SessionLocal()
+    try:
+        current_operator = (
+            db.query(Operator).filter(Operator.id == operator.id).first()
+            or operator
+        )
+        settings = get_system_settings_dict(db)
+        window = None
+        if current_operator.window_id:
+            window = (
+                db.query(Window)
+                .filter(Window.id == current_operator.window_id)
+                .first()
+            )
+
+        now = datetime.now()
+        deadline = current_operator.next_auto_call_at
+        remaining_seconds = None
+        if deadline:
+            remaining_seconds = max(
+                0,
+                math.ceil((deadline - now).total_seconds()),
+            )
+
+        return {
+            "enabled": resolve_operator_auto_call_enabled(
+                current_operator,
+                settings["auto_call_enabled"],
+            ),
+            "window_status": window.status if window else "offline",
+            "next_auto_call_at": deadline.isoformat() if deadline else None,
+            "remaining_seconds": remaining_seconds,
+        }
+    finally:
+        db.close()
 
 
 def get_operator_service_notifications(db: Session, operator: Operator):

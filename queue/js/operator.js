@@ -148,6 +148,21 @@ function initWebSocket() {
         if (data.type === "queue_updated") {
             refreshQueueAndAutoCall();
         }
+
+        if (data.type === "auto_dispatch_updated") {
+            loadAutoDispatchState();
+        }
+
+        if (
+            data.type === "ticket_called" &&
+            Number(data.operator_id) === Number(operatorId)
+        ) {
+            setCurrentTicket({...data.ticket, status: "called"});
+            document.getElementById("current").textContent = data.number;
+            document.getElementById("current-service").textContent =
+                data.service_name || "Услуга не указана";
+            Promise.all([loadCurrentTicket(), loadAutoDispatchState()]);
+        }
     };
     operatorSocket.onclose = () => {
         console.log("WebSocket отключен, переподключение...");
@@ -170,7 +185,8 @@ function startOperatorPolling() {
         try {
             await Promise.all([
                 loadQueue(),
-                loadCurrentTicket()
+                loadCurrentTicket(),
+                loadAutoDispatchState()
             ]);
         } catch (e) {
             console.debug("Operator polling error:", e);
@@ -186,6 +202,7 @@ initWebSocket();
 loadQueue();
 loadAllServices();
 startOperatorPolling();
+loadAutoDispatchState();
 
 // ------------------- WebSocket heartbeat вместо HTTP /ping -------------------
 setInterval(() => {
@@ -786,7 +803,11 @@ async function loadQueue(options = {}) {
 }
 
 async function refreshQueueAndAutoCall() {
-    const tickets = await loadQueue();
+    const [tickets] = await Promise.all([
+        loadQueue(),
+        loadCurrentTicket(),
+        loadAutoDispatchState()
+    ]);
     if (!operatorSettings.auto_call_enabled || hasCurrentTicket()) return;
 
     if (!Array.isArray(tickets) || tickets.length === 0) {
@@ -1975,6 +1996,8 @@ async function confirmReturnCurrentToQueue() {
 }
 
 let autoCallState = "";
+let autoDispatchDeadlineMs = null;
+let autoDispatchCountdownTimer = null;
 
 function normalizeAutoCallDelay(value) {
     const delay = Number(value);
@@ -1984,6 +2007,48 @@ function normalizeAutoCallDelay(value) {
 
 function getAutoCallStatusDisplay() {
     return document.getElementById("auto-call-status");
+}
+
+function renderAutoDispatchCountdown() {
+    if (!operatorSettings.auto_call_enabled || !isOperatorOnline()) return;
+    if (hasCurrentTicket()) return;
+    if (autoDispatchDeadlineMs === null) {
+        updateAutoCallStatus("Подготовка системного вызова...", {state: "countdown"});
+        return;
+    }
+
+    const remaining = Math.max(0, Math.ceil((autoDispatchDeadlineMs - Date.now()) / 1000));
+    if (remaining === 0) {
+        updateAutoCallStatus("Вызываем следующего клиента...", {state: "calling"});
+        return;
+    }
+    updateAutoCallStatus(`Следующий клиент через ${remaining} сек.`, {state: "countdown"});
+}
+
+async function loadAutoDispatchState() {
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/operators/auto-dispatch-state`, {
+            headers: {"session-id": sessionId}
+        });
+        if (!res.ok) return;
+        const state = await res.json();
+        operatorSettings.auto_call_enabled = state.enabled === true;
+        autoDispatchDeadlineMs = Number.isInteger(state.remaining_seconds)
+            ? Date.now() + state.remaining_seconds * 1000
+            : null;
+
+        if (!operatorSettings.auto_call_enabled) {
+            updateAutoCallStatus();
+            return;
+        }
+
+        if (!autoDispatchCountdownTimer) {
+            autoDispatchCountdownTimer = setInterval(renderAutoDispatchCountdown, 250);
+        }
+        renderAutoDispatchCountdown();
+    } catch (e) {
+        console.debug("Auto-dispatch state load error:", e);
+    }
 }
 
 function syncAutoCallVisibility() {
@@ -2076,7 +2141,7 @@ function startAutoCallAfterFinish() {
         return;
     }
 
-    updateAutoCallStatus("Ожидание системного вызова", {state: "countdown"});
+    renderAutoDispatchCountdown();
 }
 
 function scheduleAutoCallAfterWorkspaceFreed() {

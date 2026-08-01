@@ -108,12 +108,19 @@ async def test_dispatcher_persists_deadline_before_calling(monkeypatch):
     window = Window(id=3, status="online")
     db = FakeDb(operator=operator, window=window)
     configure_dispatch(monkeypatch, db)
+    events = []
+
+    async def record_event(message):
+        events.append(message)
+
+    monkeypatch.setattr(auto_dispatch.manager, "broadcast", record_event)
 
     dispatched = await auto_dispatch.run_auto_dispatch_once(now=now)
 
     assert dispatched == 0
     assert operator.next_auto_call_at == now + timedelta(seconds=10)
     assert db.committed is True
+    assert events == [{"type": "auto_dispatch_updated"}]
 
 
 @pytest.mark.asyncio
@@ -207,4 +214,27 @@ def test_browser_does_not_own_server_managed_auto_call_timer():
     source = open("queue/js/operator.js", encoding="utf-8").read()
 
     assert "auto_call_server_managed" in source
-    assert 'updateAutoCallStatus("Ожидание системного вызова"' in source
+    assert "autoDispatchCountdownTimer" in source
+    assert "Следующий клиент через ${remaining} сек." in source
+    assert "await callNext({ autoCall: true });" not in source
+
+
+def test_operator_refreshes_current_ticket_immediately_after_server_call():
+    source = open("queue/js/operator.js", encoding="utf-8").read()
+    websocket = source.split("operatorSocket.onmessage", 1)[1]
+    websocket = websocket.split("operatorSocket.onclose", 1)[0]
+
+    assert 'data.type === "ticket_called"' in websocket
+    assert 'setCurrentTicket({...data.ticket, status: "called"})' in websocket
+    assert "loadCurrentTicket()" in websocket
+    assert "loadCurrentTicket()," in source.split(
+        "async function refreshQueueAndAutoCall", 1
+    )[1].split("function showToast", 1)[0]
+
+
+def test_admin_labels_delay_as_server_call_countdown():
+    modern = open("queue/js/admin/views/operators.view.js", encoding="utf-8").read()
+    legacy = open("queue/js/admin/operators.js", encoding="utf-8").read()
+
+    assert "До системного вызова, сек." in modern
+    assert "До системного вызова, сек." in legacy
