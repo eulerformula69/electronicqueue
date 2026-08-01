@@ -1114,9 +1114,16 @@ body.operator-page .queue-detail-meta{
     line-height: 1.25;
 }
 
-body.operator-page .queue-resume-btn{
+body.operator-page .queue-ticket-actions{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
     margin-top: 12px;
     width: 100%;
+}
+
+body.operator-page .queue-resume-btn,
+body.operator-page .queue-cancel-deferred-btn{
     min-height: 42px;
 }
 
@@ -1196,7 +1203,8 @@ body.operator-page .deferred-reminder{
     }
 
     body.operator-page .called-actions,
-    body.operator-page .serving-actions {
+    body.operator-page .serving-actions,
+    body.operator-page .queue-ticket-actions {
         grid-template-columns: minmax(0, 1fr);
     }
 }

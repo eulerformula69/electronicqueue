@@ -501,11 +501,28 @@ def test_operator_mutations_share_double_click_guard():
     assert "function beginOperatorRequest(key)" in ui_state
     assert "if (activeOperatorRequests.size > 0) return false;" in ui_state
     for key in (
-        "call-next", "call-specific", "finish", "cancel", "defer",
+        "call-next", "call-specific", "finish", "cancel", "cancel-deferred", "defer",
         "redirect", "return-to-queue", "recall", "resume-deferred",
     ):
         assert f'beginOperatorRequest("{key}")' in source
         assert f'endOperatorRequest("{key}")' in source
+
+
+def test_deferred_ticket_can_be_cancelled_from_queue_card():
+    source = read_text("queue/js/operator.js")
+    sections = read_text("queue/js/operator-queue-sections.js")
+    backend = read_text("app/routers/tickets.py")
+    css = read_text("queue/css/operator.css")
+
+    assert "selectedSection === \"deferred\"" in sections
+    assert "cancelDeferredTicket" in sections
+    assert "Отменить талон" in sections
+    assert "async function cancelDeferredTicket(ticketId, ticketNumber)" in source
+    assert "/tickets/deferred/${ticketId}/cancel" in source
+    assert "Отменён из отложенных" in source
+    assert '@router.post("/tickets/deferred/{ticket_id}/cancel"' in backend
+    assert 'Ticket.status == "deferred"' in backend
+    assert "queue-ticket-actions" in css
 
 
 def test_operator_page_keeps_simple_auto_call_status_without_prompt_two_controls():

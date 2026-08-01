@@ -2052,6 +2052,39 @@ async function resumeTicket(ticketId, sourceSection = "deferred") {
     }
 }
 
+async function cancelDeferredTicket(ticketId, ticketNumber) {
+    if (!ensureClientOperationsAllowed()) return;
+    const confirmed = await OperatorFeedback.confirm({
+        title: `Отменить талон № ${ticketNumber}?`,
+        message: "Талон будет убран из отложенных и появится в разделе «Отменённые».",
+        confirmText: "Отменить талон",
+        danger: true
+    });
+    if (!confirmed || !beginOperatorRequest("cancel-deferred")) return;
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/tickets/deferred/${ticketId}/cancel`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "session-id": sessionId
+            },
+            body: JSON.stringify({reason: "Отменён из отложенных"})
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || "Не удалось отменить отложенный талон");
+
+        showToast(`Талон ${data.ticket_number || ticketNumber} отменён`, "success");
+        await loadQueue();
+        scheduleAutoCallAfterWorkspaceFreed();
+    } catch (e) {
+        console.error("Ошибка отмены отложенного талона:", e);
+        showToast(e.message || "Не удалось отменить отложенный талон", "danger");
+    } finally {
+        endOperatorRequest("cancel-deferred");
+    }
+}
+
 async function returnCurrentToQueue() {
     closeOperatorMoreMenu();
 

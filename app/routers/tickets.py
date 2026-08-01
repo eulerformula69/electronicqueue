@@ -830,6 +830,50 @@ async def resume_operator_deferred_ticket(
         db.close()
 
 
+@router.post("/tickets/deferred/{ticket_id}/cancel", tags=["Tickets"])
+async def cancel_operator_deferred_ticket(
+    ticket_id: int,
+    data: CancelTicketRequest | None = Body(default=None),
+    operator: Operator = Depends(verify_session),
+):
+    db = SessionLocal()
+    try:
+        if not operator.window_id:
+            raise HTTPException(status_code=400, detail="Оператору не назначено окно")
+
+        ensure_client_operations_allowed(db, operator)
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id,
+            Ticket.status == "deferred",
+            Ticket.operator_id == operator.id,
+            Ticket.window_id == operator.window_id,
+        ).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Отложенный талон не найден")
+
+        ticket.status = "cancelled"
+        ticket.completion_reason = "cancelled"
+        ticket.cancel_reason = normalize_ticket_reason(
+            data.reason if data else "Отменён из отложенных"
+        )
+        ticket.defer_reason = None
+        ticket.deferred_at = None
+        ticket.finished_at = datetime.now()
+
+        db.commit()
+        db.refresh(ticket)
+        await manager.broadcast({"type": "queue_updated"})
+        await broadcast_board()
+
+        return {
+            "status": ticket.status,
+            "ticket_number": ticket.number,
+            "cancel_reason": ticket.cancel_reason,
+        }
+    finally:
+        db.close()
+
+
 @router.post("/tickets/cancelled/{ticket_id}/resume", tags=["Tickets"])
 async def resume_operator_cancelled_ticket(
     ticket_id: int,
