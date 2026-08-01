@@ -248,6 +248,12 @@ def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatc
     assert "Автовызов остановлен: достигнут лимит отложенных талонов" in render_section
     assert "Верните или отмените один из них" in render_section
 
+    styles = read_text("queue/css/operator.css")
+    status_styles = styles.split(
+        "body.operator-page .auto-call-info-block .auto-call-status-text{", 1
+    )[1].split("}", 1)[0]
+    assert "text-align: center" in status_styles
+
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
     source = read_text("queue/js/operator.js")

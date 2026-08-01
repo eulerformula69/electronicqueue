@@ -841,6 +841,7 @@ body.operator-page .auto-call-info-block .auto-call-status-text{
     line-height: 1.3;
     font-weight: 800;
     color: var(--primary);
+    text-align: center;
     overflow-wrap: anywhere;
 }
 body.operator-page .auto-call-info-block .auto-call-status-text[data-state="countdown"],
