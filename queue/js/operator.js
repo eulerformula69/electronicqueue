@@ -67,6 +67,7 @@ const NEW_TICKET_NOTIFICATION_COOLDOWN_MS = 1200;
 let serviceNotificationSettings = new Map();
 let operatorSettings = {
     auto_call_enabled: false,
+    auto_call_server_managed: false,
     auto_call_delay_seconds: 60,
     called_ticket_min_wait_seconds: 180,
     redirect_allow_break: true,
@@ -229,11 +230,11 @@ async function loadOperatorReasonSettings() {
         if (!settingsRes.ok) throw new Error("Settings load failed");
         const settings = await settingsRes.json();
         const details = detailsRes.ok ? await detailsRes.json() : {};
-        const hadActiveAutoCallTimer = Boolean(autoCallTimer);
         const wasAutoCallEnabled = operatorSettings.auto_call_enabled;
         operatorSettings = {
             ...operatorSettings,
             auto_call_enabled: (details.auto_call_enabled ?? settings.auto_call_enabled) === true,
+            auto_call_server_managed: details.auto_call_server_managed === true,
             auto_call_delay_seconds: normalizeAutoCallDelay(
                 details.auto_call_delay_seconds ?? settings.auto_call_delay_seconds
             ),
@@ -257,7 +258,7 @@ async function loadOperatorReasonSettings() {
         updateAutoCallStatus();
         if (!operatorSettings.auto_call_enabled) {
             stopAutoCall("Отключён администратором");
-        } else if (autoCallWasJustEnabled || hadActiveAutoCallTimer) {
+        } else if (autoCallWasJustEnabled) {
             scheduleAutoCallAfterWorkspaceFreed();
         }
     } catch (e) {
@@ -795,7 +796,6 @@ async function refreshQueueAndAutoCall() {
 
     if (
         isOperatorOnline() &&
-        !autoCallTimer &&
         autoCallState === "empty"
     ) {
         scheduleAutoCallAfterWorkspaceFreed();
@@ -1974,8 +1974,6 @@ async function confirmReturnCurrentToQueue() {
     }
 }
 
-let autoCallTimer = null;
-let secondsLeft = 60;
 let autoCallState = "";
 
 function normalizeAutoCallDelay(value) {
@@ -2048,11 +2046,6 @@ function updateAutoCallStatus(message, options = {}) {
 }
 
 function stopAutoCall(message) {
-    if (autoCallTimer) {
-        clearInterval(autoCallTimer);
-        autoCallTimer = null;
-    }
-    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
     if (message !== undefined) {
         let state = "";
         if (message.includes("Отключён")) state = "disabled";
@@ -2083,68 +2076,11 @@ function startAutoCallAfterFinish() {
         return;
     }
 
-    if (queueHasCallableTickets === false) {
-        stopAutoCall("Очередь пуста");
-        return;
-    }
-
-    secondsLeft = normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds);
-    if (secondsLeft === 0) {
-        runAutoCallNow();
-        return;
-    }
-
-    updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-        state: "countdown"
-    });
-    autoCallTimer = setInterval(() => {
-        secondsLeft -= 1;
-        if (secondsLeft <= 0) {
-            clearInterval(autoCallTimer);
-            autoCallTimer = null;
-            runAutoCallNow();
-            return;
-        }
-        updateAutoCallStatus(`Следующий клиент через ${secondsLeft} сек.`, {
-            state: "countdown"
-        });
-    }, 1000);
+    updateAutoCallStatus("Ожидание системного вызова", {state: "countdown"});
 }
 
 function scheduleAutoCallAfterWorkspaceFreed() {
     startAutoCallAfterFinish();
-}
-
-async function runAutoCallNow() {
-    if (!operatorSettings.auto_call_enabled) {
-        stopAutoCall("Отключён администратором");
-        return;
-    }
-
-    if (!isOperatorOnline()) {
-        stopAutoCall(getAutoCallPausedMessage());
-        return;
-    }
-
-    if (hasCurrentTicket()) {
-        stopAutoCall("");
-        return;
-    }
-
-    const nextBtn = document.getElementById("next-btn");
-    if (nextBtn && nextBtn.disabled) {
-        stopAutoCall("Ожидание готовности...");
-        return;
-    }
-
-    const tickets = await loadQueue({ checkNewTickets: false });
-    if (!Array.isArray(tickets) || tickets.length === 0) {
-        stopAutoCall("Очередь пуста");
-        return;
-    }
-
-    updateAutoCallStatus("Вызываю следующего клиента...", {state: "calling"});
-    await callNext({ autoCall: true });
 }
 
 /* =========================

@@ -483,14 +483,22 @@ def update_my_service_notification(
 async def get_my_details(operator: Operator = Depends(verify_session)):
     db = SessionLocal()
     try:
+        current_operator = (
+            db.query(Operator).filter(Operator.id == operator.id).first()
+            or operator
+        )
         window = None
-        if operator.window_id:
-            window = db.query(Window).filter(Window.id == operator.window_id).first()
+        if current_operator.window_id:
+            window = (
+                db.query(Window)
+                .filter(Window.id == current_operator.window_id)
+                .first()
+            )
         settings = get_system_settings_dict(db)
-        auto_call_mode = operator.auto_call_mode or "default"
+        auto_call_mode = current_operator.auto_call_mode or "default"
         
         services_with_priority = []
-        if operator.window_id:
+        if current_operator.window_id:
             services_with_priority = [
                 {
                     "id": item["service_id"],
@@ -498,20 +506,25 @@ async def get_my_details(operator: Operator = Depends(verify_session)):
                     "priority": item["priority"],
                     "notifications_enabled": item["enabled"],
                 }
-                for item in get_operator_service_notifications(db, operator)
+                for item in get_operator_service_notifications(db, current_operator)
             ]
 
         return {
-            "operator_name": operator.name,
-            "window_id": operator.window_id,
+            "operator_name": current_operator.name,
+            "window_id": current_operator.window_id,
             "window_name": window.name if window else "Не назначено",
             "window_status": window.status if window else "offline",
             "auto_call_mode": auto_call_mode,
             "auto_call_enabled": resolve_operator_auto_call_enabled(
-                operator,
+                current_operator,
                 settings["auto_call_enabled"],
             ),
             "auto_call_delay_seconds": settings["auto_call_delay_seconds"],
+            "auto_call_server_managed": True,
+            "next_auto_call_at": (
+                current_operator.next_auto_call_at.isoformat()
+                if current_operator.next_auto_call_at else None
+            ),
             "services": services_with_priority # Теперь это список объектов
         }
     finally:

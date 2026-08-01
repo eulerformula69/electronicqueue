@@ -23,12 +23,14 @@ from app.migrations import (
     migrate_operator_service_notifications_schema,
     migrate_ticket_reason_settings_schema, migrate_auto_call_settings_schema,
     migrate_operator_auto_call_schema,
+    migrate_auto_dispatch_schema,
     migrate_called_ticket_min_wait_schema,
     migrate_max_ticket_redirects_schema,
     migrate_auto_call_balance_and_board_cancel_schema,
 )
 from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
+from app.services.auto_dispatch import auto_dispatch_worker
 from app.services.operators import cleanup_sessions
 
 TESTING = os.getenv("TESTING", "").lower() in {"1", "true", "yes", "on"}
@@ -69,6 +71,7 @@ async def startup():
     migrate_ticket_reason_settings_schema(engine)
     migrate_auto_call_settings_schema(engine)
     migrate_operator_auto_call_schema(engine)
+    migrate_auto_dispatch_schema(engine)
     migrate_called_ticket_min_wait_schema(engine)
     migrate_max_ticket_redirects_schema(engine)
     migrate_auto_call_balance_and_board_cancel_schema(engine)
@@ -79,3 +82,4 @@ async def startup():
     if not TESTING:
         await start_media_processor()
         asyncio.create_task(cleanup_sessions())
+        asyncio.create_task(auto_dispatch_worker())

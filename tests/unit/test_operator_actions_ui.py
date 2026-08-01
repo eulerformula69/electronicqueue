@@ -147,10 +147,11 @@ def test_operator_auto_call_uses_global_settings_without_local_toggle():
     assert "auto_call_enabled" in source
     assert "auto_call_delay_seconds" in source
     assert "startAutoCallAfterFinish();" in source
-    assert "runAutoCallNow" in source
-    assert "await callNext({ autoCall: true });" in source
+    assert "runAutoCallNow" not in source
+    assert "await callNext({ autoCall: true });" not in source
+    assert 'updateAutoCallStatus("Ожидание системного вызова"' in source
     assert "body: JSON.stringify({ auto_call: options.autoCall === true })" in source
-    assert "loadQueue({ checkNewTickets: false })" in source
+    assert "auto_call_server_managed" in source
     assert "Очередь пуста" in source
     assert "auto-call-info-block" in display_zone
     assert "auto-call-countdown" not in display_zone
@@ -213,11 +214,12 @@ def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
     assert "autoCallSettingsLoaded &&" in settings_section
     assert "!wasAutoCallEnabled &&" in settings_section
     assert "operatorSettings.auto_call_enabled" in settings_section
-    assert "autoCallWasJustEnabled || hadActiveAutoCallTimer" in settings_section
+    assert "hadActiveAutoCallTimer" not in settings_section
+    assert "autoCallWasJustEnabled" in settings_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in settings_section
 
 
-def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
+def test_operator_auto_call_status_tracks_empty_queue_and_server_resumes_dispatch():
     source = read_text("queue/js/operator.js")
     websocket_section = source.split("function initWebSocket", 1)[1]
     websocket_section = websocket_section.split("function startOperatorPolling", 1)[0]
@@ -232,8 +234,8 @@ def test_operator_auto_call_stops_for_empty_queue_and_resumes_on_queue_update():
     assert 'stopAutoCall("Очередь пуста");' in refresh_section
     assert 'autoCallState === "empty"' in refresh_section
     assert "scheduleAutoCallAfterWorkspaceFreed();" in refresh_section
-    assert "if (queueHasCallableTickets === false)" in start_section
-    assert 'stopAutoCall("Очередь пуста");' in start_section
+    assert "if (queueHasCallableTickets === false)" not in start_section
+    assert 'updateAutoCallStatus("Ожидание системного вызова"' in start_section
 
 
 def test_operator_redirect_loads_services_hidden_on_terminal():
@@ -422,4 +424,4 @@ def test_auto_call_uses_distinct_break_and_offline_reasons():
     assert 'statusDisplay.textContent = "Включён";' in source
     assert "Автоочередь" not in source
     assert "Отсчёт начнётся после завершения текущего клиента" not in source
-    assert "normalizeAutoCallDelay(operatorSettings.auto_call_delay_seconds)" in source
+    assert "normalizeAutoCallDelay" in source

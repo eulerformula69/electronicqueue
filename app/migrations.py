@@ -500,6 +500,21 @@ def migrate_operator_auto_call_schema(engine):
         conn.execute(text(ddl))
 
 
+def migrate_auto_dispatch_schema(engine):
+    """Persist recoverable server-side auto-dispatch deadlines."""
+    ddl = """
+    ALTER TABLE operators
+        ADD COLUMN IF NOT EXISTS next_auto_call_at timestamp without time zone;
+
+    CREATE INDEX IF NOT EXISTS ix_operators_next_auto_call_at
+        ON operators (next_auto_call_at)
+        WHERE next_auto_call_at IS NOT NULL;
+    """
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def migrate_called_ticket_min_wait_schema(engine):
     """Add the minimum wait before a called ticket can be finished."""
     ddl = """

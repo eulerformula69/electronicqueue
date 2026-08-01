@@ -94,6 +94,7 @@ class Operator(Base):
     password = Column(String, nullable=False)
     window_id = Column(Integer, ForeignKey("windows.id"), unique=True)
     auto_call_mode = Column(String, default="default")
+    next_auto_call_at = Column(TIMESTAMP, nullable=True)
 
 
 class OperatorServiceNotification(Base):
