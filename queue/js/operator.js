@@ -1524,36 +1524,41 @@ async function changeWindowStatus(newStatus) {
     }
 }
 
+function toggleWindowStatus() {
+    const nextStatus = currentWindowStatus === "online" ? "break" : "online";
+    return changeWindowStatus(nextStatus);
+}
+
 function updateStatusButtons(status) {
     currentWindowStatus = status || "offline";
-    const startBtn = document.getElementById("btn-start");
-    const stopBtn = document.getElementById("btn-stop");
+    const statusToggle = document.getElementById("window-status-toggle");
     const statusText = document.getElementById("status-text");
     const statusDot = document.getElementById("status-dot");
-    startBtn.disabled = currentWindowStatus === "online";
-    stopBtn.disabled = currentWindowStatus !== "online";
     refreshOperatorUiState();
     if (typeof OperatorQueueSections !== "undefined" && OperatorQueueSections.refresh) {
         OperatorQueueSections.refresh();
     }
 
     // Базовый сброс для всех состояний
-    startBtn.classList.remove("status-active");
-    stopBtn.classList.remove("btn-warning-active");
+    statusToggle.classList.remove("btn-success", "btn-warning-active");
     statusDot.className = "dot";
     statusDot.style.boxShadow = "none";
     statusDot.style.backgroundColor = "";
 
     if (currentWindowStatus === "online") {
-        startBtn.classList.add("status-active");
+        statusToggle.textContent = "УЙТИ НА ПЕРЕРЫВ";
+        statusToggle.classList.add("btn-warning-active");
+        statusToggle.dataset.nextStatus = "break";
         statusDot.className = "dot online";
-        statusText.textContent = "В сети";
+        statusText.textContent = "На линии";
         statusText.style.color = "var(--success)";
         return;
     }
 
     if (currentWindowStatus === "break") {
-        stopBtn.classList.add("btn-warning-active");
+        statusToggle.textContent = "НАЧАТЬ РАБОТУ";
+        statusToggle.classList.add("btn-success");
+        statusToggle.dataset.nextStatus = "online";
         statusDot.style.backgroundColor = "var(--warning)";
         statusDot.style.boxShadow = "0 0 8px var(--warning)";
         statusText.textContent = "На перерыве";
@@ -1561,6 +1566,9 @@ function updateStatusButtons(status) {
         return;
     }
     // offline / неизвестный статус
+    statusToggle.textContent = "НАЧАТЬ РАБОТУ";
+    statusToggle.classList.add("btn-success");
+    statusToggle.dataset.nextStatus = "online";
     statusText.textContent = "Оффлайн";
     statusText.style.color = "var(--text-muted)";
 }

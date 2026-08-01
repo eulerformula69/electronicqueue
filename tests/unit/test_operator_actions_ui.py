@@ -184,6 +184,21 @@ def test_operator_auto_call_resumes_when_operator_goes_online():
     assert "На паузе: оператор не в статусе Online" not in source
 
 
+def test_operator_uses_one_direct_status_toggle():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator.js")
+    ui_state = read_text("queue/js/operator-ui-state.js")
+
+    assert 'id="window-status-toggle"' in html
+    assert 'onclick="toggleWindowStatus()"' in html
+    assert 'id="btn-start"' not in html
+    assert 'id="btn-stop"' not in html
+    assert 'currentWindowStatus === "online" ? "break" : "online"' in source
+    assert 'statusToggle.textContent = "УЙТИ НА ПЕРЕРЫВ"' in source
+    assert source.count('statusToggle.textContent = "НАЧАТЬ РАБОТУ"') == 2
+    assert 'statusToggle.disabled = busy' in ui_state
+
+
 def test_operator_auto_call_starts_when_admin_enables_it_for_free_workspace():
     source = read_text("queue/js/operator.js")
     settings_section = source.split("async function loadOperatorReasonSettings", 1)[1]

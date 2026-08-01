@@ -20,10 +20,15 @@
 
 <header class="header-panel">
     <div class="button-group">
-        <button id="btn-start" class="btn-success" onclick="changeWindowStatus('online')">ОНЛАЙН</button>
-        <button id="btn-stop" class="btn-outline" onclick="changeWindowStatus('break')">ПЕРЕРЫВ</button>
+		<button
+			id="window-status-toggle"
+			class="window-status-toggle btn-success"
+			type="button"
+			onclick="toggleWindowStatus()"
+			aria-describedby="status-text"
+		>НАЧАТЬ РАБОТУ</button>
 		
-		<div id="status-info-block" class="info-status" style="margin: 0; padding: 6px 14px; background: #f1f5f9; border-radius: 20px; font-size: 0.95rem;">
+		<div id="status-info-block" class="info-status" aria-live="polite">
 			<div id="status-dot" class="dot"></div>
 			<span id="status-text" style="font-weight: 700;">Загрузка...</span>
 		</div>

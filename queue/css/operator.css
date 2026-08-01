@@ -561,10 +561,6 @@ body.operator-page .operator-changelog-actions{
     justify-content: center;
     margin-top: 22px;
 }
-body.operator-page .btn-success.status-active{
-    background-color: var(--success) !important;
-    box-shadow: 0 0 10px rgba(46, 196, 182, 0.5);
-}
 body.operator-page .btn-warning-active{
     background-color: var(--warning) !important;
     color: white !important;
@@ -575,6 +571,14 @@ body.operator-page .info-status{
     align-items: center;
     gap: 6px;
     white-space: nowrap; /* Чтобы текст не переносился */
+    margin: 0;
+    padding: 6px 14px;
+    background: #f1f5f9;
+    border-radius: 20px;
+    font-size: 0.95rem;
+}
+body.operator-page .window-status-toggle{
+    min-width: 190px;
 }
 body.operator-page .btn-outline{
     background: transparent;

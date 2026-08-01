@@ -17,6 +17,9 @@ function refreshOperatorUiState() {
     const hasTicket = Boolean(currentTicketId);
     const busy = activeOperatorRequests.size > 0;
 
+    const statusToggle = document.getElementById("window-status-toggle");
+    if (statusToggle) statusToggle.disabled = busy;
+
     document.querySelectorAll("[data-call-action]").forEach(button => {
         button.disabled = !online || hasTicket || busy;
     });
