@@ -288,6 +288,15 @@ def test_operator_refreshes_current_ticket_immediately_after_server_call():
     )[1].split("function showToast", 1)[0]
 
 
+def test_operator_sees_notice_after_server_calls_client():
+    source = open("queue/js/operator.js", encoding="utf-8").read()
+    websocket = source.split("operatorSocket.onmessage", 1)[1]
+    websocket = websocket.split("operatorSocket.onclose", 1)[0]
+
+    assert "Сейчас к вам должен подойти клиент №${data.number}" in websocket
+    assert '"success"' in websocket
+
+
 def test_admin_labels_delay_as_server_call_countdown():
     modern = open("queue/js/admin/views/operators.view.js", encoding="utf-8").read()
     legacy = open("queue/js/admin/operators.js", encoding="utf-8").read()

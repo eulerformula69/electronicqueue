@@ -166,6 +166,10 @@ function initWebSocket() {
             document.getElementById("current").textContent = data.number;
             document.getElementById("current-service").textContent =
                 data.service_name || "Услуга не указана";
+            showToast(
+                `Сейчас к вам должен подойти клиент №${data.number}`,
+                "success"
+            );
             Promise.all([loadCurrentTicket(), loadAutoDispatchState()]);
         }
     };
