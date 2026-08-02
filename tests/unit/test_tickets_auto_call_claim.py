@@ -3,6 +3,7 @@ from operator import eq
 from app.models import Operator, Service, Ticket, Window, WindowService
 from app.schemas import CallNextRequest
 from app.services.operators import resolve_operator_auto_call_enabled
+from app.services import tickets as tickets_service
 from app.services.tickets import claim_next_ticket
 
 
@@ -74,6 +75,10 @@ class ClaimDb:
         self.window_services = window_services
         self.locks = []
         self.flush_count = 0
+        self.executed = []
+
+    def execute(self, statement):
+        self.executed.append(statement)
 
     def query(self, model):
         rows = {
@@ -154,6 +159,36 @@ def test_auto_call_respects_workplace_services():
     assert claimed is True
     assert ticket.service_id == 1
     assert db.tickets[0].status == "waiting"
+
+
+def test_targeted_ticket_bypasses_low_load_balancing(monkeypatch):
+    db = make_db(ticket_services=(1,))
+    db.tickets[0].target_window_id = 10
+    balance_calls = []
+
+    def record_balance_call(*args, **kwargs):
+        balance_calls.append((args, kwargs))
+        return 2
+
+    monkeypatch.setattr(
+        tickets_service,
+        "low_load_auto_call_winner",
+        record_balance_call,
+    )
+
+    ticket, claimed = claim_next_ticket(
+        db,
+        operator=Operator(id=1, window_id=10),
+        require_online=True,
+        balance_settings={"auto_call_enabled": True},
+    )
+
+    assert claimed is True
+    assert ticket.id == 1
+    assert ticket.operator_id == 1
+    assert ticket.window_id == 10
+    assert ticket.target_window_id is None
+    assert balance_calls == []
 
 
 def test_claim_uses_postgresql_skip_locked_and_flushes_before_commit():

@@ -199,7 +199,11 @@ def claim_next_ticket(
     if not ticket:
         return None, False
 
-    if balance_settings:
+    # A ticket explicitly routed to this window must not participate in the
+    # general low-load competition between operators. The target is the
+    # dispatch decision for this ticket.
+    is_targeted_to_operator = ticket.target_window_id == operator.window_id
+    if balance_settings and not is_targeted_to_operator:
         winner_id = low_load_auto_call_winner(
             db,
             ticket=ticket,
