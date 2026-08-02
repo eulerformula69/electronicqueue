@@ -21,8 +21,9 @@ def test_close_day_without_flags_prints_help_and_does_not_run(capsys):
     output = capsys.readouterr().out
     assert "--finish-tickets" in output
     assert "--cancel-tickets" in output
-    assert "--offline-operators" in output
-    assert "--keep-operators-online" in output
+    assert "--operator-offline" in output
+    assert "--operator-online" in output
+    assert "--operator-break" in output
 
 
 def test_close_day_requires_ticket_and_operator_choices():
@@ -31,16 +32,24 @@ def test_close_day_requires_ticket_and_operator_choices():
     with pytest.raises(SystemExit):
         parser.parse_args(["--finish-tickets"])
     with pytest.raises(SystemExit):
-        parser.parse_args(["--offline-operators"])
+        parser.parse_args(["--operator-offline"])
 
 
 def test_close_day_parses_explicit_choices():
     args = build_argument_parser().parse_args(
-        ["--cancel-tickets", "--keep-operators-online"]
+        ["--cancel-tickets", "--operator-online"]
     )
 
     assert args.ticket_action == "cancel"
-    assert args.operators_offline is False
+    assert args.operator_action == "online"
+
+
+def test_close_day_parses_operator_break():
+    args = build_argument_parser().parse_args(
+        ["--finish-tickets", "--operator-break"]
+    )
+
+    assert args.operator_action == "break"
 
 
 def test_close_day_passes_explicit_choices_to_operation(monkeypatch):
@@ -50,9 +59,9 @@ def test_close_day_passes_explicit_choices_to_operation(monkeypatch):
         lambda **options: calls.append(options) or 0,
     )
 
-    assert main(["--cancel-tickets", "--keep-operators-online"]) == 0
+    assert main(["--cancel-tickets", "--operator-online"]) == 0
     assert calls == [
-        {"ticket_action": "cancel", "operators_offline": False}
+        {"ticket_action": "cancel", "operator_action": "online"}
     ]
 
 
