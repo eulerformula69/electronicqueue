@@ -426,6 +426,12 @@ def test_operator_ui_follows_contextual_action_audit():
     assert ".current-ticket-actions-inactive [data-current-ticket-action]" in css
 
 
+def test_called_ticket_redirect_button_is_enabled():
+    ui_state = read_text("queue/js/operator-ui-state.js")
+
+    assert '"redirect-btn": isCalled || isServing' in ui_state
+
+
 def test_break_allows_finishing_active_ticket_but_not_starting_another():
     ui_state = read_text("queue/js/operator-ui-state.js")
     source = read_text("queue/js/operator.js")

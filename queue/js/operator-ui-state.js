@@ -29,7 +29,7 @@ function refreshOperatorUiState() {
         const statusAllowsAction = {
             "start-service-btn": isCalled,
             "finish-btn": isServing,
-            "redirect-btn": isServing,
+            "redirect-btn": isCalled || isServing,
             "recall-btn": isCalled,
             "cancel-btn": isCalled,
             "defer-ticket-btn": isCalled || isServing,
