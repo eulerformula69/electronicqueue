@@ -9,6 +9,7 @@ from app.schemas import CancelTicketRequest, DeferTicketRequest
 from app.services.tickets import (
     create_window_redirect_ticket,
     defer_ticket,
+    redirect_called_ticket,
     resume_cancelled_ticket,
     resume_deferred_ticket,
     return_ticket_to_queue,
@@ -190,6 +191,41 @@ def test_create_window_redirect_ticket_preserves_finished_source_stage():
     assert redirected_ticket.called_at is None
     assert redirected_ticket.finished_at is None
     assert redirected_ticket.returned_to_queue_count == 3
+
+
+def test_redirect_called_ticket_reuses_source_record():
+    called_at = datetime(2026, 7, 2, 12, 25)
+    ticket = Ticket(
+        id=1771,
+        number=119,
+        service_id=2,
+        status="called",
+        root_ticket_id=1500,
+        operator_id=5,
+        window_id=7,
+        called_at=called_at,
+        service_started_at=None,
+        returned_to_queue_count=2,
+    )
+
+    redirect_called_ticket(
+        ticket,
+        service_id=4,
+        target_window_id=19,
+        now=datetime(2026, 7, 2, 12, 30),
+    )
+
+    assert ticket.id == 1771
+    assert ticket.root_ticket_id == 1500
+    assert ticket.service_id == 4
+    assert ticket.status == "waiting"
+    assert ticket.completion_reason == "redirected"
+    assert ticket.operator_id is None
+    assert ticket.window_id is None
+    assert ticket.target_window_id == 19
+    assert ticket.called_at is None
+    assert ticket.finished_at is None
+    assert ticket.returned_to_queue_count == 3
 
 
 class ActiveTicketQuery:

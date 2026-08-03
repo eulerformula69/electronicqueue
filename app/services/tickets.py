@@ -363,6 +363,30 @@ def create_window_redirect_ticket(
     )
 
 
+def redirect_called_ticket(
+    ticket: Ticket,
+    *,
+    service_id: int,
+    target_window_id: int | None = None,
+    now: datetime | None = None,
+) -> None:
+    """Move a called ticket without preserving a separate completed stage."""
+    redirected_at = now or datetime.now()
+
+    ticket.service_id = service_id
+    ticket.status = "waiting"
+    ticket.completion_reason = "redirected" if target_window_id else None
+    ticket.operator_id = None
+    ticket.window_id = None
+    ticket.target_window_id = target_window_id
+    ticket.queue_entered_at = redirected_at
+    ticket.called_at = None
+    ticket.service_started_at = None
+    ticket.last_recalled_at = None
+    ticket.finished_at = None
+    ticket.returned_to_queue_count = (ticket.returned_to_queue_count or 0) + 1
+
+
 def get_called_tickets():
     db = SessionLocal()
     try:

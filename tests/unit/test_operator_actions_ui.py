@@ -418,6 +418,7 @@ def test_operator_ui_follows_contextual_action_audit():
     assert 'id="start-service-btn" class="btn-primary"' in html
     assert html.index('id="recall-btn"') < html.index('id="cancel-btn"')
     assert 'data-ticket-status="serving"' in css
+    assert 'data-ticket-status="called"] #redirect-btn' not in css
     assert "grid-template-columns: minmax(0, 1fr);" in css
     assert "transition: all" not in css
     assert "prefers-reduced-motion: reduce" in css

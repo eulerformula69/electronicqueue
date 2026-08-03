@@ -53,7 +53,7 @@ from app.services.tickets import (
     broadcast_board, claim_next_ticket,
     broadcast_ticket_called, create_window_redirect_ticket, queue_order_expr,
     defer_ticket, render_ticket_template, resume_cancelled_ticket, resume_deferred_ticket,
-    recall_cooldown_remaining_seconds,
+    recall_cooldown_remaining_seconds, redirect_called_ticket,
     return_ticket_to_queue,
 )
 from app.services.operators import resolve_operator_auto_call_enabled
@@ -1063,7 +1063,7 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
 
         ticket = db.query(Ticket).filter(
             Ticket.id == data.ticket_id,
-            Ticket.status == "serving"
+            Ticket.status.in_(("called", "serving"))
         ).first()
         if not ticket:
             raise HTTPException(status_code=404, detail="Вызванный билет не найден")
@@ -1109,13 +1109,21 @@ async def redirect_ticket_to_window(data: RedirectToWindowRequest, operator: Ope
         if not window_service:
             raise HTTPException(status_code=400, detail="Выбранное окно не оказывает эту услугу")
 
-        redirected_ticket = create_window_redirect_ticket(
-            ticket,
-            target_window_id=target_window.id,
-            operator_id=operator.id,
-            service_id=service.id,
-        )
-        db.add(redirected_ticket)
+        if ticket.status == "called":
+            redirect_called_ticket(
+                ticket,
+                service_id=service.id,
+                target_window_id=target_window.id,
+            )
+            redirected_ticket = ticket
+        else:
+            redirected_ticket = create_window_redirect_ticket(
+                ticket,
+                target_window_id=target_window.id,
+                operator_id=operator.id,
+                service_id=service.id,
+            )
+            db.add(redirected_ticket)
 
         db.commit()
         db.refresh(redirected_ticket)
@@ -1142,7 +1150,7 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
 
         ticket = db.query(Ticket).filter(
             Ticket.id == data.ticket_id,
-            Ticket.status == "serving"
+            Ticket.status.in_(("called", "serving"))
         ).first()
         if not ticket:
             return {"detail": "Сначала завершите текущего клиента или тикет не найден"}
@@ -1180,32 +1188,36 @@ async def redirect_ticket(data: RedirectRequest, operator: Operator = Depends(ve
         if not windows:
             return {"detail": "Нет доступных окон для этой услуги, Пожалуйста сообщите клиенту"}
 
-        redirected_at = datetime.now()
-        root_ticket_id = ticket.root_ticket_id or ticket.id
+        if ticket.status == "called":
+            redirect_called_ticket(ticket, service_id=service.id)
+            redirected_ticket = ticket
+        else:
+            redirected_at = datetime.now()
+            root_ticket_id = ticket.root_ticket_id or ticket.id
 
-        ticket.status = "finished"
-        ticket.completion_reason = "redirected"
-        if ticket.operator_id is None:
-            ticket.operator_id = operator.id
-        ticket.finished_at = redirected_at
+            ticket.status = "finished"
+            ticket.completion_reason = "redirected"
+            if ticket.operator_id is None:
+                ticket.operator_id = operator.id
+            ticket.finished_at = redirected_at
 
-        redirected_ticket = Ticket(
-            number=ticket.number,
-            service_id=service.id,
-            status="waiting",
-            completion_reason=None,
-            root_ticket_id=root_ticket_id,
-            operator_id=None,
-            window_id=None,
-            target_window_id=None,
-            created_at=redirected_at,
-            returned_to_queue_count=(ticket.returned_to_queue_count or 0) + 1,
-            queue_entered_at=redirected_at,
-            called_at=None,
-            finished_at=None,
-        )
-        db.add(redirected_ticket)
-        db.flush()
+            redirected_ticket = Ticket(
+                number=ticket.number,
+                service_id=service.id,
+                status="waiting",
+                completion_reason=None,
+                root_ticket_id=root_ticket_id,
+                operator_id=None,
+                window_id=None,
+                target_window_id=None,
+                created_at=redirected_at,
+                returned_to_queue_count=(ticket.returned_to_queue_count or 0) + 1,
+                queue_entered_at=redirected_at,
+                called_at=None,
+                finished_at=None,
+            )
+            db.add(redirected_ticket)
+            db.flush()
 
         db.commit()
         db.refresh(redirected_ticket)
