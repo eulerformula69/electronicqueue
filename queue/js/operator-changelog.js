@@ -4,6 +4,8 @@
     const CHECK_INTERVAL_MS = 60000;
     const ACTIVITY_CHECK_COOLDOWN_MS = 30000;
     const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу (ctrl + F5)";
+    const DEFAULT_CONFIRM_BUTTON_TEXT = "Понятно";
+    let confirmButtonText = DEFAULT_CONFIRM_BUTTON_TEXT;
     let pageChangelogVersion = null;
     let checkInProgress = false;
     let lastActivityCheckAt = 0;
@@ -100,7 +102,7 @@
         const closeButton = document.createElement("button");
         closeButton.type = "button";
         closeButton.className = "btn-primary";
-        closeButton.textContent = "Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления и теперь в курсе всех изменений в работе очереди";
+        closeButton.textContent = confirmButtonText;
         closeButton.addEventListener(
             "click",
             () => closeOperatorChangelog(overlay, version, options.saveVersion !== false)
@@ -149,6 +151,26 @@
         }
     }
 
+    async function loadConfirmationButtonText() {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/settings/public`);
+            if (!response.ok) return;
+
+            const settings = await response.json();
+            confirmButtonText = String(
+                settings.operator_changelog_confirm_button_text
+                || DEFAULT_CONFIRM_BUTTON_TEXT
+            ).trim() || DEFAULT_CONFIRM_BUTTON_TEXT;
+        } catch (error) {
+            console.debug("Operator changelog settings load error:", error);
+        }
+    }
+
+    async function initOperatorChangelog() {
+        await loadConfirmationButtonText();
+        loadOperatorChangelog();
+    }
+
     function checkOperatorChangelogOnActivity() {
         const now = Date.now();
         if (now - lastActivityCheckAt < ACTIVITY_CHECK_COOLDOWN_MS) return;
@@ -169,7 +191,7 @@
         });
     };
 
-    loadOperatorChangelog();
+    initOperatorChangelog();
     setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS);
     document.addEventListener("click", checkOperatorChangelogOnActivity);
 })();

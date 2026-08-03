@@ -130,9 +130,16 @@ def test_operator_changelog_popup_can_show_previous_entries():
 
 def test_operator_changelog_uses_playful_read_confirmation():
     source = read_text("queue/js/operator-changelog.js")
+    settings_view = read_text("queue/js/admin/views/settings.view.js")
     css = read_text("queue/css/operator.css")
 
-    assert "Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления" in source
+    playful_text = "Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления"
+    assert playful_text in settings_view
+    assert 'const DEFAULT_CONFIRM_BUTTON_TEXT = "Понятно"' in source
+    assert "closeButton.textContent = confirmButtonText" in source
+    assert "operator_changelog_confirm_button_text" in settings_view
+    assert "await loadConfirmationButtonText()" in source
+    assert "initOperatorChangelog();" in source
     assert ".operator-changelog-actions .btn-primary" in css
     assert "white-space: normal" in css
 

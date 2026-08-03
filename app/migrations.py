@@ -655,3 +655,20 @@ def migrate_operator_workflow_settings_schema(engine):
     """
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_operator_changelog_button_text_schema(engine):
+    """Add configurable text for the operator changelog confirmation button."""
+    ddl = """
+    ALTER TABLE system_settings
+        ADD COLUMN IF NOT EXISTS operator_changelog_confirm_button_text varchar(200)
+        DEFAULT 'Понятно';
+
+    UPDATE system_settings
+    SET operator_changelog_confirm_button_text = COALESCE(
+        NULLIF(TRIM(operator_changelog_confirm_button_text), ''),
+        'Понятно'
+    );
+    """
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
