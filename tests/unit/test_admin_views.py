@@ -271,9 +271,12 @@ def test_focused_grafana_embed_migration_is_available():
 
     assert "GF_SECURITY_ALLOW_EMBEDDING=true" in migration
     assert "GF_SERVER_SERVE_FROM_SUB_PATH=true" in migration
+    assert "GF_SERVER_HTTP_ADDR=127.0.0.1" in migration
+    assert "GF_SERVER_HTTP_PORT=3000" in migration
     assert "location /grafana/" in migration
     assert "proxy_pass http://127.0.0.1:3000;" in migration
     assert "nginx -t" in migration
+    assert "journalctl -u grafana-server" in migration
 
 
 def test_board_status_moves_with_ticker_offset():

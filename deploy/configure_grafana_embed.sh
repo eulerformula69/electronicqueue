@@ -32,6 +32,8 @@ Environment="GF_SECURITY_ALLOW_EMBEDDING=true"
 Environment="GF_AUTH_ANONYMOUS_ENABLED=true"
 Environment="GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer"
 Environment="GF_USERS_DEFAULT_THEME=light"
+Environment="GF_SERVER_HTTP_ADDR=127.0.0.1"
+Environment="GF_SERVER_HTTP_PORT=3000"
 Environment="GF_SERVER_DOMAIN=${SERVER_IP}"
 Environment="GF_SERVER_ROOT_URL=https://${SERVER_IP}/grafana/"
 Environment="GF_SERVER_SERVE_FROM_SUB_PATH=true"
@@ -100,9 +102,26 @@ if ! systemctl restart grafana-server; then
   exit 1
 fi
 
+GRAFANA_READY=false
+for _ in {1..20}; do
+  if curl -fsS -H "Host: ${SERVER_IP}" \
+    "http://127.0.0.1:3000/grafana/api/health" >/dev/null 2>&1; then
+    GRAFANA_READY=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${GRAFANA_READY}" != true ]]; then
+  echo "Grafana не открыла локальный порт 127.0.0.1:3000." >&2
+  systemctl status grafana-server --no-pager -l || true
+  journalctl -u grafana-server -n 30 --no-pager || true
+  exit 1
+fi
+
 systemctl reload nginx
-for _ in {1..30}; do
-  if curl -kfsS "https://${SERVER_IP}/grafana/api/health" >/dev/null; then
+for _ in {1..10}; do
+  if curl -kfsS "https://${SERVER_IP}/grafana/api/health" >/dev/null 2>&1; then
     echo "Готово: https://${SERVER_IP}/grafana/"
     echo "Резервная копия: ${BACKUP_DIR}"
     exit 0
@@ -110,6 +129,7 @@ for _ in {1..30}; do
   sleep 1
 done
 
-echo "Настройки применены, но Grafana не ответила на проверку." >&2
+echo "Grafana работает локально, но Nginx не пропускает запрос к ней." >&2
+tail -n 20 /var/log/nginx/error.log >&2 || true
 echo "Резервная копия: ${BACKUP_DIR}" >&2
 exit 1

@@ -446,6 +446,8 @@ Environment="GF_AUTH_ANONYMOUS_ORG_NAME=Main Org."
 Environment=GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 Environment=GF_AUTH_DISABLE_LOGIN_FORM=false
 Environment=GF_USERS_DEFAULT_THEME=light
+Environment=GF_SERVER_HTTP_ADDR=127.0.0.1
+Environment=GF_SERVER_HTTP_PORT=3000
 Environment=GF_SERVER_DOMAIN=${SERVER_IP}
 Environment=GF_SERVER_ROOT_URL=https://${SERVER_IP}/grafana/
 Environment=GF_SERVER_SERVE_FROM_SUB_PATH=true

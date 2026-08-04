@@ -47,6 +47,8 @@ deploy/manual_ffmpeg_update.md
 sudo bash deploy/configure_grafana_embed.sh
 ```
 
+Это shell-скрипт: запускать его через `python3` не нужно.
+
 Если IP определился неправильно:
 
 ```bash
