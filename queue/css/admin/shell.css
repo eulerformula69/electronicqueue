@@ -55,37 +55,6 @@ body.admin-page .admin-sidebar {
     border-right: 1px solid var(--admin-sidebar-line);
 }
 
-body.admin-page .admin-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 84px;
-    padding: 0 24px;
-    font-size: 18px;
-    font-weight: 800;
-    border-bottom: 1px solid var(--admin-sidebar-line);
-}
-
-body.admin-page .admin-brand-copy small {
-    display: block;
-    margin-top: 2px;
-    color: var(--admin-sidebar-muted);
-    font-size: 11px;
-    font-weight: 600;
-}
-
-body.admin-page .admin-brand-mark {
-    display: inline-grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: var(--accent);
-    color: var(--card-bg);
-    font-size: 13px;
-    letter-spacing: 0;
-}
-
 body.admin-page .admin-nav {
     display: flex;
     flex-direction: column;
@@ -238,13 +207,19 @@ body.admin-page .admin-header-spacer {
 }
 
 body.admin-page .admin-menu-button {
+    display: inline-grid;
+    place-items: center;
     width: 38px;
     height: 38px;
     border: 0;
     background: transparent;
     color: var(--text-main);
-    font-size: 22px;
     cursor: pointer;
+}
+
+body.admin-page .admin-menu-button .admin-nav-icon {
+    width: 22px;
+    height: 22px;
 }
 
 body.admin-page .admin-sidebar-scrim {
@@ -256,12 +231,6 @@ body.admin-page .admin-sidebar-scrim {
         grid-template-columns: 88px minmax(0, 1fr);
     }
 
-    body.admin-page.admin-sidebar-collapsed .admin-brand {
-        justify-content: center;
-        padding-inline: 0;
-    }
-
-    body.admin-page.admin-sidebar-collapsed .admin-brand-copy,
     body.admin-page.admin-sidebar-collapsed .admin-nav-label,
     body.admin-page.admin-sidebar-collapsed .admin-nav-group,
     body.admin-page.admin-sidebar-collapsed .admin-sidebar-footer span:last-child {

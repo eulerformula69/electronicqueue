@@ -30,21 +30,6 @@ const routes = {
         icon: "operators",
         mount: mountOperators
     },
-    media: {
-        label: "Медиафайлы",
-        description: "Загрузка и управление роликами для табло",
-        group: "Очередь",
-        icon: "media",
-        mount: mountMedia
-    },
-    map: {
-        label: "Карта",
-        description: "Редактор карты офиса",
-        group: "Система",
-        icon: "map",
-        mount: mountMap,
-        unmount: unmountMap
-    },
     terminalSettings: {
         label: "Терминал",
         description: "Печать талонов и поведение терминала",
@@ -59,12 +44,27 @@ const routes = {
         icon: "board",
         mount: context => mountSettings(context, "board")
     },
+    media: {
+        label: "Медиафайлы",
+        description: "Загрузка и управление роликами для табло",
+        group: "Система",
+        icon: "media",
+        mount: mountMedia
+    },
     queueSettings: {
-        label: "Настройки очереди",
+        label: "Очередь",
         description: "Правила работы операторов и обработки талонов",
         group: "Система",
         icon: "queue",
         mount: context => mountSettings(context, "queue")
+    },
+    map: {
+        label: "Карта",
+        description: "Редактор карты офиса",
+        group: "Система",
+        icon: "map",
+        mount: mountMap,
+        unmount: unmountMap
     },
     stats: {
         label: "Статистика",
@@ -82,8 +82,10 @@ let heartbeatTimer = null;
 let reconnectTimer = null;
 
 const root = document.getElementById("admin-root");
+const SIDEBAR_STORAGE_KEY = "admin-sidebar-collapsed";
 
 const icons = {
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     services: '<path d="M4 5.5h16M4 12h16M4 18.5h16"/><circle cx="8" cy="5.5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="10" cy="18.5" r="1.5"/>',
     windows: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/>',
     operators: '<circle cx="12" cy="8" r="3"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/>',
@@ -109,6 +111,7 @@ function renderNavigation() {
         currentGroup = route.group;
         return `${group}
             <a href="${route.externalUrl || `#${key}`}" class="admin-nav-link" data-route="${key}"
+                aria-label="${route.label}" title="${route.label}"
                 ${route.externalUrl ? 'target="_blank" rel="noopener noreferrer"' : ""}>
                 ${icon(route.icon)}
                 <span class="admin-nav-label">${route.label}</span>
@@ -116,17 +119,22 @@ function renderNavigation() {
     }).join("");
 }
 
+function setSidebarCollapsed(collapsed, persist = false) {
+    document.body.classList.toggle("admin-sidebar-collapsed", collapsed);
+    const menuButton = root.querySelector(".admin-menu-button");
+    menuButton?.setAttribute("aria-expanded", String(!collapsed));
+    menuButton?.setAttribute("aria-label", collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель");
+    if (persist) localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
+}
+
 function renderShell() {
-    if (window.matchMedia("(max-width: 820px)").matches) {
+    const isMobile = window.matchMedia("(max-width: 820px)").matches;
+    if (isMobile || localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true") {
         document.body.classList.add("admin-sidebar-collapsed");
     }
     root.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
-                <div class="admin-brand">
-                    <span class="admin-brand-mark" aria-hidden="true">Q</span>
-                    <span class="admin-brand-copy">Qronion<small>Панель управления</small></span>
-                </div>
                 <nav class="admin-nav">
                     ${renderNavigation()}
                 </nav>
@@ -137,7 +145,10 @@ function renderShell() {
             </aside>
             <main class="admin-main">
                 <header class="admin-header">
-                    <button class="admin-menu-button" type="button" aria-label="Свернуть меню" aria-expanded="true">☰</button>
+                    <button class="admin-menu-button" type="button" aria-label="Свернуть боковую панель"
+                        aria-expanded="${String(!document.body.classList.contains("admin-sidebar-collapsed"))}">
+                        ${icon("menu")}
+                    </button>
                     <div>
                         <h1 id="admin-title">Администрирование</h1>
                         <p id="admin-description"></p>
@@ -157,13 +168,12 @@ function renderShell() {
         const action = event.target.closest("[data-action]")?.dataset.action;
         if (action === "logout") api.logout();
         if (event.target.closest(".admin-menu-button")) {
-            document.body.classList.toggle("admin-sidebar-collapsed");
-            const collapsed = document.body.classList.contains("admin-sidebar-collapsed");
-            event.target.closest(".admin-menu-button").setAttribute("aria-expanded", String(!collapsed));
+            const collapsed = !document.body.classList.contains("admin-sidebar-collapsed");
+            setSidebarCollapsed(collapsed, !window.matchMedia("(max-width: 820px)").matches);
         }
-        if (event.target.closest(".admin-sidebar-scrim")) document.body.classList.add("admin-sidebar-collapsed");
+        if (event.target.closest(".admin-sidebar-scrim")) setSidebarCollapsed(true);
         if (event.target.closest(".admin-nav-link") && window.matchMedia("(max-width: 820px)").matches) {
-            document.body.classList.add("admin-sidebar-collapsed");
+            setSidebarCollapsed(true);
         }
     });
 }

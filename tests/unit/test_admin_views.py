@@ -96,11 +96,11 @@ def test_media_view_uses_compact_cards_and_opens_video_in_new_tab():
     assert "filter: grayscale(1)" in css
 
 
-def test_media_navigation_is_part_of_queue_group():
+def test_media_navigation_is_part_of_system_group():
     source = _read("queue/js/admin/app.js")
     media_route = source[source.index("media: {"):source.index("map: {")]
 
-    assert 'group: "Очередь"' in media_route
+    assert 'group: "Система"' in media_route
     assert 'group: "Контент"' not in source
 
 
@@ -285,6 +285,31 @@ def test_admin_shell_has_only_one_vertical_scroll_container():
     assert "height: 100dvh;" in shell_css
     assert "overflow-y: hidden;" in responsive_css
     assert "overflow-y: auto;" in responsive_css
+
+
+def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
+    app_source = _read("queue/js/admin/app.js")
+
+    assert 'class="admin-brand"' not in app_source
+    assert "Qronion" not in app_source
+    assert 'const SIDEBAR_STORAGE_KEY = "admin-sidebar-collapsed"' in app_source
+    assert "localStorage.setItem(SIDEBAR_STORAGE_KEY" in app_source
+    assert 'aria-label="${route.label}" title="${route.label}"' in app_source
+
+
+def test_admin_system_routes_follow_operational_order():
+    app_source = _read("queue/js/admin/app.js")
+
+    route_positions = [
+        app_source.index("terminalSettings:"),
+        app_source.index("boardSettings:"),
+        app_source.index("media:"),
+        app_source.index("queueSettings:"),
+        app_source.index("map:"),
+        app_source.index("stats:"),
+    ]
+    assert route_positions == sorted(route_positions)
+    assert 'label: "Очередь"' in app_source
 
 
 def test_admin_statistics_embed_grafana_with_fallback_actions():
