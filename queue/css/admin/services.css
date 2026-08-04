@@ -13,15 +13,6 @@ body.admin-page .admin-list-row {
     border-radius: 8px;
 }
 
-body.admin-page .admin-service-group-create {
-    margin-left: auto;
-    width: auto;
-}
-
-body.admin-page .admin-service-group-create .admin-input {
-    width: 260px;
-}
-
 body.admin-page .admin-service-board {
     display: grid;
     gap: 18px;
@@ -47,13 +38,31 @@ body.admin-page .admin-service-group-header {
 }
 
 body.admin-page .admin-service-group-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0;
     font-size: 18px;
     line-height: 1.2;
     color: var(--text-main);
 }
 
-body.admin-page .admin-service-group-header span {
+body.admin-page .admin-group-drag-handle {
+    width: 24px;
+    margin: 0;
+    color: var(--text-muted);
+    cursor: grab;
+    font-size: 16px;
+    font-weight: 400;
+    user-select: none;
+}
+
+body.admin-page .admin-service-group.dragging {
+    opacity: .58;
+    border-color: var(--primary);
+}
+
+body.admin-page .admin-service-group-count {
     display: block;
     margin-top: 4px;
     color: var(--text-muted);
@@ -136,6 +145,83 @@ body.admin-page .admin-service-actions {
     justify-self: end;
 }
 
+body.admin-page .admin-service-dialog {
+    width: min(560px, calc(100vw - 28px));
+    max-height: min(720px, calc(100dvh - 28px));
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+}
+
+body.admin-page .admin-service-dialog::backdrop {
+    background: rgba(15, 23, 42, .48);
+    backdrop-filter: blur(4px);
+}
+
+body.admin-page .admin-service-dialog form {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+}
+
+body.admin-page .admin-service-dialog-heading,
+body.admin-page .admin-service-dialog-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+body.admin-page .admin-service-dialog-heading h3,
+body.admin-page .admin-service-dialog-heading p {
+    margin: 0;
+}
+
+body.admin-page .admin-service-dialog-heading h3 {
+    font-size: 20px;
+}
+
+body.admin-page .admin-service-dialog-heading p,
+body.admin-page .admin-service-dialog-empty {
+    margin-top: 5px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+body.admin-page .admin-service-dialog-close {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+}
+
+body.admin-page .admin-service-dialog-actions {
+    justify-content: flex-end;
+}
+
+body.admin-page .admin-service-choice-list {
+    display: grid;
+    gap: 10px;
+    max-height: 280px;
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+}
+
+body.admin-page .admin-service-choice-list legend {
+    padding: 0 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
 body.admin-page .admin-check-list {
     display: grid;
     gap: 10px;
@@ -161,6 +247,21 @@ body.admin-page .admin-settings-layout {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
+}
+
+@media (max-width: 560px) {
+    body.admin-page .admin-service-dialog form {
+        padding: 18px;
+    }
+
+    body.admin-page .admin-service-dialog-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    body.admin-page .admin-service-dialog-actions .admin-btn {
+        width: 100%;
+    }
 }
 
 body.admin-page .admin-settings-layout .admin-card {

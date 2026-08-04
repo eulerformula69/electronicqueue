@@ -46,6 +46,30 @@ def test_service_admin_list_hides_visible_id_but_keeps_data_id():
     assert "draggedServiceId = Number(item.dataset.serviceId)" in source
 
 
+def test_services_use_separate_short_create_dialogs_without_availability_dashboard():
+    source = _read("queue/js/admin/views/services.view.js")
+
+    assert 'button("Добавить услугу", {variant: "primary", action: "create-service"})' in source
+    assert 'button("Добавить группу", {variant: "secondary", action: "create-group"})' in source
+    assert "function openCreateServiceDialog()" in source
+    assert "function openCreateGroupDialog()" in source
+    assert 'ctx.ui.select("service_group_id", groupOptions(), "")' in source
+    assert 'name="service_ids"' in source
+    assert "admin-stats-grid" not in source
+    assert "statCard(" not in source
+    assert "add-inline-group" not in source
+
+
+def test_service_groups_support_drag_reordering_and_accessible_button_fallback():
+    source = _read("queue/js/admin/views/services.view.js")
+
+    assert 'class="admin-group-drag-handle" draggable="true"' in source
+    assert "async function persistGroupOrder()" in source
+    assert 'ctx.api.json("/service-groups/order"' in source
+    assert 'action: "group-up"' in source
+    assert 'action: "group-down"' in source
+
+
 def test_admin_views_use_click_sorting_with_direction_toggle():
     for path in [
         "queue/js/admin/views/operators.view.js",

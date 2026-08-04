@@ -2,6 +2,7 @@ let ctx;
 let services = [];
 let groups = [];
 let draggedServiceId = null;
+let draggedGroupId = null;
 
 const statusOptions = [
     {value: "active", label: "active"},
@@ -24,23 +25,10 @@ async function load() {
 }
 
 function render() {
-    const activeCount = services.filter(item => item.status === "active").length;
-    const inactiveCount = services.filter(item => item.status !== "active").length;
-    const hiddenCount = services.filter(item => !item.visible_on_terminal).length;
-
     ctx.view.innerHTML = `
         <div class="admin-toolbar">
             ${ctx.ui.button("Добавить услугу", {variant: "primary", action: "create-service"})}
-            <div class="admin-inline-form admin-service-group-create">
-                ${ctx.ui.input("inline_group_name", "", "placeholder=\"Название группы\"")}
-                ${ctx.ui.button("Добавить группу", {variant: "secondary", action: "add-inline-group"})}
-            </div>
-        </div>
-        <div class="admin-stats-grid">
-            ${ctx.ui.statCard("Всего услуг", services.length, "blue")}
-            ${ctx.ui.statCard("Активных", activeCount, "green")}
-            ${ctx.ui.statCard("Отключенных", inactiveCount, "red")}
-            ${ctx.ui.statCard("Скрытых", hiddenCount, "orange")}
+            ${ctx.ui.button("Добавить группу", {variant: "secondary", action: "create-group"})}
         </div>
         <section class="admin-service-board">
             ${renderGroupSections()}
@@ -74,8 +62,12 @@ function renderGroupSections() {
         <article class="admin-service-group" data-group-id="${section.id}">
             <header class="admin-service-group-header">
                 <div>
-                    <h2>${ctx.ui.escapeHtml(section.name)}</h2>
-                    <span>${section.items.length} услуг</span>
+                    <h2>
+                        ${section.isSystem ? "" : `<span class="admin-group-drag-handle" draggable="true"
+                            data-drag-group-id="${section.id}" title="Перетащить группу" aria-label="Перетащить группу">☰</span>`}
+                        ${ctx.ui.escapeHtml(section.name)}
+                    </h2>
+                    <span class="admin-service-group-count">${section.items.length} услуг</span>
                 </div>
                 ${section.isSystem ? "" : `
                     <div class="admin-service-group-actions">
@@ -113,8 +105,8 @@ async function handleClick(event) {
     if (!button) return;
     const id = Number(button.dataset.id);
 
-    if (button.dataset.action === "create-service") openServiceDrawer();
-    if (button.dataset.action === "add-inline-group") await addInlineGroup();
+    if (button.dataset.action === "create-service") openCreateServiceDialog();
+    if (button.dataset.action === "create-group") openCreateGroupDialog();
     if (button.dataset.action === "edit") openServiceDrawer(services.find(item => item.id === id));
     if (button.dataset.action === "rename-group") await renameGroup(id);
     if (button.dataset.action === "delete-group") await deleteGroup(id);
@@ -127,6 +119,106 @@ function groupOptions(selectedId) {
         {value: "", label: "Без группы"},
         ...groups.map(group => ({value: group.id, label: group.name}))
     ];
+}
+
+function createDialog(title, description, body, saveAction, saveLabel) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "admin-service-dialog";
+    dialog.innerHTML = `
+        <form method="dialog">
+            <div class="admin-service-dialog-heading">
+                <div><h3>${title}</h3><p>${description}</p></div>
+                <button class="admin-service-dialog-close" type="button" aria-label="Закрыть">×</button>
+            </div>
+            ${body}
+            <div class="admin-service-dialog-actions">
+                ${ctx.ui.button("Отмена", {variant: "secondary", action: "cancel-dialog"})}
+                ${ctx.ui.button(saveLabel, {variant: "primary", action: saveAction, type: "submit"})}
+            </div>
+        </form>
+    `;
+    document.body.appendChild(dialog);
+    dialog.addEventListener("close", () => dialog.remove());
+    dialog.querySelector("form").onsubmit = event => event.preventDefault();
+    dialog.querySelector(".admin-service-dialog-close").onclick = () => dialog.close();
+    dialog.querySelector('[data-action="cancel-dialog"]').onclick = () => dialog.close();
+    dialog.onclick = event => {
+        if (event.target === dialog) dialog.close();
+    };
+    dialog.showModal();
+    dialog.querySelector("input")?.focus();
+    return dialog;
+}
+
+function openCreateServiceDialog() {
+    const dialog = createDialog(
+        "Новая услуга",
+        "Укажите название и сразу выберите группу.",
+        `<div class="admin-form">
+            ${ctx.ui.field("Название", ctx.ui.input("name", "", "required autocomplete=\"off\""))}
+            ${ctx.ui.field("Группа", ctx.ui.select("service_group_id", groupOptions(), ""))}
+        </div>`,
+        "save-new-service",
+        "Добавить"
+    );
+    dialog.querySelector('[data-action="save-new-service"]').onclick = () => saveNewService(dialog);
+}
+
+async function saveNewService(dialog) {
+    const data = Object.fromEntries(new FormData(dialog.querySelector("form")).entries());
+    const name = data.name?.trim();
+    if (!name) return ctx.toast("Введите название услуги", "error");
+    await ctx.api.json("/services", {
+        method: "POST",
+        body: {
+            name,
+            operator_choice_enabled: false,
+            operator_choice_allow_break: true,
+            operator_choice_allow_offline: false,
+            service_group_id: data.service_group_id ? Number(data.service_group_id) : null
+        }
+    });
+    dialog.close();
+    await load();
+    render();
+    ctx.toast("Услуга добавлена", "success");
+}
+
+function openCreateGroupDialog() {
+    const serviceChoices = services.length
+        ? services.map(service => `
+            <label class="admin-check-row">
+                <input type="checkbox" name="service_ids" value="${service.id}">
+                <span>${ctx.ui.escapeHtml(service.name)}</span>
+            </label>`).join("")
+        : '<p class="admin-service-dialog-empty">Услуг пока нет — группу можно заполнить позже.</p>';
+    const dialog = createDialog(
+        "Новая группа",
+        "Назовите группу и выберите входящие в неё услуги.",
+        `<div class="admin-form">
+            ${ctx.ui.field("Название", ctx.ui.input("name", "", "required autocomplete=\"off\""))}
+            <fieldset class="admin-service-choice-list"><legend>Услуги</legend>${serviceChoices}</fieldset>
+        </div>`,
+        "save-new-group",
+        "Добавить"
+    );
+    dialog.querySelector('[data-action="save-new-group"]').onclick = () => saveNewGroup(dialog);
+}
+
+async function saveNewGroup(dialog) {
+    const formData = new FormData(dialog.querySelector("form"));
+    const name = formData.get("name")?.trim();
+    if (!name) return ctx.toast("Введите название группы", "error");
+    const group = await ctx.api.json("/service-groups", {method: "POST", body: {name}});
+    const serviceIds = formData.getAll("service_ids").map(Number);
+    await Promise.all(serviceIds.map(serviceId => ctx.api.json(`/services/${serviceId}/group`, {
+        method: "PATCH",
+        body: {service_group_id: group.id}
+    })));
+    dialog.close();
+    await load();
+    render();
+    ctx.toast("Группа добавлена", "success");
 }
 
 function openServiceDrawer(service = null) {
@@ -220,15 +312,6 @@ async function deleteService(id) {
     render();
 }
 
-async function addInlineGroup() {
-    const input = ctx.view.querySelector('[name="inline_group_name"]');
-    const name = input.value.trim();
-    if (!name) return;
-    await ctx.api.json("/service-groups", {method: "POST", body: {name}});
-    await load();
-    render();
-}
-
 async function renameGroup(id) {
     const group = groups.find(item => item.id === id);
     const name = prompt("Название группы", group?.name || "")?.trim();
@@ -257,6 +340,14 @@ async function moveGroup(id, direction) {
 }
 
 function handleDragStart(event) {
+    const groupHandle = event.target.closest("[data-drag-group-id]");
+    if (groupHandle) {
+        draggedGroupId = Number(groupHandle.dataset.dragGroupId);
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", `group:${draggedGroupId}`);
+        groupHandle.closest(".admin-service-group")?.classList.add("dragging");
+        return;
+    }
     const item = event.target.closest(".admin-service-item");
     if (!item) return;
     draggedServiceId = Number(item.dataset.serviceId);
@@ -266,6 +357,15 @@ function handleDragStart(event) {
 }
 
 function handleDragOver(event) {
+    if (draggedGroupId) {
+        const target = event.target.closest('.admin-service-group[data-group-id]:not([data-group-id=""])');
+        const dragged = ctx.view.querySelector(`.admin-service-group[data-group-id="${draggedGroupId}"]`);
+        if (!target || !dragged || target === dragged) return;
+        event.preventDefault();
+        const box = target.getBoundingClientRect();
+        target.parentNode.insertBefore(dragged, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+        return;
+    }
     const dropzone = event.target.closest(".admin-service-dropzone");
     if (!dropzone || !draggedServiceId) return;
     event.preventDefault();
@@ -280,6 +380,11 @@ function handleDragOver(event) {
 }
 
 async function handleDrop(event) {
+    if (draggedGroupId) {
+        event.preventDefault();
+        await persistGroupOrder();
+        return;
+    }
     const dropzone = event.target.closest(".admin-service-dropzone");
     if (!dropzone || !draggedServiceId) return;
     event.preventDefault();
@@ -287,8 +392,19 @@ async function handleDrop(event) {
 }
 
 function handleDragEnd() {
-    ctx.view.querySelectorAll(".admin-service-item.dragging").forEach(item => item.classList.remove("dragging"));
+    ctx.view.querySelectorAll(".dragging").forEach(item => item.classList.remove("dragging"));
     draggedServiceId = null;
+    draggedGroupId = null;
+}
+
+async function persistGroupOrder() {
+    const groupIds = [...ctx.view.querySelectorAll('.admin-service-group[data-group-id]:not([data-group-id=""])')]
+        .map(item => Number(item.dataset.groupId));
+    if (groupIds.length !== groups.length) return render();
+    await ctx.api.json("/service-groups/order", {method: "PUT", body: {group_ids: groupIds}});
+    await load();
+    render();
+    ctx.toast("Порядок групп сохранён", "success");
 }
 
 function getDragAfterElement(container, y) {
