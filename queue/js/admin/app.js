@@ -53,7 +53,7 @@ const routes = {
     },
     queueSettings: {
         label: "Очередь",
-        description: "Правила работы операторов и обработки талонов",
+        description: "Правила",
         group: "Система",
         icon: "queue",
         mount: context => mountSettings(context, "queue")
