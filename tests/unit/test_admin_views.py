@@ -208,6 +208,17 @@ def test_admin_settings_do_not_repeat_page_heading_inside_card():
     assert "admin-settings-grid" in settings_source
 
 
+def test_admin_settings_nested_rows_stay_compact_and_save_is_pinned():
+    settings_css = _read("queue/css/admin/settings.css")
+
+    assert ".admin-field:has(> .admin-switch)" in settings_css
+    assert "[data-reason-option-row]" in settings_css
+    assert "[data-ticker-message-row]" in settings_css
+    assert "grid-template-columns: 44px minmax(0, 1fr) auto;" in settings_css
+    assert "position: fixed;" in settings_css
+    assert "bottom: 24px;" in settings_css
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")

@@ -138,6 +138,7 @@ body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
 body.admin-page .admin-settings-layout.admin-settings-layout-single {
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
+    padding-bottom: 76px;
     align-items: start;
 }
 
@@ -157,7 +158,7 @@ body.admin-page .admin-settings-grid > .admin-field {
     align-content: start;
 }
 
-body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) {
+body.admin-page .admin-settings-grid > .admin-field:has(> .admin-switch) {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     min-height: 44px;
@@ -167,11 +168,11 @@ body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) {
     background: var(--admin-soft-bg);
 }
 
-body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) > span:first-child {
+body.admin-page .admin-settings-grid > .admin-field:has(> .admin-switch) > span:first-child {
     grid-column: 1;
 }
 
-body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) > .admin-switch {
+body.admin-page .admin-settings-grid > .admin-field:has(> .admin-switch) > .admin-switch {
     grid-column: 2;
     grid-row: 1;
 }
@@ -180,8 +181,50 @@ body.admin-page .admin-settings-span {
     grid-column: 1 / -1;
 }
 
+body.admin-page #cancel-reason-options,
+body.admin-page #defer-reason-options,
+body.admin-page #board-ticker-messages {
+    display: grid;
+    gap: 10px;
+}
+
+body.admin-page [data-reason-option-row],
+body.admin-page [data-ticker-message-row] {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    background: var(--admin-soft-bg);
+}
+
+body.admin-page [data-reason-option-row] > .admin-switch,
+body.admin-page [data-ticker-message-row] > .admin-switch {
+    grid-column: 1;
+}
+
+body.admin-page [data-reason-option-row] > .admin-input,
+body.admin-page [data-ticker-message-row] > .admin-input {
+    grid-column: 2;
+    margin: 0;
+}
+
+body.admin-page [data-reason-option-row] > .admin-btn,
+body.admin-page [data-ticker-message-row] > .admin-btn {
+    grid-column: 3;
+}
+
+body.admin-page [data-ticker-message-row] > .admin-textarea {
+    min-height: 72px;
+}
+
 body.admin-page .admin-settings-actions {
-    position: static;
+    position: fixed;
+    right: 28px;
+    bottom: 24px;
+    z-index: 20;
     display: flex;
     grid-column: 1;
     align-self: start;
@@ -189,8 +232,12 @@ body.admin-page .admin-settings-actions {
     justify-content: flex-start;
     width: max-content;
     max-width: 100%;
-    padding: 0;
-    background: transparent;
+    padding: 10px;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+    box-shadow: 0 12px 32px rgba(12, 36, 30, .18);
+    backdrop-filter: blur(14px) saturate(150%);
 }
 
 body.admin-page .admin-settings-actions .admin-btn {
@@ -222,6 +269,22 @@ body.admin-page .admin-settings-actions .admin-btn {
 
     body.admin-page .admin-settings-span {
         grid-column: 1;
+    }
+
+    body.admin-page [data-reason-option-row],
+    body.admin-page [data-ticker-message-row] {
+        grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    body.admin-page [data-reason-option-row] > .admin-btn,
+    body.admin-page [data-ticker-message-row] > .admin-btn {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    body.admin-page .admin-settings-actions {
+        right: 16px;
+        bottom: 16px;
     }
 }
 
