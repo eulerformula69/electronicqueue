@@ -146,6 +146,8 @@ body.admin-page .admin-service-actions {
 }
 
 body.admin-page .admin-service-item .admin-badge {
+    width: fit-content;
+    justify-self: start;
     white-space: nowrap;
 }
 
