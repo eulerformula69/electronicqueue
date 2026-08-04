@@ -66,8 +66,9 @@ body.admin-page .admin-nav {
 body.admin-page .admin-sidebar-header {
     display: flex;
     align-items: center;
+    justify-content: center;
     min-height: 64px;
-    padding: 0 20px;
+    padding: 0;
     border-bottom: 1px solid var(--admin-sidebar-line);
 }
 
@@ -125,27 +126,6 @@ body.admin-page .admin-nav-link.active {
 
 body.admin-page .admin-nav-link.active {
     box-shadow: inset 3px 0 var(--accent);
-}
-
-body.admin-page .admin-sidebar-footer {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-height: 60px;
-    margin-top: auto;
-    padding: 0 28px;
-    border-top: 1px solid var(--admin-sidebar-line);
-    color: var(--admin-sidebar-muted);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-body.admin-page .admin-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 20%, transparent);
 }
 
 body.admin-page .admin-sidebar-user {
@@ -248,8 +228,7 @@ body.admin-page .admin-sidebar-scrim {
     }
 
     body.admin-page.admin-sidebar-collapsed .admin-nav-label,
-    body.admin-page.admin-sidebar-collapsed .admin-nav-group,
-    body.admin-page.admin-sidebar-collapsed .admin-sidebar-footer span:last-child {
+    body.admin-page.admin-sidebar-collapsed .admin-nav-group {
         display: none;
     }
 
@@ -258,15 +237,6 @@ body.admin-page .admin-sidebar-scrim {
         padding-inline: 0;
     }
 
-    body.admin-page.admin-sidebar-collapsed .admin-sidebar-header {
-        justify-content: center;
-        padding-inline: 0;
-    }
-
-    body.admin-page.admin-sidebar-collapsed .admin-sidebar-footer {
-        justify-content: center;
-        padding-inline: 0;
-    }
 }
 
 body.admin-page button:active,

@@ -326,6 +326,7 @@ def test_admin_notifications_are_centered_at_the_top():
 
 def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
     app_source = _read("queue/js/admin/app.js")
+    shell_css = _read("queue/css/admin/shell.css")
 
     assert 'class="admin-brand"' not in app_source
     assert "Qronion" not in app_source
@@ -335,6 +336,10 @@ def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
     assert '<div class="admin-sidebar-header">' in app_source
     assert 'class="admin-menu-button admin-mobile-menu-button"' in app_source
     assert 'root.querySelectorAll(".admin-menu-button")' in app_source
+    assert "Система доступна" not in app_source
+    assert "admin-sidebar-footer" not in app_source
+    sidebar_header = shell_css.split("body.admin-page .admin-sidebar-header", 1)[1].split("}", 1)[0]
+    assert "justify-content: center;" in sidebar_header
 
 
 def test_admin_system_routes_follow_operational_order():

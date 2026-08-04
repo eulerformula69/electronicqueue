@@ -147,10 +147,6 @@ function renderShell() {
                 <nav class="admin-nav">
                     ${renderNavigation()}
                 </nav>
-                <div class="admin-sidebar-footer">
-                    <span class="admin-status-dot" aria-hidden="true"></span>
-                    <span>Система доступна</span>
-                </div>
             </aside>
             <main class="admin-main">
                 <header class="admin-header">
