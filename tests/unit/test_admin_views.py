@@ -94,7 +94,7 @@ def test_settings_view_renders_and_saves_board_ticker_text():
     assert "collectBoardTickerMessages" in source
     assert "add-ticker-message" in source
     assert "delete-ticker-message" in source
-    assert "data.board_ticker_text.trim()" in source
+    assert 'document.getElementById("setting-board-ticker-text").value.trim()' in source
 
 
 def test_settings_view_renders_and_saves_ticket_reason_options():
@@ -178,6 +178,22 @@ def test_settings_view_does_not_show_template_hint_caption():
     source = _read("queue/js/admin/views/settings.view.js")
 
     assert "В шаблонах должны остаться параметры" not in source
+
+
+def test_admin_settings_are_split_into_system_routes():
+    app_source = _read("queue/js/admin/app.js")
+    settings_source = _read("queue/js/admin/views/settings.view.js")
+
+    assert 'terminalSettings:' in app_source
+    assert 'boardSettings:' in app_source
+    assert 'queueSettings:' in app_source
+    assert 'mount: context => mountSettings(context, "terminal")' in app_source
+    assert 'mount: context => mountSettings(context, "board")' in app_source
+    assert 'mount: context => mountSettings(context, "queue")' in app_source
+    assert 'export async function mount(context, section = "terminal")' in settings_source
+    assert 'if (activeSection === "terminal") applyTerminalForm(payload, data)' in settings_source
+    assert 'if (activeSection === "queue") applyQueueForm(payload, data)' in settings_source
+    assert 'if (activeSection === "board") applyBoardForm(payload, data)' in settings_source
 
 
 def test_board_status_moves_with_ticker_offset():

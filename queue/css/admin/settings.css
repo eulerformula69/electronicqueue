@@ -135,6 +135,32 @@ body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
     background: #8fa4bd;
 }
 
+body.admin-page .admin-settings-layout-single {
+    grid-template-columns: minmax(0, 860px);
+    justify-content: start;
+}
+
+body.admin-page .admin-settings-layout-single .admin-settings-wide {
+    grid-column: 1;
+}
+
+body.admin-page .admin-form-description {
+    margin: -4px 0 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+body.admin-page .admin-settings-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: flex-start;
+    padding: 14px 0 2px;
+    background: linear-gradient(transparent, var(--bg) 30%);
+}
+
 @media (max-width: 900px){
     body.admin-page .settings-form{
         max-width: none;

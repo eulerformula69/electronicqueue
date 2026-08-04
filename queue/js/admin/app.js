@@ -30,14 +30,6 @@ const routes = {
         icon: "operators",
         mount: mountOperators
     },
-    map: {
-        label: "Карта",
-        description: "Редактор карты офиса",
-        group: "Пространство",
-        icon: "map",
-        mount: mountMap,
-        unmount: unmountMap
-    },
     media: {
         label: "Медиафайлы",
         description: "Загрузка и управление роликами для табло",
@@ -45,12 +37,34 @@ const routes = {
         icon: "media",
         mount: mountMedia
     },
-    settings: {
-        label: "Настройки",
-        description: "Реальные параметры терминала, очереди и табло",
+    map: {
+        label: "Карта",
+        description: "Редактор карты офиса",
         group: "Система",
-        icon: "settings",
-        mount: mountSettings
+        icon: "map",
+        mount: mountMap,
+        unmount: unmountMap
+    },
+    terminalSettings: {
+        label: "Терминал",
+        description: "Печать талонов и поведение терминала",
+        group: "Система",
+        icon: "terminal",
+        mount: context => mountSettings(context, "terminal")
+    },
+    boardSettings: {
+        label: "Табло",
+        description: "Тексты, озвучка и бегущая строка",
+        group: "Система",
+        icon: "board",
+        mount: context => mountSettings(context, "board")
+    },
+    queueSettings: {
+        label: "Настройки очереди",
+        description: "Правила работы операторов и обработки талонов",
+        group: "Система",
+        icon: "queue",
+        mount: context => mountSettings(context, "queue")
     },
     stats: {
         label: "Статистика",
@@ -75,6 +89,9 @@ const icons = {
     operators: '<circle cx="12" cy="8" r="3"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/>',
     map: '<path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14M15 6v14"/>',
     media: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3Z"/>',
+    terminal: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M8 17h8"/><circle cx="12" cy="12" r="2"/>',
+    board: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 9h6M7 13h10"/>',
+    queue: '<path d="M6 7h12M6 12h12M6 17h8"/><circle cx="3" cy="7" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="17" r=".8"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
     stats: '<path d="M5 19V9M12 19V5M19 19v-7"/><path d="M3 19h18"/>'
 };
@@ -188,7 +205,8 @@ function closeDrawer() {
 
 async function navigate() {
     const routeKey = (location.hash || "#services").slice(1);
-    const key = routes[routeKey] ? routeKey : "services";
+    const normalizedRouteKey = routeKey === "settings" ? "terminalSettings" : routeKey;
+    const key = routes[normalizedRouteKey] ? normalizedRouteKey : "services";
     const route = routes[key];
 
     closeDrawer();
