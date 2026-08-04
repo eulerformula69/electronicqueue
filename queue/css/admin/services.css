@@ -97,7 +97,7 @@ body.admin-page .admin-service-dropzone:has(.admin-service-item) .admin-service-
 
 body.admin-page .admin-service-sort-row {
     display: grid;
-    grid-template-columns: 34px minmax(260px, 1fr) max-content max-content 120px 140px;
+    grid-template-columns: 34px minmax(260px, 1fr) 190px 225px 120px 140px;
     align-items: center;
     gap: 14px;
     min-height: 42px;
@@ -111,7 +111,7 @@ body.admin-page .admin-service-sort-row {
 
 body.admin-page .admin-service-item {
     display: grid;
-    grid-template-columns: 34px minmax(260px, 1fr) max-content max-content 120px 140px;
+    grid-template-columns: 34px minmax(260px, 1fr) 190px 225px 120px 140px;
     align-items: center;
     gap: 14px;
     min-height: 58px;

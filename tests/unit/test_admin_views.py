@@ -173,7 +173,7 @@ def test_sorting_layout_has_stable_column_widths():
 
     assert "table-layout: fixed;" in source
     assert "flex: 0 0 12px;" in source
-    assert "grid-template-columns: 34px minmax(260px, 1fr) max-content max-content 120px 140px;" in source
+    assert "grid-template-columns: 34px minmax(260px, 1fr) 190px 225px 120px 140px;" in source
     assert ".admin-service-item .admin-badge" in source
     assert "white-space: nowrap;" in source
 
