@@ -136,13 +136,48 @@ body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
 }
 
 body.admin-page .admin-settings-layout.admin-settings-layout-single {
-    grid-template-columns: minmax(0, 1120px);
-    justify-content: center;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
     align-items: start;
 }
 
 body.admin-page .admin-settings-layout-single .admin-settings-wide {
     grid-column: 1;
+}
+
+body.admin-page .admin-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+    align-items: start;
+}
+
+body.admin-page .admin-settings-grid > .admin-field {
+    min-width: 0;
+    align-content: start;
+}
+
+body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    background: var(--admin-soft-bg);
+}
+
+body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) > span:first-child {
+    grid-column: 1;
+}
+
+body.admin-page .admin-settings-grid > .admin-field:has(.admin-switch) > .admin-switch {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+body.admin-page .admin-settings-span {
+    grid-column: 1 / -1;
 }
 
 body.admin-page .admin-settings-actions {
@@ -176,6 +211,16 @@ body.admin-page .admin-settings-actions .admin-btn {
     }
 
     body.admin-page .settings-actions{
+        grid-column: 1;
+    }
+}
+
+@media (max-width: 760px) {
+    body.admin-page .admin-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.admin-page .admin-settings-span {
         grid-column: 1;
     }
 }

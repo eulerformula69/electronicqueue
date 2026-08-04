@@ -203,8 +203,9 @@ def test_admin_settings_do_not_repeat_page_heading_inside_card():
     assert '<h2>Терминал</h2>' not in settings_source
     assert '<h2>Оператор и очередь</h2>' not in settings_source
     assert '<h2>Табло и озвучка</h2>' not in settings_source
-    assert "grid-template-columns: minmax(0, 1120px);" in settings_css
-    assert "justify-content: center;" in settings_css
+    assert "grid-template-columns: minmax(0, 1fr);" in settings_css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in settings_css
+    assert "admin-settings-grid" in settings_source
 
 
 def test_board_status_moves_with_ticker_offset():

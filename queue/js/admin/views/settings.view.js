@@ -29,6 +29,7 @@ function renderActiveSection() {
 
 function renderTerminalSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
+        <div class="admin-settings-grid">
         ${ctx.ui.field("Печатать талон", ctx.ui.switchField("print_ticket", settings.print_ticket))}
         ${ctx.ui.field("Показывать режим печати", ctx.ui.switchField("show_print_badge", settings.show_print_badge))}
         ${ctx.ui.field("Размер печатного талона, %", ctx.ui.input("ticket_print_scale_percent", settings.ticket_print_scale_percent || 94, "type=\"number\" min=\"50\" max=\"150\" step=\"1\""))}
@@ -40,11 +41,13 @@ function renderTerminalSection() {
         ${ctx.ui.field("Текст при печати талона", ctx.ui.textarea("ticket_notice_printed_text", settings.ticket_notice_printed_text || "Ваш номер: <number>", "maxlength=\"500\""))}
         ${ctx.ui.field("Показ номера без печати, секунд", ctx.ui.input("ticket_notice_duration_unprinted_seconds", settings.ticket_notice_duration_unprinted_seconds || 45, "type=\"number\" min=\"1\" max=\"300\""))}
         ${ctx.ui.field("Текст без печати талона", ctx.ui.textarea("ticket_notice_unprinted_text", settings.ticket_notice_unprinted_text || "Пожалуйста, запомните свой номер:\n<number>", "maxlength=\"500\""))}
+        </div>
     </section>`;
 }
 
 function renderQueueSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
+        <div class="admin-settings-grid">
         ${ctx.ui.field("Статус окна при входе оператора", ctx.ui.select("default_operator_status", [
             {value: "online", label: "Онлайн"}, {value: "break", label: "Перерыв"}, {value: "offline", label: "Офлайн"}
         ], settings.default_operator_status))}
@@ -63,17 +66,20 @@ function renderQueueSection() {
         ${ctx.ui.field("Балансировка: минимум свободных операторов", ctx.ui.input("auto_call_balance_min_free_operators", settings.auto_call_balance_min_free_operators ?? 2, "type=\"number\" min=\"2\" max=\"100\" step=\"1\""))}
         ${ctx.ui.field("Сообщение об отменённом талоне на табло, секунд", ctx.ui.input("cancelled_ticket_board_display_seconds", settings.cancelled_ticket_board_display_seconds ?? 60, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
         ${ctx.ui.field("Текст системного сообщения об отмене (<number>, <window>)", ctx.ui.input("cancelled_ticket_board_message_template", settings.cancelled_ticket_board_message_template || "⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.", "maxlength=\"500\""))}
-        <div class="admin-field"><span>Причины отмены</span><div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>${ctx.ui.button("Добавить причину отмены", {action: "add-reason-option", id: "cancel"})}</div>
-        <div class="admin-field"><span>Причины отложения</span><div id="defer-reason-options">${renderReasonOptions("defer")}</div>${ctx.ui.button("Добавить причину отложения", {action: "add-reason-option", id: "defer"})}</div>
+        <div class="admin-field admin-settings-span"><span>Причины отмены</span><div id="cancel-reason-options">${renderReasonOptions("cancel")}</div>${ctx.ui.button("Добавить причину отмены", {action: "add-reason-option", id: "cancel"})}</div>
+        <div class="admin-field admin-settings-span"><span>Причины отложения</span><div id="defer-reason-options">${renderReasonOptions("defer")}</div>${ctx.ui.button("Добавить причину отложения", {action: "add-reason-option", id: "defer"})}</div>
+        </div>
     </section>`;
 }
 
 function renderBoardSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
+        <div class="admin-settings-grid">
         ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
         ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
         <input type="hidden" id="setting-board-ticker-text" name="board_ticker_text" value="${escapeHtml(settings.board_ticker_text || "")}">
-        <div class="admin-field"><span>Тексты бегущей строки</span><div id="board-ticker-messages">${renderBoardTickerMessages()}</div>${ctx.ui.button("Добавить сообщение", {action: "add-ticker-message"})}</div>
+        <div class="admin-field admin-settings-span"><span>Тексты бегущей строки</span><div id="board-ticker-messages">${renderBoardTickerMessages()}</div>${ctx.ui.button("Добавить сообщение", {action: "add-ticker-message"})}</div>
+        </div>
     </section>`;
 }
 
