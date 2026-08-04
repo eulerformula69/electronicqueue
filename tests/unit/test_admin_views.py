@@ -231,6 +231,27 @@ def test_admin_shell_has_only_one_vertical_scroll_container():
     assert "overflow-y: auto;" in responsive_css
 
 
+def test_admin_statistics_embed_grafana_with_fallback_actions():
+    app_source = _read("queue/js/admin/app.js")
+    stats_source = _read("queue/js/admin/views/stats.view.js")
+    admin_css = _read("queue/css/admin.css")
+    stats_css = _read("queue/css/admin/stats.css")
+
+    stats_route = app_source.split("stats: {", 1)[1].split("}", 1)[0]
+    assert "externalUrl" not in stats_route
+    assert "unmount: unmountStats" in stats_route
+    assert "window.open" not in stats_source
+    assert 'id="admin-stats-frame"' in stats_source
+    assert "Открыть в Grafana" in stats_source
+    assert "Загружаем статистику" in stats_source
+    assert "Статистика сейчас недоступна" in stats_source
+    assert 'data-action="retry-stats"' not in stats_source
+    assert 'action: "retry-stats"' in stats_source
+    assert '@import url("./admin/stats.css");' in admin_css
+    assert ".admin-stats-frame-wrap" in stats_css
+    assert "prefers-reduced-motion: reduce" in stats_css
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")

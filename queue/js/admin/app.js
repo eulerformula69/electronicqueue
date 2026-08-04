@@ -5,7 +5,7 @@ import { mount as mountWindows } from "./views/windows.view.js";
 import { mount as mountOperators } from "./views/operators.view.js";
 import { mount as mountMedia } from "./views/media.view.js";
 import { mount as mountSettings } from "./views/settings.view.js";
-import { mount as mountStats } from "./views/stats.view.js";
+import { mount as mountStats, unmount as unmountStats } from "./views/stats.view.js";
 import { mount as mountMap, unmount as unmountMap } from "./views/map.view.js";
 
 const routes = {
@@ -68,11 +68,11 @@ const routes = {
     },
     stats: {
         label: "Статистика",
-        description: "Переход к текущей статистике Grafana",
+        description: "Показатели очереди и работы операторов",
         group: "Система",
         icon: "stats",
-        externalUrl: CONFIG.GRAFANA_URL,
-        mount: mountStats
+        mount: mountStats,
+        unmount: unmountStats
     }
 };
 
