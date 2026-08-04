@@ -29,8 +29,6 @@ function renderActiveSection() {
 
 function renderTerminalSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
-        <h2>Терминал</h2>
-        <p class="admin-form-description">Печать талонов, длительность уведомлений и доступность услуг.</p>
         ${ctx.ui.field("Печатать талон", ctx.ui.switchField("print_ticket", settings.print_ticket))}
         ${ctx.ui.field("Показывать режим печати", ctx.ui.switchField("show_print_badge", settings.show_print_badge))}
         ${ctx.ui.field("Размер печатного талона, %", ctx.ui.input("ticket_print_scale_percent", settings.ticket_print_scale_percent || 94, "type=\"number\" min=\"50\" max=\"150\" step=\"1\""))}
@@ -47,8 +45,6 @@ function renderTerminalSection() {
 
 function renderQueueSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
-        <h2>Оператор и очередь</h2>
-        <p class="admin-form-description">Правила входа операторов, перенаправления и обработки талонов.</p>
         ${ctx.ui.field("Статус окна при входе оператора", ctx.ui.select("default_operator_status", [
             {value: "online", label: "Онлайн"}, {value: "break", label: "Перерыв"}, {value: "offline", label: "Офлайн"}
         ], settings.default_operator_status))}
@@ -74,8 +70,6 @@ function renderQueueSection() {
 
 function renderBoardSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
-        <h2>Табло и озвучка</h2>
-        <p class="admin-form-description">Шаблоны вызова и сообщения бегущей строки.</p>
         ${ctx.ui.field("Сообщение вызова / озвучки", ctx.ui.input("call_message_template", settings.call_message_template || "Талон <number> подойдите к окну <window>"))}
         ${ctx.ui.field("Отображение вызванного талона", ctx.ui.input("board_ticket_template", settings.board_ticket_template || "Билет <number> -> окно <window>"))}
         <input type="hidden" id="setting-board-ticker-text" name="board_ticker_text" value="${escapeHtml(settings.board_ticker_text || "")}">

@@ -136,8 +136,8 @@ body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
 }
 
 body.admin-page .admin-settings-layout.admin-settings-layout-single {
-    grid-template-columns: minmax(0, 860px);
-    justify-content: start;
+    grid-template-columns: minmax(0, 1120px);
+    justify-content: center;
     align-items: start;
 }
 
@@ -145,17 +145,8 @@ body.admin-page .admin-settings-layout-single .admin-settings-wide {
     grid-column: 1;
 }
 
-body.admin-page .admin-form-description {
-    margin: -4px 0 20px;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
 body.admin-page .admin-settings-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
+    position: static;
     display: flex;
     grid-column: 1;
     align-self: start;
@@ -163,8 +154,8 @@ body.admin-page .admin-settings-actions {
     justify-content: flex-start;
     width: max-content;
     max-width: 100%;
-    padding: 14px 0 2px;
-    background: linear-gradient(transparent, var(--bg) 30%);
+    padding: 0;
+    background: transparent;
 }
 
 body.admin-page .admin-settings-actions .admin-btn {

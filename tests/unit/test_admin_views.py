@@ -196,6 +196,17 @@ def test_admin_settings_are_split_into_system_routes():
     assert 'if (activeSection === "board") applyBoardForm(payload, data)' in settings_source
 
 
+def test_admin_settings_do_not_repeat_page_heading_inside_card():
+    settings_source = _read("queue/js/admin/views/settings.view.js")
+    settings_css = _read("queue/css/admin/settings.css")
+
+    assert '<h2>Терминал</h2>' not in settings_source
+    assert '<h2>Оператор и очередь</h2>' not in settings_source
+    assert '<h2>Табло и озвучка</h2>' not in settings_source
+    assert "grid-template-columns: minmax(0, 1120px);" in settings_css
+    assert "justify-content: center;" in settings_css
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")
