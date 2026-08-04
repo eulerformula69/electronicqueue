@@ -55,15 +55,13 @@ function renderMediaCard(item) {
     const safeFilename = ctx.ui.escapeHtml(item.filename);
     const status = item.status || "ready";
     return `
-        <article class="admin-media-card admin-media-card-${status}">
+        <article class="admin-media-card admin-media-card-${status}${ready && !included ? " admin-media-card-inactive" : ""}">
             ${ready ? `
                 <a class="admin-media-preview" href="${webPath}" target="_blank" rel="noopener" title="Открыть видео в новой вкладке" aria-label="Открыть ${safeFilename} в новой вкладке">
                     <video src="${framePath}" preload="metadata" muted playsinline aria-hidden="true"></video>
-                    <span class="admin-media-preview-status">${ctx.ui.badge(statusText(item, included), statusTone(status, included))}</span>
                     <span class="admin-media-preview-play" aria-hidden="true">${videoPlaceholderIcon}</span>
                 </a>
             ` : `<div class="admin-media-preview admin-media-preview-disabled">
-                <span class="admin-media-preview-status">${ctx.ui.badge(statusText(item, included), statusTone(status, included))}</span>
                 ${videoPlaceholderIcon}<span>Кадр появится после обработки</span>
             </div>`}
             <div class="admin-media-details">
@@ -166,19 +164,6 @@ function updateExpectedResult(dialog) {
     const processed = form.elements.process_video.checked;
     const quality = form.elements.compression_mode.selectedOptions[0]?.text.split(" — ")[0];
     output.innerHTML = `<strong>Исходный файл:</strong> ${ctx.ui.escapeHtml(file.name)} · ${formatBytes(file.size)}<br><strong>Результат:</strong> ${processed ? `MP4 · ${ctx.ui.escapeHtml(quality)} качество` : "исходный файл без изменений"}`;
-}
-
-function statusText(item, included) {
-    if (item.status === "pending") return "В очереди";
-    if (item.status === "processing") return "Обрабатывается";
-    if (item.status === "error") return "Ошибка";
-    return included ? "Готово" : "Выключено";
-}
-
-function statusTone(status, included) {
-    if (["pending", "processing"].includes(status)) return "warning";
-    if (status === "error") return "danger";
-    return included ? "success" : "neutral";
 }
 
 function fileType(filename) {

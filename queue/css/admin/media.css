@@ -7,8 +7,6 @@ body.admin-page .admin-media-card { display: flex; min-width: 0; overflow: hidde
 body.admin-page .admin-media-preview { position: relative; display: grid; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; place-items: center; background: #101827; color: #fff; text-decoration: none; }
 body.admin-page .admin-media-preview video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 body.admin-page .admin-media-preview::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.24), transparent 42%); opacity: .7; transition: opacity .15s ease; }
-body.admin-page .admin-media-preview-status { position: absolute; z-index: 2; top: 12px; right: 12px; }
-body.admin-page .admin-media-preview-status .admin-badge { box-shadow: 0 1px 5px rgba(0,0,0,.16); }
 body.admin-page .admin-media-preview-play { position: absolute; z-index: 1; display: grid; width: 46px; height: 46px; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: rgba(5,15,30,.58); backdrop-filter: blur(8px); transition: transform .15s ease, background .15s ease; }
 body.admin-page .admin-media-preview-play svg { width: 25px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 body.admin-page .admin-media-preview-play svg path { fill: currentColor; stroke: none; }
@@ -19,6 +17,11 @@ body.admin-page .admin-media-preview-disabled { align-content: center; gap: 10px
 body.admin-page .admin-media-preview-disabled > svg { width: 34px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 body.admin-page .admin-media-preview-disabled > svg path { fill: currentColor; stroke: none; }
 body.admin-page .admin-media-preview-disabled > span { font-size: 12px; }
+body.admin-page .admin-media-card-inactive { background: var(--bg); }
+body.admin-page .admin-media-card-inactive .admin-media-preview video { filter: grayscale(1); opacity: .58; }
+body.admin-page .admin-media-card-inactive .admin-media-preview::after { background: rgba(70, 78, 88, .3); opacity: 1; }
+body.admin-page .admin-media-card-inactive .admin-media-preview-play { opacity: .72; }
+body.admin-page .admin-media-card-inactive .admin-media-details { opacity: .68; }
 body.admin-page .admin-media-details { min-width: 0; }
 body.admin-page .admin-media-details { display: grid; flex: 1 1 auto; align-content: start; gap: 10px; padding: 16px 16px 10px; }
 body.admin-page .admin-media-heading { min-width: 0; }

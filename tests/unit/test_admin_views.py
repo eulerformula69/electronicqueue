@@ -81,17 +81,19 @@ def test_media_view_uses_compact_cards_and_opens_video_in_new_tab():
     source = _read("queue/js/admin/views/media.view.js")
     css = _read("queue/css/admin/media.css")
 
-    assert 'class="admin-media-card admin-media-card-${status}"' in source
+    assert 'class="admin-media-card admin-media-card-${status}${ready && !included ? " admin-media-card-inactive" : ""}"' in source
     assert 'target="_blank" rel="noopener"' in source
     assert "Открыть видео в новой вкладке" in source
     assert '<video src="${framePath}" preload="metadata" muted playsinline' in source
     assert 'const framePath = `${webPath}#t=0.1`' in source
-    assert 'class="admin-media-preview-status"' in source
+    assert "admin-media-card-inactive" in source
+    assert "admin-media-preview-status" not in source
     assert 'data-action="toggle"' in source
     assert "Удалить с сервера" in source
     assert ".admin-media-card" in css
     assert "repeat(auto-fit, minmax(320px, 1fr))" in css
     assert "margin-top: auto" in css
+    assert "filter: grayscale(1)" in css
 
 
 def test_media_navigation_is_part_of_queue_group():
