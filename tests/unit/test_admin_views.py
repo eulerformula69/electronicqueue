@@ -158,6 +158,7 @@ def test_media_playlist_switch_comes_before_its_label():
 
 def test_media_upload_uses_single_entry_button_and_dialog():
     source = _read("queue/js/admin/views/media.view.js")
+    css = _read("queue/css/admin/media.css")
 
     assert 'button("Загрузить файл", {variant: "primary", action: "open-upload"})' in source
     assert '<h2 id="media-section-title">' not in source
@@ -168,6 +169,7 @@ def test_media_upload_uses_single_entry_button_and_dialog():
     assert '<option value="custom">Свои параметры — для опытных</option>' in source
     assert 'name="custom_ffmpeg_command"' in source
     assert 'ffmpeg -i "{input}" "{output}"' in source
+    assert ".admin-media-custom-command[hidden] { display: none; }" in css
     assert "data-upload-result" in source
 
 

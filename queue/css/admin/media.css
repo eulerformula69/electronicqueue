@@ -49,6 +49,7 @@ body.admin-page .admin-media-dialog-heading h3 { margin: 0; font-size: 20px; }
 body.admin-page .admin-media-dialog-heading p { margin: 5px 0 0; color: var(--text-muted); font-size: 14px; }
 body.admin-page .admin-media-dialog-close { border: 0; background: transparent; color: var(--text-muted); font-size: 28px; line-height: 1; cursor: pointer; }
 body.admin-page .admin-media-dialog .admin-file-picker { width: 100%; flex-basis: auto; }
+body.admin-page .admin-media-custom-command[hidden] { display: none; }
 body.admin-page .admin-media-process-option { display: flex; align-items: flex-start; gap: 11px; cursor: pointer; }
 body.admin-page .admin-media-process-option input { margin-top: 3px; }
 body.admin-page .admin-media-process-option span { display: grid; gap: 3px; }
