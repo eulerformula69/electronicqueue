@@ -28,7 +28,7 @@ function render() {
     ctx.view.innerHTML = `
         <div class="admin-toolbar">
             ${ctx.ui.button("Добавить услугу", {variant: "primary", action: "create-service"})}
-            ${ctx.ui.button("Добавить группу", {variant: "secondary", action: "create-group"})}
+            ${ctx.ui.button("Добавить группу", {variant: "primary", action: "create-group"})}
         </div>
         <section class="admin-service-board">
             ${renderGroupSections()}
@@ -358,10 +358,10 @@ function handleDragStart(event) {
 
 function handleDragOver(event) {
     if (draggedGroupId) {
+        event.preventDefault();
         const target = event.target.closest('.admin-service-group[data-group-id]:not([data-group-id=""])');
         const dragged = ctx.view.querySelector(`.admin-service-group[data-group-id="${draggedGroupId}"]`);
         if (!target || !dragged || target === dragged) return;
-        event.preventDefault();
         const box = target.getBoundingClientRect();
         target.parentNode.insertBefore(dragged, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
         return;

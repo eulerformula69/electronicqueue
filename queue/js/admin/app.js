@@ -121,9 +121,10 @@ function renderNavigation() {
 
 function setSidebarCollapsed(collapsed, persist = false) {
     document.body.classList.toggle("admin-sidebar-collapsed", collapsed);
-    const menuButton = root.querySelector(".admin-menu-button");
-    menuButton?.setAttribute("aria-expanded", String(!collapsed));
-    menuButton?.setAttribute("aria-label", collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель");
+    root.querySelectorAll(".admin-menu-button").forEach(menuButton => {
+        menuButton.setAttribute("aria-expanded", String(!collapsed));
+        menuButton.setAttribute("aria-label", collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель");
+    });
     if (persist) localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
 }
 
@@ -132,9 +133,17 @@ function renderShell() {
     if (isMobile || localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true") {
         document.body.classList.add("admin-sidebar-collapsed");
     }
+    const sidebarCollapsed = document.body.classList.contains("admin-sidebar-collapsed");
     root.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
+                <div class="admin-sidebar-header">
+                    <button class="admin-menu-button" type="button"
+                        aria-label="${sidebarCollapsed ? "Развернуть" : "Свернуть"} боковую панель"
+                        aria-expanded="${String(!sidebarCollapsed)}">
+                        ${icon("menu")}
+                    </button>
+                </div>
                 <nav class="admin-nav">
                     ${renderNavigation()}
                 </nav>
@@ -145,8 +154,9 @@ function renderShell() {
             </aside>
             <main class="admin-main">
                 <header class="admin-header">
-                    <button class="admin-menu-button" type="button" aria-label="Свернуть боковую панель"
-                        aria-expanded="${String(!document.body.classList.contains("admin-sidebar-collapsed"))}">
+                    <button class="admin-menu-button admin-mobile-menu-button" type="button"
+                        aria-label="${sidebarCollapsed ? "Развернуть" : "Свернуть"} боковую панель"
+                        aria-expanded="${String(!sidebarCollapsed)}">
                         ${icon("menu")}
                     </button>
                     <div>

@@ -64,6 +64,10 @@ body.admin-page .admin-map-host .map-editor {
 }
 
 @media (max-width: 820px) {
+    body.admin-page .admin-mobile-menu-button {
+        display: inline-grid;
+    }
+
     body.admin-page {
         overflow-x: hidden;
         overflow-y: hidden;

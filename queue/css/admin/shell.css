@@ -63,6 +63,18 @@ body.admin-page .admin-nav {
     overflow-y: auto;
 }
 
+body.admin-page .admin-sidebar-header {
+    display: flex;
+    align-items: center;
+    min-height: 64px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--admin-sidebar-line);
+}
+
+body.admin-page .admin-sidebar-header .admin-menu-button {
+    color: var(--card-bg);
+}
+
 body.admin-page .admin-nav-group {
     margin: 16px 14px 4px;
     color: color-mix(in srgb, var(--card-bg) 52%, transparent);
@@ -222,6 +234,10 @@ body.admin-page .admin-menu-button .admin-nav-icon {
     height: 22px;
 }
 
+body.admin-page .admin-mobile-menu-button {
+    display: none;
+}
+
 body.admin-page .admin-sidebar-scrim {
     display: none;
 }
@@ -238,6 +254,11 @@ body.admin-page .admin-sidebar-scrim {
     }
 
     body.admin-page.admin-sidebar-collapsed .admin-nav-link {
+        justify-content: center;
+        padding-inline: 0;
+    }
+
+    body.admin-page.admin-sidebar-collapsed .admin-sidebar-header {
         justify-content: center;
         padding-inline: 0;
     }

@@ -50,7 +50,7 @@ def test_services_use_separate_short_create_dialogs_without_availability_dashboa
     source = _read("queue/js/admin/views/services.view.js")
 
     assert 'button("Добавить услугу", {variant: "primary", action: "create-service"})' in source
-    assert 'button("Добавить группу", {variant: "secondary", action: "create-group"})' in source
+    assert 'button("Добавить группу", {variant: "primary", action: "create-group"})' in source
     assert "function openCreateServiceDialog()" in source
     assert "function openCreateGroupDialog()" in source
     assert 'ctx.ui.select("service_group_id", groupOptions(), "")' in source
@@ -68,6 +68,8 @@ def test_service_groups_support_drag_reordering_and_accessible_button_fallback()
     assert 'ctx.api.json("/service-groups/order"' in source
     assert 'action: "group-up"' in source
     assert 'action: "group-down"' in source
+    drag_over = source[source.index("function handleDragOver"):source.index("async function handleDrop")]
+    assert drag_over.index("event.preventDefault()") < drag_over.index("target === dragged")
 
 
 def test_admin_views_use_click_sorting_with_direction_toggle():
@@ -319,6 +321,9 @@ def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
     assert 'const SIDEBAR_STORAGE_KEY = "admin-sidebar-collapsed"' in app_source
     assert "localStorage.setItem(SIDEBAR_STORAGE_KEY" in app_source
     assert 'aria-label="${route.label}" title="${route.label}"' in app_source
+    assert '<div class="admin-sidebar-header">' in app_source
+    assert 'class="admin-menu-button admin-mobile-menu-button"' in app_source
+    assert 'root.querySelectorAll(".admin-menu-button")' in app_source
 
 
 def test_admin_system_routes_follow_operational_order():
