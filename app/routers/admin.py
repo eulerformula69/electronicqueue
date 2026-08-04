@@ -276,7 +276,7 @@ async def list_media_files(admin: Admin = Depends(verify_admin_session)):
                     if job.get("status") == "error" else ""
                 )
             ),
-            "size_bytes": job.get("size_bytes"),
+            "size_bytes": os.path.getsize(os.path.join(media_dir, filename)),
         })
 
     existing_names = set(physical_files)

@@ -77,6 +77,28 @@ def test_table_helper_renders_sortable_headers():
     assert 'data-sort-key="${escapeHtml(header.sortKey)}"' in source
 
 
+def test_media_view_uses_compact_cards_and_opens_video_in_new_tab():
+    source = _read("queue/js/admin/views/media.view.js")
+    css = _read("queue/css/admin/media.css")
+
+    assert 'class="admin-media-card admin-media-card-${status}"' in source
+    assert 'target="_blank" rel="noopener"' in source
+    assert "Открыть видео в новой вкладке" in source
+    assert 'data-action="toggle"' in source
+    assert "Удалить с сервера" in source
+    assert ".admin-media-card" in css
+
+
+def test_media_upload_uses_single_entry_button_and_dialog():
+    source = _read("queue/js/admin/views/media.view.js")
+
+    assert 'button("Загрузить файл", {variant: "primary", action: "open-upload"})' in source
+    assert 'dialog.className = "admin-media-dialog"' in source
+    assert 'name="display_name"' in source
+    assert 'name="process_video" checked' in source
+    assert "data-upload-result" in source
+
+
 def test_sorting_layout_has_stable_column_widths():
     source = _read("queue/css/admin/shell.css") + _read("queue/css/admin/services.css")
 
