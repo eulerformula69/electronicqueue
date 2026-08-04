@@ -28,12 +28,8 @@ async function render() {
     }
 
     ctx.view.innerHTML = `
-        <section class="admin-media-page" aria-labelledby="media-section-title">
+        <section class="admin-media-page" aria-label="Управление видеофайлами">
             <div class="admin-media-toolbar">
-                <div>
-                    <h2 id="media-section-title">Видеофайлы</h2>
-                    <p>Видео для показа на информационном табло</p>
-                </div>
                 ${ctx.ui.button("Загрузить файл", {variant: "primary", action: "open-upload"})}
             </div>
             <div id="uploadStatus" class="admin-upload-status" aria-live="polite">${ctx.ui.escapeHtml(mediaLastUploadMessage)}</div>
@@ -88,9 +84,9 @@ function renderMediaCard(item) {
 function renderPlaylistSwitch(filename, included) {
     return `
         <label class="admin-media-playlist-switch">
-            <span>${included ? "В плейлисте" : "Не в плейлисте"}</span>
             <input type="checkbox" data-action="toggle" data-id="${ctx.ui.escapeHtml(filename)}" ${included ? "checked" : ""}>
             <i aria-hidden="true"></i>
+            <span>${included ? "В плейлисте" : "Не в плейлисте"}</span>
         </label>
     `;
 }

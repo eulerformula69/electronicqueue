@@ -114,10 +114,19 @@ def test_media_playlist_toggle_updates_only_its_card():
     assert "input.checked = !checked" in toggle_source
 
 
+def test_media_playlist_switch_comes_before_its_label():
+    source = _read("queue/js/admin/views/media.view.js")
+    switch_source = source[source.index("function renderPlaylistSwitch"):source.index("function renderEmptyState")]
+
+    assert switch_source.index('type="checkbox"') < switch_source.index("<span>${included ?")
+
+
 def test_media_upload_uses_single_entry_button_and_dialog():
     source = _read("queue/js/admin/views/media.view.js")
 
     assert 'button("Загрузить файл", {variant: "primary", action: "open-upload"})' in source
+    assert '<h2 id="media-section-title">' not in source
+    assert 'aria-label="Управление видеофайлами"' in source
     assert 'dialog.className = "admin-media-dialog"' in source
     assert 'name="display_name"' in source
     assert 'name="process_video" checked' in source
