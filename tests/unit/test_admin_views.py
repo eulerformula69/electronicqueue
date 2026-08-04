@@ -266,6 +266,16 @@ def test_grafana_is_embedded_through_same_origin_https_proxy():
     assert '"https://${SERVER_IP}/grafana/api/health"' in installer_source
 
 
+def test_focused_grafana_embed_migration_is_available():
+    migration = _read("deploy/configure_grafana_embed.sh")
+
+    assert "GF_SECURITY_ALLOW_EMBEDDING=true" in migration
+    assert "GF_SERVER_SERVE_FROM_SUB_PATH=true" in migration
+    assert "location /grafana/" in migration
+    assert "proxy_pass http://127.0.0.1:3000;" in migration
+    assert "nginx -t" in migration
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")

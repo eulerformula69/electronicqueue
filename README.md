@@ -38,6 +38,24 @@ sudo QUEUE_SERVER_IP=192.168.0.20 bash deploy/install.sh
 deploy/manual_ffmpeg_update.md
 ```
 
+### Настройка встроенной статистики без полного install.sh
+
+Если приложение уже установлено, для исправления Grafana достаточно запустить
+отдельный безопасный скрипт:
+
+```bash
+sudo bash deploy/configure_grafana_embed.sh
+```
+
+Если IP определился неправильно:
+
+```bash
+sudo QUEUE_SERVER_IP=10.0.1.132 bash deploy/configure_grafana_embed.sh
+```
+
+Скрипт не переустанавливает приложение и не меняет базу данных. Он создаёт
+резервные копии и обновляет только настройки Grafana и Nginx.
+
 ## HTTPS
 
 Установщик создаёт локальный центр сертификации `mkcert`, выпускает сертификат для IP сервера и одновременно оставляет доступными HTTP и HTTPS без перенаправления.

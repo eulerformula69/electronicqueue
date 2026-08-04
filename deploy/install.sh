@@ -158,6 +158,7 @@ install -m 0750 "${SOURCE_DIR}/scripts/closeDay.py" "${APP_DIR}/scripts/closeDay
 install -m 0644 "${SOURCE_DIR}/scripts/grafana_dashboard.py" "${APP_DIR}/scripts/grafana_dashboard.py"
 install -m 0750 "${SOURCE_DIR}/scripts/normalizeGrafanaDashboard.py" "${APP_DIR}/scripts/normalizeGrafanaDashboard.py"
 install -m 0750 "${SOURCE_DIR}/deploy/update_from_git.py" "${APP_DIR}/deploy/update_from_git.py"
+install -m 0750 "${SOURCE_DIR}/deploy/configure_grafana_embed.sh" "${APP_DIR}/deploy/configure_grafana_embed.sh"
 install -m 0640 "${SOURCE_DIR}/deploy/exclude_from_update.txt" "${APP_DIR}/deploy/exclude_from_update.txt"
 install -m 0644 "${SOURCE_DIR}/deploy/bootstrap_users.py" "${APP_DIR}/deploy/bootstrap_users.py"
 install -m 0750 "${SOURCE_DIR}/deploy/db_common.sh" "${APP_DIR}/deploy/db_common.sh"
