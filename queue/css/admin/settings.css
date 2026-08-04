@@ -135,9 +135,10 @@ body.admin-page .settings-form::-webkit-scrollbar-thumb:hover{
     background: #8fa4bd;
 }
 
-body.admin-page .admin-settings-layout-single {
+body.admin-page .admin-settings-layout.admin-settings-layout-single {
     grid-template-columns: minmax(0, 860px);
     justify-content: start;
+    align-items: start;
 }
 
 body.admin-page .admin-settings-layout-single .admin-settings-wide {
@@ -156,9 +157,19 @@ body.admin-page .admin-settings-actions {
     bottom: 0;
     z-index: 2;
     display: flex;
+    grid-column: 1;
+    align-self: start;
+    align-items: flex-start;
     justify-content: flex-start;
+    width: max-content;
+    max-width: 100%;
     padding: 14px 0 2px;
     background: linear-gradient(transparent, var(--bg) 30%);
+}
+
+body.admin-page .admin-settings-actions .admin-btn {
+    flex: 0 0 auto;
+    height: auto;
 }
 
 @media (max-width: 900px){
