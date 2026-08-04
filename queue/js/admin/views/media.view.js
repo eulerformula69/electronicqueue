@@ -4,7 +4,7 @@ let mediaLastUploadMessage = "";
 let mediaItems = [];
 let mediaPlaylist = [];
 
-const videoIcon = `
+const videoPlaceholderIcon = `
     <svg viewBox="0 0 24 24" aria-hidden="true">
         <rect x="3" y="5" width="18" height="14" rx="3"></rect>
         <path d="m10 9 5 3-5 3Z"></path>
@@ -49,6 +49,7 @@ async function render() {
 
 function renderMediaCard(item) {
     const webPath = `/queue/media/${encodeURIComponent(item.filename)}`;
+    const framePath = `${webPath}#t=0.1`;
     const included = mediaPlaylist.includes(`/queue/media/${item.filename}`);
     const ready = (item.status || "ready") === "ready";
     const safeFilename = ctx.ui.escapeHtml(item.filename);
@@ -56,11 +57,11 @@ function renderMediaCard(item) {
     return `
         <article class="admin-media-card admin-media-card-${status}">
             ${ready ? `
-                <a class="admin-media-icon" href="${webPath}" target="_blank" rel="noopener" title="Открыть видео в новой вкладке" aria-label="Открыть ${safeFilename} в новой вкладке">
-                    ${videoIcon}
-                    <span aria-hidden="true">Открыть</span>
+                <a class="admin-media-preview" href="${webPath}" target="_blank" rel="noopener" title="Открыть видео в новой вкладке" aria-label="Открыть ${safeFilename} в новой вкладке">
+                    <video src="${framePath}" preload="metadata" muted playsinline aria-hidden="true"></video>
+                    <span class="admin-media-preview-play" aria-hidden="true">${videoPlaceholderIcon}</span>
                 </a>
-            ` : `<div class="admin-media-icon admin-media-icon-disabled">${videoIcon}<span aria-hidden="true">Видео</span></div>`}
+            ` : `<div class="admin-media-preview admin-media-preview-disabled">${videoPlaceholderIcon}<span>Кадр появится после обработки</span></div>`}
             <div class="admin-media-details">
                 <div class="admin-media-heading">
                     <strong title="${safeFilename}">${safeFilename}</strong>

@@ -84,9 +84,19 @@ def test_media_view_uses_compact_cards_and_opens_video_in_new_tab():
     assert 'class="admin-media-card admin-media-card-${status}"' in source
     assert 'target="_blank" rel="noopener"' in source
     assert "Открыть видео в новой вкладке" in source
+    assert '<video src="${framePath}" preload="metadata" muted playsinline' in source
+    assert 'const framePath = `${webPath}#t=0.1`' in source
     assert 'data-action="toggle"' in source
     assert "Удалить с сервера" in source
     assert ".admin-media-card" in css
+
+
+def test_media_navigation_is_part_of_queue_group():
+    source = _read("queue/js/admin/app.js")
+    media_route = source[source.index("media: {"):source.index("map: {")]
+
+    assert 'group: "Очередь"' in media_route
+    assert 'group: "Контент"' not in source
 
 
 def test_media_upload_uses_single_entry_button_and_dialog():

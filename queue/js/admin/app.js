@@ -33,7 +33,7 @@ const routes = {
     media: {
         label: "Медиафайлы",
         description: "Загрузка и управление роликами для табло",
-        group: "Контент",
+        group: "Очередь",
         icon: "media",
         mount: mountMedia
     },
