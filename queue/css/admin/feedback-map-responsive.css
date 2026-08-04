@@ -1,10 +1,19 @@
 body.admin-page .admin-toast-host {
     position: fixed;
-    right: 22px;
-    bottom: 22px;
+    top: 22px;
+    left: 50%;
     z-index: 50;
     display: grid;
+    width: min(520px, calc(100vw - 32px));
     gap: 10px;
+    justify-items: center;
+    transform: translateX(-50%);
+}
+
+body.admin-page .admin-toast {
+    width: fit-content;
+    max-width: 100%;
+    text-align: center;
 }
 
 body.admin-page .admin-toast {

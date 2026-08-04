@@ -313,6 +313,17 @@ def test_admin_shell_has_only_one_vertical_scroll_container():
     assert "overflow-y: auto;" in responsive_css
 
 
+def test_admin_notifications_are_centered_at_the_top():
+    responsive_css = _read("queue/css/admin/feedback-map-responsive.css")
+    toast_styles = responsive_css.split("body.admin-page .admin-toast-host", 1)[1].split("}", 1)[0]
+
+    assert "top: 22px;" in toast_styles
+    assert "left: 50%;" in toast_styles
+    assert "transform: translateX(-50%);" in toast_styles
+    assert "right:" not in toast_styles
+    assert "bottom:" not in toast_styles
+
+
 def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
     app_source = _read("queue/js/admin/app.js")
 
