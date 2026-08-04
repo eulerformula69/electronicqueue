@@ -252,6 +252,20 @@ def test_admin_statistics_embed_grafana_with_fallback_actions():
     assert "prefers-reduced-motion: reduce" in stats_css
 
 
+def test_grafana_is_embedded_through_same_origin_https_proxy():
+    config_source = _read("queue/js/config.js")
+    installer_source = _read("deploy/install.sh")
+
+    assert "${window.location.origin}/grafana/d/queue-statistics/queue-statistics" in config_source
+    assert "location /grafana/" in installer_source
+    assert "proxy_pass http://127.0.0.1:3000;" in installer_source
+    assert "proxy_hide_header X-Frame-Options;" in installer_source
+    assert "Environment=GF_SECURITY_ALLOW_EMBEDDING=true" in installer_source
+    assert "Environment=GF_SERVER_ROOT_URL=https://${SERVER_IP}/grafana/" in installer_source
+    assert "Environment=GF_SERVER_SERVE_FROM_SUB_PATH=true" in installer_source
+    assert '"https://${SERVER_IP}/grafana/api/health"' in installer_source
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")

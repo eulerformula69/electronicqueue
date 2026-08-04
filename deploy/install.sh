@@ -437,7 +437,7 @@ python3 "${APP_DIR}/scripts/normalizeGrafanaDashboard.py" \
 chown -R grafana:grafana /var/lib/grafana/dashboards
 
 install -d -m 0755 /etc/systemd/system/grafana-server.service.d
-cat > /etc/systemd/system/grafana-server.service.d/queue.conf <<'EOF'
+cat > /etc/systemd/system/grafana-server.service.d/queue.conf <<EOF
 [Service]
 Environment=GF_SECURITY_ALLOW_EMBEDDING=true
 Environment=GF_AUTH_ANONYMOUS_ENABLED=true
@@ -445,6 +445,9 @@ Environment="GF_AUTH_ANONYMOUS_ORG_NAME=Main Org."
 Environment=GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 Environment=GF_AUTH_DISABLE_LOGIN_FORM=false
 Environment=GF_USERS_DEFAULT_THEME=light
+Environment=GF_SERVER_DOMAIN=${SERVER_IP}
+Environment=GF_SERVER_ROOT_URL=https://${SERVER_IP}/grafana/
+Environment=GF_SERVER_SERVE_FROM_SUB_PATH=true
 EOF
 
 systemctl daemon-reload
@@ -521,6 +524,22 @@ server {
 
     client_max_body_size 305m;
 
+    location /grafana/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /grafana;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_hide_header X-Frame-Options;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
@@ -571,6 +590,11 @@ HTTPS_STATUS="$(curl --silent --insecure --noproxy '*' --output /dev/null --writ
 [[ "${HTTPS_STATUS}" == "200" ]] \
     || fail "Nginx по HTTPS вернул код ${HTTPS_STATUS} вместо 200"
 
+GRAFANA_PROXY_STATUS="$(curl --silent --insecure --noproxy '*' --output /dev/null --write-out '%{http_code}' \
+    "https://${SERVER_IP}/grafana/api/health" || true)"
+[[ "${GRAFANA_PROXY_STATUS}" == "200" ]] \
+    || fail "Grafana через HTTPS-прокси вернула код ${GRAFANA_PROXY_STATUS} вместо 200"
+
 if ! openssl s_client -connect 127.0.0.1:443 -servername "${SERVER_IP}" </dev/null 2>/dev/null \
     | openssl x509 -noout -checkip "${SERVER_IP}" >/dev/null; then
     fail "Nginx отдаёт сертификат без IP ${SERVER_IP}"
@@ -609,7 +633,7 @@ printf 'HTTP:       http://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'HTTPS:      https://%s/queue/login.html\n' "${SERVER_IP}"
 printf 'Терминал:   http://%s/queue/terminal.html\n' "${SERVER_IP}"
 printf 'Табло:      http://%s/queue/board-media.html\n' "${SERVER_IP}"
-printf 'Статистика: http://%s:3000/d/queue-statistics/queue-statistics\n' "${SERVER_IP}"
+printf 'Статистика: https://%s/grafana/d/queue-statistics/queue-statistics\n' "${SERVER_IP}"
 if [[ -n "${INSTALL_USER}" && -n "${INSTALL_HOME}" ]]; then
     printf 'Проект:     %s (доступ для %s)\n' "${APP_DIR}" "${INSTALL_USER}"
     printf 'Открыть:    cd %s\n' "${APP_DIR}"
