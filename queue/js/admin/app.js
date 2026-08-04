@@ -12,44 +12,51 @@ const routes = {
     services: {
         label: "Услуги",
         description: "Управление услугами, доступными на терминалах",
-        icon: "▦",
+        group: "Очередь",
+        icon: "services",
         mount: mountServices
     },
     windows: {
         label: "Рабочие места",
         description: "Рабочие места, статусы и назначенные услуги",
-        icon: "▣",
+        group: "Очередь",
+        icon: "windows",
         mount: mountWindows
     },
     operators: {
         label: "Операторы",
         description: "Доступ операторов и привязка к рабочим местам",
-        icon: "◎",
+        group: "Очередь",
+        icon: "operators",
         mount: mountOperators
     },
     map: {
         label: "Карта",
         description: "Редактор карты офиса",
-        icon: "▥",
+        group: "Пространство",
+        icon: "map",
         mount: mountMap,
         unmount: unmountMap
     },
     media: {
         label: "Медиафайлы",
         description: "Загрузка и управление роликами для табло",
-        icon: "▤",
+        group: "Контент",
+        icon: "media",
         mount: mountMedia
     },
     settings: {
-        label: "Общее",
+        label: "Настройки",
         description: "Реальные параметры терминала, очереди и табло",
-        icon: "⚙",
+        group: "Система",
+        icon: "settings",
         mount: mountSettings
     },
     stats: {
         label: "Статистика",
         description: "Переход к текущей статистике Grafana",
-        icon: "↗",
+        group: "Система",
+        icon: "stats",
         externalUrl: CONFIG.GRAFANA_URL,
         mount: mountStats
     }
@@ -62,27 +69,58 @@ let reconnectTimer = null;
 
 const root = document.getElementById("admin-root");
 
+const icons = {
+    services: '<path d="M4 5.5h16M4 12h16M4 18.5h16"/><circle cx="8" cy="5.5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="10" cy="18.5" r="1.5"/>',
+    windows: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/>',
+    operators: '<circle cx="12" cy="8" r="3"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/>',
+    map: '<path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14M15 6v14"/>',
+    media: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3Z"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
+    stats: '<path d="M5 19V9M12 19V5M19 19v-7"/><path d="M3 19h18"/>'
+};
+
+function icon(name) {
+    return `<svg class="admin-nav-icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
+}
+
+function renderNavigation() {
+    let currentGroup = null;
+    return Object.entries(routes).map(([key, route]) => {
+        const group = route.group !== currentGroup
+            ? `<div class="admin-nav-group">${route.group}</div>`
+            : "";
+        currentGroup = route.group;
+        return `${group}
+            <a href="${route.externalUrl || `#${key}`}" class="admin-nav-link" data-route="${key}"
+                ${route.externalUrl ? 'target="_blank" rel="noopener noreferrer"' : ""}>
+                ${icon(route.icon)}
+                <span class="admin-nav-label">${route.label}</span>
+            </a>`;
+    }).join("");
+}
+
 function renderShell() {
+    if (window.matchMedia("(max-width: 820px)").matches) {
+        document.body.classList.add("admin-sidebar-collapsed");
+    }
     root.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
+                <div class="admin-brand">
+                    <span class="admin-brand-mark" aria-hidden="true">Q</span>
+                    <span class="admin-brand-copy">Qronion<small>Панель управления</small></span>
+                </div>
                 <nav class="admin-nav">
-                    ${Object.entries(routes).map(([key, route]) => `
-                        <a
-                            href="${route.externalUrl || `#${key}`}"
-                            class="admin-nav-link"
-                            data-route="${key}"
-                            ${route.externalUrl ? 'target="_blank" rel="noopener noreferrer"' : ""}
-                        >
-                            <span>${route.icon}</span>
-                            ${route.label}
-                        </a>
-                    `).join("")}
+                    ${renderNavigation()}
                 </nav>
+                <div class="admin-sidebar-footer">
+                    <span class="admin-status-dot" aria-hidden="true"></span>
+                    <span>Система доступна</span>
+                </div>
             </aside>
             <main class="admin-main">
                 <header class="admin-header">
-                    <button class="admin-menu-button" type="button" aria-label="Меню">☰</button>
+                    <button class="admin-menu-button" type="button" aria-label="Свернуть меню" aria-expanded="true">☰</button>
                     <div>
                         <h1 id="admin-title">Администрирование</h1>
                         <p id="admin-description"></p>
@@ -93,6 +131,7 @@ function renderShell() {
                 <section id="admin-view" class="admin-view"></section>
             </main>
         </div>
+        <button class="admin-sidebar-scrim" type="button" aria-label="Закрыть меню"></button>
         <aside id="admin-drawer" class="admin-drawer" aria-hidden="true"></aside>
         <div id="admin-toast-host" class="admin-toast-host"></div>
     `;
@@ -102,6 +141,12 @@ function renderShell() {
         if (action === "logout") api.logout();
         if (event.target.closest(".admin-menu-button")) {
             document.body.classList.toggle("admin-sidebar-collapsed");
+            const collapsed = document.body.classList.contains("admin-sidebar-collapsed");
+            event.target.closest(".admin-menu-button").setAttribute("aria-expanded", String(!collapsed));
+        }
+        if (event.target.closest(".admin-sidebar-scrim")) document.body.classList.add("admin-sidebar-collapsed");
+        if (event.target.closest(".admin-nav-link") && window.matchMedia("(max-width: 820px)").matches) {
+            document.body.classList.add("admin-sidebar-collapsed");
         }
     });
 }

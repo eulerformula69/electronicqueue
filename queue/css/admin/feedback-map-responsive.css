@@ -78,9 +78,33 @@ body.admin-page .admin-map-host .map-editor {
     }
 
     body.admin-page .admin-sidebar {
-        position: static;
-        height: auto;
-        min-height: auto;
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 40;
+        width: min(300px, 86vw);
+        height: 100dvh;
+        min-height: 0;
+        transform: translateX(0);
+        transition: transform 220ms cubic-bezier(.2, .8, .2, 1);
+        box-shadow: 18px 0 50px rgba(0, 0, 0, .18);
+    }
+
+    body.admin-page.admin-sidebar-collapsed .admin-sidebar {
+        transform: translateX(-105%);
+    }
+
+    body.admin-page .admin-sidebar-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: block;
+        border: 0;
+        background: rgba(17, 28, 24, .34);
+        backdrop-filter: blur(2px);
+    }
+
+    body.admin-page.admin-sidebar-collapsed .admin-sidebar-scrim {
+        display: none;
     }
 
     body.admin-page .admin-main {
@@ -89,8 +113,7 @@ body.admin-page .admin-map-host .map-editor {
     }
 
     body.admin-page .admin-nav {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
     }
 
     body.admin-page .admin-sidebar-user,
