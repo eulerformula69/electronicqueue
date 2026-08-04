@@ -59,13 +59,16 @@ function renderMediaCard(item) {
             ${ready ? `
                 <a class="admin-media-preview" href="${webPath}" target="_blank" rel="noopener" title="Открыть видео в новой вкладке" aria-label="Открыть ${safeFilename} в новой вкладке">
                     <video src="${framePath}" preload="metadata" muted playsinline aria-hidden="true"></video>
+                    <span class="admin-media-preview-status">${ctx.ui.badge(statusText(item, included), statusTone(status, included))}</span>
                     <span class="admin-media-preview-play" aria-hidden="true">${videoPlaceholderIcon}</span>
                 </a>
-            ` : `<div class="admin-media-preview admin-media-preview-disabled">${videoPlaceholderIcon}<span>Кадр появится после обработки</span></div>`}
+            ` : `<div class="admin-media-preview admin-media-preview-disabled">
+                <span class="admin-media-preview-status">${ctx.ui.badge(statusText(item, included), statusTone(status, included))}</span>
+                ${videoPlaceholderIcon}<span>Кадр появится после обработки</span>
+            </div>`}
             <div class="admin-media-details">
                 <div class="admin-media-heading">
                     <strong title="${safeFilename}">${safeFilename}</strong>
-                    ${ctx.ui.badge(statusText(item, included), statusTone(status, included))}
                 </div>
                 <div class="admin-media-meta">
                     <span>${fileType(item.filename)}</span>

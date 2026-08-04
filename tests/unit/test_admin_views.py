@@ -86,9 +86,12 @@ def test_media_view_uses_compact_cards_and_opens_video_in_new_tab():
     assert "Открыть видео в новой вкладке" in source
     assert '<video src="${framePath}" preload="metadata" muted playsinline' in source
     assert 'const framePath = `${webPath}#t=0.1`' in source
+    assert 'class="admin-media-preview-status"' in source
     assert 'data-action="toggle"' in source
     assert "Удалить с сервера" in source
     assert ".admin-media-card" in css
+    assert "repeat(auto-fit, minmax(320px, 1fr))" in css
+    assert "margin-top: auto" in css
 
 
 def test_media_navigation_is_part_of_queue_group():
