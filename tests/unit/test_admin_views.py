@@ -219,6 +219,18 @@ def test_admin_settings_nested_rows_stay_compact_and_save_is_pinned():
     assert "bottom: 24px;" in settings_css
 
 
+def test_admin_shell_has_only_one_vertical_scroll_container():
+    html_source = _read("queue/admin.html")
+    shell_css = _read("queue/css/admin/shell.css")
+    responsive_css = _read("queue/css/admin/feedback-map-responsive.css")
+
+    assert '<html lang="ru" class="admin-document">' in html_source
+    assert "html.admin-document" in shell_css
+    assert "height: 100dvh;" in shell_css
+    assert "overflow-y: hidden;" in responsive_css
+    assert "overflow-y: auto;" in responsive_css
+
+
 def test_board_status_moves_with_ticker_offset():
     board_css = _read("queue/css/board.css")
     media_css = _read("queue/css/board-media/main.css")

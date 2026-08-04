@@ -1,3 +1,8 @@
+html.admin-document {
+    height: 100%;
+    overflow: hidden;
+}
+
 body.admin-page {
     --admin-border: color-mix(in srgb, var(--primary) 12%, transparent);
     --admin-border-strong: color-mix(in srgb, var(--primary) 18%, transparent);
@@ -11,9 +16,9 @@ body.admin-page {
     --admin-sidebar-muted: color-mix(in srgb, var(--card-bg) 82%, transparent);
 
     margin: 0;
-    height: 100vh;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
     overflow-x: hidden;
     overflow-y: hidden;
     background: var(--bg);
@@ -34,7 +39,7 @@ body.admin-page * {
 body.admin-page .admin-shell {
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
-    height: 100vh;
+    height: 100dvh;
     min-height: 0;
     overflow: hidden;
 }
@@ -44,7 +49,7 @@ body.admin-page .admin-sidebar {
     top: 0;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
     background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary) 100%);
     color: var(--card-bg);
     border-right: 1px solid var(--admin-sidebar-line);
@@ -195,7 +200,7 @@ body.admin-page .admin-main {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    height: 100vh;
+    height: 100dvh;
     min-height: 0;
     overflow: hidden;
 }
