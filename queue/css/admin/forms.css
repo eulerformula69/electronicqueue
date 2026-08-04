@@ -176,45 +176,6 @@ body.admin-page .operator-top-row {
     margin-bottom: 14px;
 }
 
-body.admin-page .operator-auto-call-card {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 14px;
-    width: auto;
-    max-width: 100%;
-    padding: 14px 16px;
-}
-
-body.admin-page .operator-auto-call-card > strong {
-    font-size: 16px;
-    line-height: 1;
-}
-
-body.admin-page .operator-auto-call-controls {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-body.admin-page .operator-auto-call-switch,
-body.admin-page .operator-auto-call-delay {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    color: var(--text-main);
-    font-size: 14px;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-body.admin-page .operator-auto-call-delay .admin-input {
-    width: 86px;
-    min-height: 36px;
-}
-
 body.admin-page .operator-add-button {
     min-height: 42px;
 }

@@ -48,6 +48,8 @@ function renderTerminalSection() {
 function renderQueueSection() {
     return `<section class="admin-card admin-form admin-settings-wide">
         <div class="admin-settings-grid">
+        ${ctx.ui.field("Автовызов по умолчанию", ctx.ui.switchField("auto_call_enabled", settings.auto_call_enabled))}
+        ${ctx.ui.field("До автоматического вызова, секунд", ctx.ui.input("auto_call_delay_seconds", settings.auto_call_delay_seconds ?? 60, "type=\"number\" min=\"0\" max=\"600\" step=\"1\""))}
         ${ctx.ui.field("Статус окна при входе оператора", ctx.ui.select("default_operator_status", [
             {value: "online", label: "Онлайн"}, {value: "break", label: "Перерыв"}, {value: "offline", label: "Офлайн"}
         ], settings.default_operator_status))}
@@ -236,6 +238,8 @@ function applyTerminalForm(payload, data) {
 
 function applyQueueForm(payload, data) {
     Object.assign(payload, {
+        auto_call_enabled: Boolean(data.auto_call_enabled),
+        auto_call_delay_seconds: Number(data.auto_call_delay_seconds),
         default_operator_status: data.default_operator_status,
         active_ticket_on_operator_logout: data.active_ticket_on_operator_logout,
         redirect_allow_break: Boolean(data.redirect_allow_break),

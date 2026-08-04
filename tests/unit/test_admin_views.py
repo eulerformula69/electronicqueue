@@ -13,7 +13,7 @@ def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
 
     assert "<td>${operator.id}</td>" in source
     assert 'ctx.ui.sortHeader("ID", "id", sortState)' in source
-    assert '["id", "name", "login", "window"].includes(parsed.key)' in source
+    assert '["id", "name", "login", "window", "auto_call"].includes(parsed.key)' in source
     assert "id: operator.id" in source
     assert "operators.find(item => item.id === Number(button.dataset.id))" in source
 
@@ -44,6 +44,15 @@ def test_service_admin_list_hides_visible_id_but_keeps_data_id():
     assert "admin-service-id" not in source
     assert 'data-service-id="${service.id}"' in source
     assert "draggedServiceId = Number(item.dataset.serviceId)" in source
+
+
+def test_service_statuses_use_clear_russian_labels_with_terminal_context():
+    source = _read("queue/js/admin/views/services.view.js")
+
+    assert '{value: "active", label: "Предоставляется"}' in source
+    assert '{value: "inactive", label: "Не предоставляется"}' in source
+    assert '"Показывается на терминале"' in source
+    assert '"Скрыта на терминале"' in source
 
 
 def test_services_use_separate_short_create_dialogs_without_availability_dashboard():
@@ -228,13 +237,18 @@ def test_settings_view_renders_and_saves_auto_call_settings():
 
     assert 'min=\\"0\\"' in modern_source
     assert 'max=\\"600\\"' in modern_source
-    assert 'min="0"' in legacy_source
-    assert 'max="600"' in legacy_source
-
     assert "validAutoCallDelay" in modern_source
-    assert "setting-auto-call-enabled" in legacy_source
-    assert "setting-auto-call-delay-seconds" in legacy_source
 
+
+def test_global_auto_call_settings_are_in_rules_not_operators():
+    operators_source = _read("queue/js/admin/views/operators.view.js")
+    settings_source = _read("queue/js/admin/views/settings.view.js")
+
+    assert "operator-auto-call-form" not in operators_source
+    assert 'ctx.api.request("/admin/settings")' not in operators_source
+    queue_section = settings_source[settings_source.index("function renderQueueSection"):settings_source.index("function renderBoardSection")]
+    assert 'switchField("auto_call_enabled"' in queue_section
+    assert 'input("auto_call_delay_seconds"' in queue_section
 
 def test_settings_views_do_not_expose_legacy_queue_modes():
     for relative_path in (
@@ -340,6 +354,9 @@ def test_admin_sidebar_is_unbranded_collapsible_and_keeps_desktop_preference():
     assert "admin-sidebar-footer" not in app_source
     sidebar_header = shell_css.split("body.admin-page .admin-sidebar-header", 1)[1].split("}", 1)[0]
     assert "justify-content: center;" in sidebar_header
+    menu_icon = shell_css.split("body.admin-page .admin-menu-button .admin-nav-icon", 1)[1].split("}", 1)[0]
+    assert "left: 50%;" in menu_icon
+    assert "transform: translate(-50%, -50%);" in menu_icon
 
 
 def test_admin_system_routes_follow_operational_order():

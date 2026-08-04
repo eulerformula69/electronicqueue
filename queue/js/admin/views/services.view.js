@@ -5,8 +5,8 @@ let draggedServiceId = null;
 let draggedGroupId = null;
 
 const statusOptions = [
-    {value: "active", label: "active"},
-    {value: "inactive", label: "inactive"}
+    {value: "active", label: "Предоставляется"},
+    {value: "inactive", label: "Не предоставляется"}
 ];
 
 export async function mount(context) {
@@ -88,12 +88,14 @@ function renderGroupSections() {
 }
 
 function renderServiceCard(service) {
+    const availabilityLabel = service.status === "active" ? "Предоставляется" : "Не предоставляется";
+    const terminalLabel = service.visible_on_terminal ? "Показывается на терминале" : "Скрыта на терминале";
     return `
         <div class="admin-service-item" draggable="true" data-service-id="${service.id}">
             <span class="admin-drag-handle" title="Перетащить">☰</span>
             <strong>${ctx.ui.escapeHtml(service.name)}</strong>
-            ${ctx.ui.badge(service.status, service.status === "active" ? "success" : "neutral")}
-            ${service.visible_on_terminal ? ctx.ui.badge("Показывается", "success") : ctx.ui.badge("Скрыта", "warning")}
+            ${ctx.ui.badge(availabilityLabel, service.status === "active" ? "success" : "neutral")}
+            ${ctx.ui.badge(terminalLabel, service.visible_on_terminal ? "success" : "warning")}
             <span>${service.operator_choice_enabled ? "Выбор: да" : "Выбор: нет"}</span>
             <span class="admin-service-actions">${ctx.ui.button("Редактировать", {variant: "link", action: "edit", id: service.id})}</span>
         </div>
