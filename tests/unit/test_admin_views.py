@@ -165,6 +165,9 @@ def test_media_upload_uses_single_entry_button_and_dialog():
     assert 'dialog.className = "admin-media-dialog"' in source
     assert 'name="display_name"' in source
     assert 'name="process_video" checked' in source
+    assert '<option value="custom">Свои параметры — для опытных</option>' in source
+    assert 'name="custom_ffmpeg_command"' in source
+    assert 'ffmpeg -i "{input}" "{output}"' in source
     assert "data-upload-result" in source
 
 

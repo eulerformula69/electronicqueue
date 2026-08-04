@@ -116,7 +116,12 @@ function openUploadDialog() {
                     <option value="normal" selected>Обычное — баланс качества и размера</option>
                     <option value="high">Высокое — крупнее файл</option>
                     <option value="compact">Компактное — меньше размер</option>
+                    <option value="custom">Свои параметры — для опытных</option>
                 </select>
+            </label>
+            <label class="admin-field admin-media-custom-command" hidden><span>Командная строка FFmpeg</span>
+                <textarea class="admin-input admin-textarea" name="custom_ffmpeg_command" rows="3" spellcheck="false">ffmpeg -i "{input}" "{output}"</textarea>
+                <small>Оставьте {input} и {output}: система подставит безопасные пути к файлам.</small>
             </label>
             <div class="admin-media-result" data-upload-result>Выберите файл — здесь появится ожидаемый результат.</div>
             <div class="admin-media-dialog-actions">
@@ -133,9 +138,13 @@ function openUploadDialog() {
     dialog.querySelector("[name=file]").onchange = event => updateUploadPreview(event.target, dialog);
     dialog.querySelector("[name=process_video]").onchange = event => {
         dialog.querySelector("[name=compression_mode]").disabled = !event.target.checked;
+        updateCustomCommandVisibility(dialog);
         updateExpectedResult(dialog);
     };
-    dialog.querySelector("[name=compression_mode]").onchange = () => updateExpectedResult(dialog);
+    dialog.querySelector("[name=compression_mode]").onchange = () => {
+        updateCustomCommandVisibility(dialog);
+        updateExpectedResult(dialog);
+    };
     dialog.onclick = event => {
         if (event.target === dialog) dialog.close();
         const button = event.target.closest('[data-action="upload"]');
@@ -159,7 +168,14 @@ function updateExpectedResult(dialog) {
     if (!file) return;
     const processed = form.elements.process_video.checked;
     const quality = form.elements.compression_mode.selectedOptions[0]?.text.split(" — ")[0];
-    output.innerHTML = `<strong>Исходный файл:</strong> ${ctx.ui.escapeHtml(file.name)} · ${formatBytes(file.size)}<br><strong>Результат:</strong> ${processed ? `MP4 · ${ctx.ui.escapeHtml(quality)} качество` : "исходный файл без изменений"}`;
+    const custom = form.elements.compression_mode.value === "custom";
+    output.innerHTML = `<strong>Исходный файл:</strong> ${ctx.ui.escapeHtml(file.name)} · ${formatBytes(file.size)}<br><strong>Результат:</strong> ${processed ? (custom ? "MP4 · свои параметры FFmpeg" : `MP4 · ${ctx.ui.escapeHtml(quality)} качество`) : "исходный файл без изменений"}`;
+}
+
+function updateCustomCommandVisibility(dialog) {
+    const customField = dialog.querySelector(".admin-media-custom-command");
+    const form = dialog.querySelector("form");
+    customField.hidden = !form.elements.process_video.checked || form.elements.compression_mode.value !== "custom";
 }
 
 function fileType(filename) {
@@ -199,6 +215,7 @@ async function upload(dialog) {
     payload.append("file", uploadFile);
     payload.append("process_video", form.elements.process_video.checked ? "true" : "false");
     payload.append("compression_mode", form.elements.compression_mode.value || "normal");
+    payload.append("custom_ffmpeg_command", form.elements.custom_ffmpeg_command.value.trim());
     status.textContent = "Загрузка…";
     form.querySelector('[data-action="upload"]').disabled = true;
 

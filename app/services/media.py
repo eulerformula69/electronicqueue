@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import secrets
+import shlex
 import shutil
 import subprocess
 from datetime import datetime
@@ -41,6 +42,9 @@ MEDIA_TRANSCODE_MODES = {
         "preset": MEDIA_TRANSCODE_PRESET,
         "max_width": 1280,
         "fps": 30,
+    },
+    "custom": {
+        "label": "Свои параметры",
     },
 }
 
@@ -129,6 +133,37 @@ def normalize_compression_mode(mode: str | None) -> str:
     return normalized
 
 
+def parse_custom_ffmpeg_command(command: str | None) -> list[str]:
+    template = (command or "").strip()
+    if not template:
+        raise HTTPException(status_code=400, detail="Укажите команду FFmpeg")
+    if len(template) > 4000 or "\x00" in template:
+        raise HTTPException(status_code=400, detail="Команда FFmpeg слишком длинная")
+
+    try:
+        tokens = shlex.split(template, posix=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Некорректные кавычки в команде: {exc}") from exc
+
+    if not tokens or FilePath(tokens[0]).name.lower() not in {"ffmpeg", "ffmpeg.exe"}:
+        raise HTTPException(status_code=400, detail="Команда должна начинаться с ffmpeg")
+
+    arguments = tokens[1:]
+    if arguments.count("{input}") != 1 or arguments.count("{output}") != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Команда должна содержать по одному {input} и {output}",
+        )
+    if arguments.count("-i") != 1:
+        raise HTTPException(status_code=400, detail="В команде должен быть один входной файл (-i)")
+    input_index = arguments.index("-i")
+    if input_index + 1 >= len(arguments) or arguments[input_index + 1] != "{input}":
+        raise HTTPException(status_code=400, detail="После -i должен стоять {input}")
+    if arguments[-1] != "{output}":
+        raise HTTPException(status_code=400, detail="{output} должен быть последним аргументом")
+    return arguments
+
+
 def _build_unique_output_filename(filename: str) -> str:
     safe_filename = sanitize_media_filename(filename)
     stem = FilePath(safe_filename).stem.strip() or "video"
@@ -166,10 +201,13 @@ async def enqueue_media_processing(
     source_path: str,
     original_filename: str,
     compression_mode: str = "normal",
+    custom_ffmpeg_command: str = "",
 ) -> dict:
     _ensure_media_dirs()
     safe_filename = sanitize_media_filename(original_filename)
     mode = normalize_compression_mode(compression_mode)
+    if mode == "custom":
+        parse_custom_ffmpeg_command(custom_ffmpeg_command)
     job_id = secrets.token_hex(8)
     source = FilePath(source_path)
     output_filename = _build_unique_output_filename(safe_filename)
@@ -183,6 +221,7 @@ async def enqueue_media_processing(
         "output_path": str(MEDIA_DIR / output_filename),
         "compression_mode": mode,
         "compression_label": MEDIA_TRANSCODE_MODES[mode]["label"],
+        "custom_ffmpeg_command": custom_ffmpeg_command.strip() if mode == "custom" else "",
         "error": "",
         "created_at": _utc_now(),
         "updated_at": _utc_now(),
@@ -306,22 +345,31 @@ async def _process_media_job(job_id: str) -> None:
     settings = MEDIA_TRANSCODE_MODES[mode]
     job["compression_mode"] = mode
     job["compression_label"] = settings["label"]
-    scale_filter = f"scale='min({settings['max_width']},iw)':-2,fps={settings['fps']}"
-    command = [
-        FFMPEG_PATH, "-y",
-        "-i", str(source_path),
-        "-vf", scale_filter,
-        "-c:v", "libx264",
-        "-preset", settings["preset"],
-        "-crf", settings["crf"],
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-    ]
-    if MEDIA_TRANSCODE_KEEP_AUDIO:
-        command.extend(["-c:a", "aac", "-b:a", "128k"])
+    if mode == "custom":
+        custom_arguments = parse_custom_ffmpeg_command(job.get("custom_ffmpeg_command"))
+        command = [FFMPEG_PATH, "-y", *[
+            str(source_path) if argument == "{input}"
+            else str(temp_output) if argument == "{output}"
+            else argument
+            for argument in custom_arguments
+        ]]
     else:
-        command.append("-an")
-    command.append(str(temp_output))
+        scale_filter = f"scale='min({settings['max_width']},iw)':-2,fps={settings['fps']}"
+        command = [
+            FFMPEG_PATH, "-y",
+            "-i", str(source_path),
+            "-vf", scale_filter,
+            "-c:v", "libx264",
+            "-preset", settings["preset"],
+            "-crf", settings["crf"],
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+        ]
+        if MEDIA_TRANSCODE_KEEP_AUDIO:
+            command.extend(["-c:a", "aac", "-b:a", "128k"])
+        else:
+            command.append("-an")
+        command.append(str(temp_output))
 
     try:
         process = await asyncio.to_thread(

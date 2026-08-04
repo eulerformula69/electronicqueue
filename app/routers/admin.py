@@ -38,7 +38,8 @@ from app.schemas import (
 from app.security import get_password_hash, verify_password
 from app.services.media import (
     build_media_file_path, enqueue_media_processing, get_media_job_index,
-    list_media_jobs, retry_media_job, sanitize_media_filename,
+    list_media_jobs, normalize_compression_mode, parse_custom_ffmpeg_command,
+    retry_media_job, sanitize_media_filename,
     save_upload_direct_to_media, save_upload_to_originals,
 )
 from app.services.operators import update_services_status_for_window
@@ -131,6 +132,7 @@ async def upload_media(
     file: UploadFile = File(...),
     process_video: bool = Form(True),
     compression_mode: str = Form("normal"),
+    custom_ffmpeg_command: str = Form(""),
     admin: Admin = Depends(verify_admin_session)
     ):
     safe_filename = sanitize_media_filename(file.filename)
@@ -154,8 +156,17 @@ async def upload_media(
             "job_id": None,
         }
 
+    mode = normalize_compression_mode(compression_mode)
+    if mode == "custom":
+        parse_custom_ffmpeg_command(custom_ffmpeg_command)
+
     source_path = save_upload_to_originals(file.file, safe_filename)
-    job = await enqueue_media_processing(source_path, safe_filename, compression_mode)
+    job = await enqueue_media_processing(
+        source_path,
+        safe_filename,
+        mode,
+        custom_ffmpeg_command,
+    )
     return {
         "status": "processing",
         "filename": job["filename"],
