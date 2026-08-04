@@ -104,6 +104,16 @@ def test_media_navigation_is_part_of_queue_group():
     assert 'group: "Контент"' not in source
 
 
+def test_media_playlist_toggle_updates_only_its_card():
+    source = _read("queue/js/admin/views/media.view.js")
+    toggle_source = source[source.index("async function toggle(input)"):source.index("async function deleteFile")]
+
+    assert "updatePlaylistCard(card, checked)" in toggle_source
+    assert 'card.classList.toggle("admin-media-card-inactive", !included)' in toggle_source
+    assert "await render()" not in toggle_source
+    assert "input.checked = !checked" in toggle_source
+
+
 def test_media_upload_uses_single_entry_button_and_dialog():
     source = _read("queue/js/admin/views/media.view.js")
 

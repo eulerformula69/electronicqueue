@@ -218,10 +218,39 @@ async function upload(dialog) {
     }
 }
 
-async function toggle(filename, checked) {
+async function toggle(input) {
+    const filename = input.dataset.id;
+    const checked = input.checked;
     const path = `/queue/media/${filename}`;
-    await ctx.api.json("/admin/media/playlist", {method: "POST", body: {path, action: checked ? "add" : "delete"}});
-    await render();
+    const card = input.closest(".admin-media-card");
+
+    updatePlaylistCard(card, checked);
+    input.disabled = true;
+    card?.setAttribute("aria-busy", "true");
+
+    try {
+        await ctx.api.json("/admin/media/playlist", {
+            method: "POST",
+            body: {path, action: checked ? "add" : "delete"}
+        });
+        mediaPlaylist = checked
+            ? [...new Set([...mediaPlaylist, path])]
+            : mediaPlaylist.filter(item => item !== path);
+    } catch (error) {
+        input.checked = !checked;
+        updatePlaylistCard(card, !checked);
+        ctx.toast(error.message || "Не удалось изменить плейлист", "error");
+    } finally {
+        input.disabled = false;
+        card?.removeAttribute("aria-busy");
+    }
+}
+
+function updatePlaylistCard(card, included) {
+    if (!card) return;
+    card.classList.toggle("admin-media-card-inactive", !included);
+    const label = card.querySelector(".admin-media-playlist-switch > span");
+    if (label) label.textContent = included ? "В плейлисте" : "Не в плейлисте";
 }
 
 async function deleteFile(filename) {
@@ -239,5 +268,5 @@ async function retry(jobId) {
 
 document.addEventListener("change", event => {
     const toggleInput = event.target.closest('.admin-media-playlist-switch input[data-action="toggle"]');
-    if (toggleInput && location.hash === "#media") toggle(toggleInput.dataset.id, toggleInput.checked);
+    if (toggleInput && location.hash === "#media") toggle(toggleInput);
 });
