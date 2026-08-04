@@ -52,8 +52,8 @@ const routes = {
         mount: mountMedia
     },
     queueSettings: {
-        label: "Очередь",
-        description: "Правила",
+        label: "Правила",
+        description: "Правила работы операторов и обработки талонов",
         group: "Система",
         icon: "queue",
         mount: context => mountSettings(context, "queue")

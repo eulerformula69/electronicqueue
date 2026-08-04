@@ -309,7 +309,8 @@ def test_admin_system_routes_follow_operational_order():
         app_source.index("stats:"),
     ]
     assert route_positions == sorted(route_positions)
-    assert 'label: "Очередь"' in app_source
+    assert 'label: "Правила"' in app_source
+    assert 'description: "Правила работы операторов и обработки талонов"' in app_source
 
 
 def test_admin_statistics_embed_grafana_with_fallback_actions():
