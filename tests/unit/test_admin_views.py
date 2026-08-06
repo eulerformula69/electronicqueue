@@ -26,6 +26,13 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert "grid-template-columns: 56px 160px 124px minmax(240px, 1fr) 330px 280px;" in css_source
     assert "status-break" in css_source
     assert "@media (max-width: 720px)" in css_source
+    assert 'viewButton("Рабочие места", "windows")' in view_source
+    assert 'viewButton("Операторы", "operators")' in view_source
+    assert 'operatorSortButton("ID", "id")' in view_source
+    assert 'operatorSortButton("Имя", "name")' in view_source
+    assert 'operatorSortButton("Логин", "login")' in view_source
+    assert 'operatorSortButton("Рабочее место", "window")' in view_source
+    assert 'class="workplace-id">${operator.id}</strong>' in view_source
 
 
 def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():

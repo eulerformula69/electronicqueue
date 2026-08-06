@@ -4,7 +4,11 @@ let operators = [];
 let services = [];
 let windowServices = new Map();
 let sortState = {key: "id", direction: "asc"};
+let operatorSortState = {key: "id", direction: "asc"};
+let viewMode = "windows";
 const sortStorageKey = "admin.windows.sort";
+const operatorSortStorageKey = "admin.operators.sort";
+const viewStorageKey = "admin.workplaces.view";
 
 const statuses = [
     {value: "online", label: "Работает"},
@@ -21,6 +25,8 @@ const autoCallModes = [
 export async function mount(context) {
     ctx = context;
     sortState = loadSortState(sortState);
+    operatorSortState = loadOperatorSortState(operatorSortState);
+    viewMode = localStorage.getItem(viewStorageKey) === "operators" ? "operators" : "windows";
     await load();
     render();
 }
@@ -52,10 +58,23 @@ function render() {
             ${summaryCard("Без назначения", freeOperators.length, freeOperators.length ? "warning" : "neutral")}
         </div>
         <div class="workplaces-toolbar">
-            <p>Оператор назначается на место, но остаётся отдельной учётной записью.</p>
+            <div class="workplaces-view-switch" role="group" aria-label="Представление раздела">
+                ${viewButton("Рабочие места", "windows")}${viewButton("Операторы", "operators")}
+            </div>
             <div>${ctx.ui.button("Добавить оператора", {action: "create-operator"})}${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create-window"})}</div>
         </div>
-        <section class="workplaces-section" aria-labelledby="workplaces-title">
+        ${viewMode === "windows" ? renderWindowsView(freeOperators) : renderOperatorsView()}`;
+    ctx.view.onclick = handleClick;
+    ctx.view.onchange = handleChange;
+}
+
+function viewButton(label, mode) {
+    const active = viewMode === mode;
+    return `<button type="button" class="workplaces-view-button${active ? " is-active" : ""}" data-action="switch-view" data-view="${mode}" aria-pressed="${active}">${label}</button>`;
+}
+
+function renderWindowsView(freeOperators) {
+    return `<section class="workplaces-section" aria-labelledby="workplaces-title">
             <h2 id="workplaces-title">Рабочие места</h2>
             ${windows.length ? `<div class="workplaces-columns" aria-label="Сортировка рабочих мест">
                 ${sortButton("ID", "id")}${sortButton("Название", "name")}${sortButton("Статус", "status")}${sortButton("Услуги", "services")}<span>Оператор</span><span>Действия</span>
@@ -66,8 +85,16 @@ function render() {
             <div class="workplaces-section-heading"><h2 id="unassigned-title">Операторы без назначения</h2>${ctx.ui.badge(String(freeOperators.length), freeOperators.length ? "warning" : "neutral")}</div>
             <div class="unassigned-operators">${freeOperators.length ? freeOperators.sort(byName).map(renderFreeOperator).join("") : `<p class="workplaces-empty-inline">Все операторы назначены на рабочие места.</p>`}</div>
         </section>`;
-    ctx.view.onclick = handleClick;
-    ctx.view.onchange = handleChange;
+}
+
+function renderOperatorsView() {
+    return `<section class="workplaces-section" aria-labelledby="operators-title">
+        <h2 id="operators-title">Операторы</h2>
+        ${operators.length ? `<div class="operators-columns" aria-label="Сортировка операторов">
+            ${operatorSortButton("ID", "id")}${operatorSortButton("Имя", "name")}${operatorSortButton("Логин", "login")}${operatorSortButton("Рабочее место", "window")}<span>Автовызов</span><span>Действия</span>
+        </div>` : ""}
+        <div class="operators-list">${operators.length ? sortOperators(operators).map(renderOperator).join("") : emptyState("Операторов пока нет")}</div>
+    </section>`;
 }
 
 function summaryCard(label, value, tone = "neutral") {
@@ -78,6 +105,12 @@ function sortButton(label, key) {
     const active = sortState.key === key;
     const arrow = active ? (sortState.direction === "asc" ? "↑" : "↓") : "";
     return `<button class="workplaces-sort${active ? " is-active" : ""}" type="button" data-action="sort" data-sort-key="${key}" aria-label="Сортировать: ${label}">${label}<span aria-hidden="true">${arrow}</span></button>`;
+}
+
+function operatorSortButton(label, key) {
+    const active = operatorSortState.key === key;
+    const arrow = active ? (operatorSortState.direction === "asc" ? "↑" : "↓") : "";
+    return `<button class="workplaces-sort${active ? " is-active" : ""}" type="button" data-action="sort-operator" data-sort-key="${key}" aria-label="Сортировать операторов: ${label}">${label}<span aria-hidden="true">${arrow}</span></button>`;
 }
 
 function renderWindow(windowItem) {
@@ -96,6 +129,18 @@ function renderWindow(windowItem) {
 
 function renderFreeOperator(operator) {
     return `<article class="unassigned-operator-card"><div><strong>${ctx.ui.escapeHtml(operator.name)}</strong><small>${ctx.ui.escapeHtml(operator.login || "")}</small></div>${ctx.ui.button("Изменить", {variant: "link", action: "edit-operator", id: operator.id})}</article>`;
+}
+
+function renderOperator(operator) {
+    const windowItem = windows.find(item => item.id === operator.window_id);
+    return `<article class="operator-card">
+        <strong class="workplace-id">${operator.id}</strong>
+        <strong class="operator-card-name">${ctx.ui.escapeHtml(operator.name)}</strong>
+        <span>${ctx.ui.escapeHtml(operator.login || "—")}</span>
+        <span>${ctx.ui.escapeHtml(windowItem?.name || "Не назначено")}</span>
+        <span>${ctx.ui.escapeHtml(autoCallModeLabel(operator.auto_call_mode))}</span>
+        <div class="workplace-actions">${ctx.ui.button("Изменить", {variant: "link", action: "edit-operator", id: operator.id})}</div>
+    </article>`;
 }
 
 function emptyState(message) {
@@ -121,6 +166,20 @@ function sortWindows(items) {
     });
 }
 
+function sortOperators(items) {
+    return [...items].sort((a, b) => {
+        const result = compareValues(operatorSortValue(a), operatorSortValue(b));
+        return operatorSortState.direction === "asc" ? result : -result;
+    });
+}
+
+function operatorSortValue(operator) {
+    if (operatorSortState.key === "id") return operator.id ?? 0;
+    if (operatorSortState.key === "login") return operator.login || "";
+    if (operatorSortState.key === "window") return windows.find(item => item.id === operator.window_id)?.name || "";
+    return operator.name || "";
+}
+
 function sortValue(windowItem) {
     if (sortState.key === "id") return windowItem.id ?? 0;
     if (sortState.key === "status") return statusLabel(windowItem.status);
@@ -138,12 +197,29 @@ function setSort(key) {
     try { localStorage.setItem(sortStorageKey, JSON.stringify(sortState)); } catch (error) { /* Current-page sorting still works. */ }
 }
 
+function setOperatorSort(key) {
+    operatorSortState = {key, direction: operatorSortState.key === key && operatorSortState.direction === "asc" ? "desc" : "asc"};
+    try { localStorage.setItem(operatorSortStorageKey, JSON.stringify(operatorSortState)); } catch (error) { /* Current-page sorting still works. */ }
+}
+
 function loadSortState(fallback) {
     try {
         const saved = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
         if (saved && ["id", "name", "status", "services"].includes(saved.key) && ["asc", "desc"].includes(saved.direction)) return saved;
     } catch (error) { return fallback; }
     return fallback;
+}
+
+function loadOperatorSortState(fallback) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(operatorSortStorageKey) || "null");
+        if (saved && ["id", "name", "login", "window"].includes(saved.key) && ["asc", "desc"].includes(saved.direction)) return saved;
+    } catch (error) { return fallback; }
+    return fallback;
+}
+
+function autoCallModeLabel(mode) {
+    return autoCallModes.find(item => item.value === mode)?.label || autoCallModes[0].label;
 }
 
 function statusLabel(status) {
@@ -163,8 +239,19 @@ async function handleChange(event) {
 async function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button || button.matches("select")) return;
+    if (button.dataset.action === "switch-view") {
+        viewMode = button.dataset.view;
+        try { localStorage.setItem(viewStorageKey, viewMode); } catch (error) { /* Current-page view still works. */ }
+        render();
+        return;
+    }
     if (button.dataset.action === "sort") {
         setSort(button.dataset.sortKey);
+        render();
+        return;
+    }
+    if (button.dataset.action === "sort-operator") {
+        setOperatorSort(button.dataset.sortKey);
         render();
         return;
     }
