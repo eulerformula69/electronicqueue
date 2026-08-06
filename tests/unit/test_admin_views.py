@@ -8,6 +8,24 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def test_workplaces_and_operators_share_one_operational_screen():
+    app_source = _read("queue/js/admin/app.js")
+    view_source = _read("queue/js/admin/views/windows.view.js")
+    css_source = _read("queue/css/admin/workplaces.css")
+
+    assert 'label: "Рабочие места и операторы"' in app_source
+    assert 'import { mount as mountOperators }' not in app_source
+    assert 'operators: {' not in app_source
+    assert 'operators: "windows"' in app_source
+    assert 'ctx.api.request("/operators/")' in view_source
+    assert 'ctx.api.json(`/windows/${windowId}/operator`' in view_source
+    assert "Операторы без назначения" in view_source
+    assert "Выберите оператора" in view_source
+    assert 'action: "unassign"' in view_source
+    assert ".workplace-card" in css_source
+    assert "@media (max-width: 720px)" in css_source
+
+
 def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
     source = _read("queue/js/admin/views/operators.view.js")
 
@@ -18,14 +36,13 @@ def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
     assert "operators.find(item => item.id === Number(button.dataset.id))" in source
 
 
-def test_window_admin_table_shows_visible_id_and_keeps_internal_id():
+def test_workplace_cards_keep_internal_ids_without_showing_technical_ids():
     source = _read("queue/js/admin/views/windows.view.js")
 
-    assert "<td>${windowItem.id}</td>" in source
-    assert 'ctx.ui.sortHeader("ID", "id", sortState)' in source
-    assert '["id", "name", "status", "services"].includes(parsed.key)' in source
-    assert "id: windowItem.id" in source
-    assert "windows.find(item => item.id === Number(button.dataset.id))" in source
+    assert "<td>${windowItem.id}</td>" not in source
+    assert 'data-window-id="${windowItem.id}"' in source
+    assert 'action: "edit-window", id: windowItem.id' in source
+    assert "windows.find(item => item.id === id)" in source
 
 
 def test_window_admin_loads_hidden_terminal_services_for_internal_assignment():
@@ -96,25 +113,21 @@ def test_service_group_drag_handle_is_centered_beside_name_and_count():
 
 
 def test_admin_views_use_click_sorting_with_direction_toggle():
-    for path in [
-        "queue/js/admin/views/operators.view.js",
-        "queue/js/admin/views/windows.view.js",
-    ]:
-        source = _read(path)
-        assert 'button.dataset.action === "sort"' in source
-        assert 'sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"' in source
+    source = _read("queue/js/admin/views/operators.view.js")
+    assert 'button.dataset.action === "sort"' in source
+    assert 'sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"' in source
+
+    workplaces = _read("queue/js/admin/views/windows.view.js")
+    assert ".sort(byName)" in workplaces
+    assert 'data-action="sort"' not in workplaces
 
 
 def test_admin_views_persist_sort_state():
-    for path, key in [
-        ("queue/js/admin/views/operators.view.js", "admin.operators.sort"),
-        ("queue/js/admin/views/windows.view.js", "admin.windows.sort"),
-    ]:
-        source = _read(path)
-        assert f'const sortStorageKey = "{key}"' in source
-        assert "sortState = loadSortState(sortState)" in source
-        assert "saveSortState(sortState)" in source
-        assert "localStorage.setItem(sortStorageKey, JSON.stringify(state))" in source
+    source = _read("queue/js/admin/views/operators.view.js")
+    assert 'const sortStorageKey = "admin.operators.sort"' in source
+    assert "sortState = loadSortState(sortState)" in source
+    assert "saveSortState(sortState)" in source
+    assert "localStorage.setItem(sortStorageKey, JSON.stringify(state))" in source
 
 
 def test_table_helper_renders_sortable_headers():

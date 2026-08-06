@@ -298,8 +298,8 @@ def test_operator_sees_notice_after_server_calls_client():
 
 
 def test_admin_labels_delay_as_server_call_countdown():
-    modern = open("queue/js/admin/views/operators.view.js", encoding="utf-8").read()
+    modern = open("queue/js/admin/views/settings.view.js", encoding="utf-8").read()
     legacy = open("queue/js/admin/operators.js", encoding="utf-8").read()
 
-    assert "До системного вызова, сек." in modern
+    assert "До автоматического вызова, секунд" in modern
     assert "До системного вызова, сек." in legacy

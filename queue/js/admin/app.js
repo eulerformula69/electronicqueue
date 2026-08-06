@@ -2,7 +2,6 @@ import * as api from "./api.js";
 import * as ui from "./ui.js";
 import { mount as mountServices } from "./views/services.view.js";
 import { mount as mountWindows } from "./views/windows.view.js";
-import { mount as mountOperators } from "./views/operators.view.js";
 import { mount as mountMedia } from "./views/media.view.js";
 import { mount as mountSettings } from "./views/settings.view.js";
 import { mount as mountStats, unmount as unmountStats } from "./views/stats.view.js";
@@ -17,18 +16,11 @@ const routes = {
         mount: mountServices
     },
     windows: {
-        label: "Рабочие места",
-        description: "Рабочие места, статусы и назначенные услуги",
+        label: "Рабочие места и операторы",
+        description: "Назначения операторов, доступность мест и услуги",
         group: "Очередь",
         icon: "windows",
         mount: mountWindows
-    },
-    operators: {
-        label: "Операторы",
-        description: "Доступ операторов и привязка к рабочим местам",
-        group: "Очередь",
-        icon: "operators",
-        mount: mountOperators
     },
     terminalSettings: {
         label: "Терминал",
@@ -221,7 +213,8 @@ function closeDrawer() {
 
 async function navigate() {
     const routeKey = (location.hash || "#services").slice(1);
-    const normalizedRouteKey = routeKey === "settings" ? "terminalSettings" : routeKey;
+    const routeAliases = {settings: "terminalSettings", operators: "windows"};
+    const normalizedRouteKey = routeAliases[routeKey] || routeKey;
     const key = routes[normalizedRouteKey] ? normalizedRouteKey : "services";
     const route = routes[key];
 
