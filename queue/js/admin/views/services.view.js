@@ -61,7 +61,7 @@ function renderGroupSections() {
     return sections.map((section, index) => `
         <article class="admin-service-group" data-group-id="${section.id}">
             <header class="admin-service-group-header">
-                <div class="admin-service-group-heading">
+                <div class="admin-service-group-heading${section.isSystem ? " admin-service-group-heading-system" : ""}">
                     <h2>
                         ${section.isSystem ? "" : `<span class="admin-group-drag-handle" draggable="true"
                             data-drag-group-id="${section.id}" title="Перетащить группу" aria-label="Перетащить группу">☰</span>`}
