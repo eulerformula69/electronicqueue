@@ -81,14 +81,18 @@ def test_service_groups_support_drag_reordering_and_accessible_button_fallback()
     assert drag_over.index("event.preventDefault()") < drag_over.index("target === dragged")
 
 
-def test_service_group_count_stays_below_and_aligns_with_name():
+def test_service_group_drag_handle_is_centered_beside_name_and_count():
     source = _read("queue/js/admin/views/services.view.js")
     css = _read("queue/css/admin/services.css")
 
-    assert 'class="admin-service-group-heading${section.isSystem' in source
+    assert 'class="admin-service-group-heading"' in source
+    assert 'class="admin-service-group-copy"' in source
+    heading_styles = css.split("body.admin-page .admin-service-group-heading", 1)[1].split("}", 1)[0]
+    assert "display: flex;" in heading_styles
+    assert "align-items: center;" in heading_styles
     count_styles = css.split("body.admin-page .admin-service-group-count", 1)[1].split("}", 1)[0]
     assert "display: block;" in count_styles
-    assert "margin: 4px 0 0 34px;" in count_styles
+    assert "margin: 4px 0 0;" in count_styles
 
 
 def test_admin_views_use_click_sorting_with_direction_toggle():

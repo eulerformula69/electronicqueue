@@ -48,6 +48,13 @@ body.admin-page .admin-service-group-header h2 {
 }
 
 body.admin-page .admin-service-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+body.admin-page .admin-service-group-copy {
     min-width: 0;
 }
 
@@ -68,14 +75,10 @@ body.admin-page .admin-service-group.dragging {
 
 body.admin-page .admin-service-group-count {
     display: block;
-    margin: 4px 0 0 34px;
+    margin: 4px 0 0;
     color: var(--text-muted);
     font-size: 13px;
     white-space: nowrap;
-}
-
-body.admin-page .admin-service-group-heading-system .admin-service-group-count {
-    margin-left: 0;
 }
 
 body.admin-page .admin-service-group-actions {

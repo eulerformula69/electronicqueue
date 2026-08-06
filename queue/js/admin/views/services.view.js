@@ -61,13 +61,13 @@ function renderGroupSections() {
     return sections.map((section, index) => `
         <article class="admin-service-group" data-group-id="${section.id}">
             <header class="admin-service-group-header">
-                <div class="admin-service-group-heading${section.isSystem ? " admin-service-group-heading-system" : ""}">
-                    <h2>
-                        ${section.isSystem ? "" : `<span class="admin-group-drag-handle" draggable="true"
-                            data-drag-group-id="${section.id}" title="Перетащить группу" aria-label="Перетащить группу">☰</span>`}
-                        ${ctx.ui.escapeHtml(section.name)}
-                    </h2>
-                    <span class="admin-service-group-count">${section.items.length} услуг</span>
+                <div class="admin-service-group-heading">
+                    ${section.isSystem ? "" : `<span class="admin-group-drag-handle" draggable="true"
+                        data-drag-group-id="${section.id}" title="Перетащить группу" aria-label="Перетащить группу">☰</span>`}
+                    <div class="admin-service-group-copy">
+                        <h2>${ctx.ui.escapeHtml(section.name)}</h2>
+                        <span class="admin-service-group-count">${section.items.length} услуг</span>
+                    </div>
                 </div>
                 ${section.isSystem ? "" : `
                     <div class="admin-service-group-actions">
