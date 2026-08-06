@@ -23,6 +23,8 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert "Выберите оператора" in view_source
     assert 'action: "unassign"' in view_source
     assert ".workplace-card" in css_source
+    assert "grid-template-columns: 260px minmax(260px, 1fr) 360px 280px;" in css_source
+    assert "status-break" in css_source
     assert "@media (max-width: 720px)" in css_source
 
 

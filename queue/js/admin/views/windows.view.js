@@ -72,7 +72,7 @@ function renderWindow(windowItem) {
     const operator = operatorForWindow(windowItem.id);
     const linked = windowServices.get(windowItem.id) || [];
     const serviceNames = linked.map(link => services.find(service => service.id === link.service_id)?.name).filter(Boolean);
-    return `<article class="workplace-card ${operator ? "is-occupied" : "is-free"}">
+    return `<article class="workplace-card ${operator ? "is-occupied" : "is-free"} status-${ctx.ui.escapeHtml(windowItem.status)}">
         <div class="workplace-identity"><span class="workplace-status-dot" aria-hidden="true"></span><div><h3>${ctx.ui.escapeHtml(windowItem.name)}</h3><p>${ctx.ui.badge(statusLabel(windowItem.status), statusTone(windowItem.status))}</p></div></div>
         <div class="workplace-services"><span>Услуги</span><strong>${serviceNames.length ? ctx.ui.escapeHtml(serviceNames.join(", ")) : "Не назначены"}</strong></div>
         <div class="workplace-operator"><span>Оператор</span>${operator ? `<strong>${ctx.ui.escapeHtml(operator.name)}</strong><small>${ctx.ui.escapeHtml(operator.login || "")}</small>` : `<select class="admin-input workplace-assign-select" data-action="assign" data-window-id="${windowItem.id}" aria-label="Назначить оператора на ${ctx.ui.escapeHtml(windowItem.name)}"><option value="">Выберите оператора</option>${freeOperatorOptions()}</select>`}</div>
