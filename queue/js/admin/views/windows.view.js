@@ -64,21 +64,21 @@ function renderLinkedView() {
     const rows = buildLinkedRows();
     return `<section class="workplaces-section" aria-labelledby="workplaces-title">
         <h2 id="workplaces-title">Назначения</h2>
-        ${rows.length ? `<div class="workplaces-columns" aria-label="Сортировка назначений">
-            ${sortButton("ID места", "window_id")}${sortButton("Рабочее место", "window_name")}${sortButton("Статус", "status")}${sortButton("Услуги", "services")}${sortButton("ID оператора", "operator_id")}${sortButton("Оператор", "operator_name")}${sortButton("Логин", "login")}<span>Действия</span>
-        </div>` : ""}
-        <div class="workplaces-list">${rows.length ? sortRows(rows).map(renderLinkedRow).join("") : emptyState("Рабочих мест и операторов пока нет")}</div>
+        ${ctx.ui.table([
+            ctx.ui.sortHeader("ID места", "window_id", sortState),
+            ctx.ui.sortHeader("Рабочее место", "window_name", sortState),
+            ctx.ui.sortHeader("Статус", "status", sortState),
+            ctx.ui.sortHeader("Услуги", "services", sortState),
+            ctx.ui.sortHeader("ID оператора", "operator_id", sortState),
+            ctx.ui.sortHeader("Оператор", "operator_name", sortState),
+            ctx.ui.sortHeader("Логин", "login", sortState),
+            "Действия"
+        ], sortRows(rows).map(renderLinkedRow), {title: ""})}
     </section>`;
 }
 
 function summaryCard(label, value, tone = "neutral") {
     return `<article class="workplaces-summary-card workplaces-summary-${tone}"><strong>${value}</strong><span>${label}</span></article>`;
-}
-
-function sortButton(label, key) {
-    const active = sortState.key === key;
-    const arrow = active ? (sortState.direction === "asc" ? "↑" : "↓") : "";
-    return `<button class="workplaces-sort${active ? " is-active" : ""}" type="button" data-action="sort" data-sort-key="${key}" aria-label="Сортировать: ${label}">${label}<span aria-hidden="true">${arrow}</span></button>`;
 }
 
 function buildLinkedRows() {
@@ -89,17 +89,16 @@ function buildLinkedRows() {
 
 function renderLinkedRow({windowItem, operator}) {
     const serviceNames = windowItem ? serviceNamesForWindow(windowItem.id) : [];
-    const stateClass = windowItem ? `status-${ctx.ui.escapeHtml(windowItem.status)}` : "is-unassigned-operator";
-    return `<article class="workplace-card ${stateClass}">
-        <strong class="workplace-id">${windowItem?.id ?? "—"}</strong>
-        <div class="workplace-identity">${windowItem ? `<span class="workplace-status-dot" aria-hidden="true"></span><strong>${ctx.ui.escapeHtml(windowItem.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign-window" data-operator-id="${operator.id}" aria-label="Назначить рабочее место оператору ${ctx.ui.escapeHtml(operator.name)}"><option value="">Не назначено</option>${freeWindowOptions()}</select>`}</div>
-        <div class="workplace-state">${windowItem ? ctx.ui.badge(statusLabel(windowItem.status), statusTone(windowItem.status)) : "—"}</div>
-        <div class="workplace-services"><strong>${windowItem ? (serviceNames.length ? ctx.ui.escapeHtml(serviceNames.join(", ")) : "Не назначены") : "—"}</strong></div>
-        <strong class="workplace-id">${operator?.id ?? "—"}</strong>
-        <div class="workplace-operator">${operator ? `<strong>${ctx.ui.escapeHtml(operator.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign" data-window-id="${windowItem.id}" aria-label="Назначить оператора на ${ctx.ui.escapeHtml(windowItem.name)}"><option value="">Не назначен</option>${freeOperatorOptions()}</select>`}</div>
-        <span class="workplace-login">${ctx.ui.escapeHtml(operator?.login || "—")}</span>
-        <div class="workplace-actions">${windowItem && operator ? ctx.ui.button("Снять", {variant: "ghost", action: "unassign", id: windowItem.id}) : ""}${operator ? ctx.ui.button("Оператор", {variant: "link", action: "edit-operator", id: operator.id}) : ""}${windowItem ? ctx.ui.button("Место", {variant: "link", action: "edit-window", id: windowItem.id}) : ""}</div>
-    </article>`;
+    return `<tr class="workplace-row">
+        <td class="workplace-id">${windowItem?.id ?? "—"}</td>
+        <td>${windowItem ? `<strong>${ctx.ui.escapeHtml(windowItem.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign-window" data-operator-id="${operator.id}" aria-label="Назначить рабочее место оператору ${ctx.ui.escapeHtml(operator.name)}"><option value="">Не назначено</option>${freeWindowOptions()}</select>`}</td>
+        <td>${windowItem ? ctx.ui.badge(statusLabel(windowItem.status), statusTone(windowItem.status)) : "—"}</td>
+        <td class="workplace-services" title="${ctx.ui.escapeHtml(serviceNames.join(", "))}">${windowItem ? (serviceNames.length ? ctx.ui.escapeHtml(serviceNames.join(", ")) : "Не назначены") : "—"}</td>
+        <td class="workplace-id">${operator?.id ?? "—"}</td>
+        <td>${operator ? `<strong>${ctx.ui.escapeHtml(operator.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign" data-window-id="${windowItem.id}" aria-label="Назначить оператора на ${ctx.ui.escapeHtml(windowItem.name)}"><option value="">Не назначен</option>${freeOperatorOptions()}</select>`}</td>
+        <td>${ctx.ui.escapeHtml(operator?.login || "—")}</td>
+        <td><div class="workplace-actions">${windowItem && operator ? ctx.ui.button("Снять", {variant: "ghost", action: "unassign", id: windowItem.id}) : ""}${operator ? ctx.ui.button("Оператор", {variant: "link", action: "edit-operator", id: operator.id}) : ""}${windowItem ? ctx.ui.button("Место", {variant: "link", action: "edit-window", id: windowItem.id}) : ""}</div></td>
+    </tr>`;
 }
 
 function emptyState(message) {

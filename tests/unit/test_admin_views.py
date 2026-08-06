@@ -22,15 +22,15 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert "Назначения" in view_source
     assert "Не назначен" in view_source
     assert 'action: "unassign"' in view_source
-    assert ".workplace-card" in css_source
-    assert "grid-template-columns: 58px 150px 112px minmax(210px, 1fr) 76px 170px 130px 220px;" in css_source
-    assert "status-break" in css_source
+    assert 'class="workplace-row"' in view_source
+    assert ".admin-table" in css_source
+    assert "min-width: 1280px" in css_source
     assert "@media (max-width: 720px)" in css_source
-    assert 'sortButton("ID места", "window_id")' in view_source
-    assert 'sortButton("Рабочее место", "window_name")' in view_source
-    assert 'sortButton("ID оператора", "operator_id")' in view_source
-    assert 'sortButton("Оператор", "operator_name")' in view_source
-    assert 'sortButton("Логин", "login")' in view_source
+    assert 'ctx.ui.sortHeader("ID места", "window_id", sortState)' in view_source
+    assert 'ctx.ui.sortHeader("Рабочее место", "window_name", sortState)' in view_source
+    assert 'ctx.ui.sortHeader("ID оператора", "operator_id", sortState)' in view_source
+    assert 'ctx.ui.sortHeader("Оператор", "operator_name", sortState)' in view_source
+    assert 'ctx.ui.sortHeader("Логин", "login", sortState)' in view_source
     assert "function buildLinkedRows()" in view_source
     assert 'data-action="assign-window"' in view_source
 
@@ -48,14 +48,14 @@ def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
 def test_workplace_cards_show_ids_and_support_sorting():
     source = _read("queue/js/admin/views/windows.view.js")
 
-    assert 'class="workplace-id">${windowItem?.id ?? "—"}</strong>' in source
+    assert 'class="workplace-id">${windowItem?.id ?? "—"}</td>' in source
     assert 'data-window-id="${windowItem.id}"' in source
     assert 'action: "edit-window", id: windowItem.id' in source
     assert "windows.find(item => item.id === id)" in source
-    assert 'sortButton("ID места", "window_id")' in source
-    assert 'sortButton("Рабочее место", "window_name")' in source
-    assert 'sortButton("Статус", "status")' in source
-    assert 'sortButton("Услуги", "services")' in source
+    assert 'ctx.ui.sortHeader("ID места", "window_id", sortState)' in source
+    assert 'ctx.ui.sortHeader("Рабочее место", "window_name", sortState)' in source
+    assert 'ctx.ui.sortHeader("Статус", "status", sortState)' in source
+    assert 'ctx.ui.sortHeader("Услуги", "services", sortState)' in source
 
 
 def test_window_admin_loads_hidden_terminal_services_for_internal_assignment():
