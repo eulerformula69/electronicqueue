@@ -23,7 +23,7 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert "Выберите оператора" in view_source
     assert 'action: "unassign"' in view_source
     assert ".workplace-card" in css_source
-    assert "grid-template-columns: 260px minmax(260px, 1fr) 360px 280px;" in css_source
+    assert "grid-template-columns: 56px 160px 124px minmax(240px, 1fr) 330px 280px;" in css_source
     assert "status-break" in css_source
     assert "@media (max-width: 720px)" in css_source
 
@@ -38,13 +38,17 @@ def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
     assert "operators.find(item => item.id === Number(button.dataset.id))" in source
 
 
-def test_workplace_cards_keep_internal_ids_without_showing_technical_ids():
+def test_workplace_cards_show_ids_and_support_sorting():
     source = _read("queue/js/admin/views/windows.view.js")
 
-    assert "<td>${windowItem.id}</td>" not in source
+    assert 'class="workplace-id">${windowItem.id}</strong>' in source
     assert 'data-window-id="${windowItem.id}"' in source
     assert 'action: "edit-window", id: windowItem.id' in source
     assert "windows.find(item => item.id === id)" in source
+    assert 'sortButton("ID", "id")' in source
+    assert 'sortButton("Название", "name")' in source
+    assert 'sortButton("Статус", "status")' in source
+    assert 'sortButton("Услуги", "services")' in source
 
 
 def test_window_admin_loads_hidden_terminal_services_for_internal_assignment():
@@ -120,8 +124,8 @@ def test_admin_views_use_click_sorting_with_direction_toggle():
     assert 'sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"' in source
 
     workplaces = _read("queue/js/admin/views/windows.view.js")
-    assert ".sort(byName)" in workplaces
-    assert 'data-action="sort"' not in workplaces
+    assert 'button.dataset.action === "sort"' in workplaces
+    assert 'sortState.key === key && sortState.direction === "asc" ? "desc" : "asc"' in workplaces
 
 
 def test_admin_views_persist_sort_state():
@@ -130,6 +134,11 @@ def test_admin_views_persist_sort_state():
     assert "sortState = loadSortState(sortState)" in source
     assert "saveSortState(sortState)" in source
     assert "localStorage.setItem(sortStorageKey, JSON.stringify(state))" in source
+
+    workplaces = _read("queue/js/admin/views/windows.view.js")
+    assert 'const sortStorageKey = "admin.windows.sort"' in workplaces
+    assert "sortState = loadSortState(sortState)" in workplaces
+    assert "localStorage.setItem(sortStorageKey, JSON.stringify(sortState))" in workplaces
 
 
 def test_table_helper_renders_sortable_headers():
