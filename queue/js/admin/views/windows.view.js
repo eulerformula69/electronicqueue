@@ -52,8 +52,7 @@ function render() {
             ${summaryCard("Без назначения", freeOperators.length, freeOperators.length ? "warning" : "neutral")}
         </div>
         <div class="workplaces-toolbar">
-            <p>Рабочие места и операторы показаны одним связанным списком.</p>
-            <div>${ctx.ui.button("Добавить оператора", {action: "create-operator"})}${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create-window"})}</div>
+            <div>${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create-window"})}${ctx.ui.button("Добавить оператора", {variant: "primary", action: "create-operator"})}</div>
         </div>
         ${renderLinkedView()}`;
     ctx.view.onclick = handleClick;

@@ -25,6 +25,10 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert 'class="workplace-row"' in view_source
     assert ".admin-table" in css_source
     assert "min-width: 1280px" in css_source
+    assert "overflow-wrap: normal; white-space: nowrap;" in css_source
+    assert 'button("Добавить оператор",' not in view_source
+    assert 'button("Добавить оператора", {variant: "primary"' in view_source
+    assert "показаны одним связанным списком" not in view_source
     assert "@media (max-width: 720px)" in css_source
     assert 'ctx.ui.sortHeader("ID места", "window_id", sortState)' in view_source
     assert 'ctx.ui.sortHeader("Рабочее место", "window_name", sortState)' in view_source
