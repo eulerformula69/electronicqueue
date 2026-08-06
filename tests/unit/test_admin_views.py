@@ -19,20 +19,20 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert 'operators: "windows"' in app_source
     assert 'ctx.api.request("/operators/")' in view_source
     assert 'ctx.api.json(`/windows/${windowId}/operator`' in view_source
-    assert "Операторы без назначения" in view_source
-    assert "Выберите оператора" in view_source
+    assert "Назначения" in view_source
+    assert "Не назначен" in view_source
     assert 'action: "unassign"' in view_source
     assert ".workplace-card" in css_source
-    assert "grid-template-columns: 56px 160px 124px minmax(240px, 1fr) 330px 280px;" in css_source
+    assert "grid-template-columns: 58px 150px 112px minmax(210px, 1fr) 76px 170px 130px 220px;" in css_source
     assert "status-break" in css_source
     assert "@media (max-width: 720px)" in css_source
-    assert 'viewButton("Рабочие места", "windows")' in view_source
-    assert 'viewButton("Операторы", "operators")' in view_source
-    assert 'operatorSortButton("ID", "id")' in view_source
-    assert 'operatorSortButton("Имя", "name")' in view_source
-    assert 'operatorSortButton("Логин", "login")' in view_source
-    assert 'operatorSortButton("Рабочее место", "window")' in view_source
-    assert 'class="workplace-id">${operator.id}</strong>' in view_source
+    assert 'sortButton("ID места", "window_id")' in view_source
+    assert 'sortButton("Рабочее место", "window_name")' in view_source
+    assert 'sortButton("ID оператора", "operator_id")' in view_source
+    assert 'sortButton("Оператор", "operator_name")' in view_source
+    assert 'sortButton("Логин", "login")' in view_source
+    assert "function buildLinkedRows()" in view_source
+    assert 'data-action="assign-window"' in view_source
 
 
 def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
@@ -48,12 +48,12 @@ def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
 def test_workplace_cards_show_ids_and_support_sorting():
     source = _read("queue/js/admin/views/windows.view.js")
 
-    assert 'class="workplace-id">${windowItem.id}</strong>' in source
+    assert 'class="workplace-id">${windowItem?.id ?? "—"}</strong>' in source
     assert 'data-window-id="${windowItem.id}"' in source
     assert 'action: "edit-window", id: windowItem.id' in source
     assert "windows.find(item => item.id === id)" in source
-    assert 'sortButton("ID", "id")' in source
-    assert 'sortButton("Название", "name")' in source
+    assert 'sortButton("ID места", "window_id")' in source
+    assert 'sortButton("Рабочее место", "window_name")' in source
     assert 'sortButton("Статус", "status")' in source
     assert 'sortButton("Услуги", "services")' in source
 
@@ -143,7 +143,7 @@ def test_admin_views_persist_sort_state():
     assert "localStorage.setItem(sortStorageKey, JSON.stringify(state))" in source
 
     workplaces = _read("queue/js/admin/views/windows.view.js")
-    assert 'const sortStorageKey = "admin.windows.sort"' in workplaces
+    assert 'const sortStorageKey = "admin.workplaces.sort"' in workplaces
     assert "sortState = loadSortState(sortState)" in workplaces
     assert "localStorage.setItem(sortStorageKey, JSON.stringify(sortState))" in workplaces
 

@@ -3,12 +3,8 @@ let windows = [];
 let operators = [];
 let services = [];
 let windowServices = new Map();
-let sortState = {key: "id", direction: "asc"};
-let operatorSortState = {key: "id", direction: "asc"};
-let viewMode = "windows";
-const sortStorageKey = "admin.windows.sort";
-const operatorSortStorageKey = "admin.operators.sort";
-const viewStorageKey = "admin.workplaces.view";
+let sortState = {key: "window_id", direction: "asc"};
+const sortStorageKey = "admin.workplaces.sort";
 
 const statuses = [
     {value: "online", label: "Работает"},
@@ -25,8 +21,6 @@ const autoCallModes = [
 export async function mount(context) {
     ctx = context;
     sortState = loadSortState(sortState);
-    operatorSortState = loadOperatorSortState(operatorSortState);
-    viewMode = localStorage.getItem(viewStorageKey) === "operators" ? "operators" : "windows";
     await load();
     render();
 }
@@ -58,42 +52,22 @@ function render() {
             ${summaryCard("Без назначения", freeOperators.length, freeOperators.length ? "warning" : "neutral")}
         </div>
         <div class="workplaces-toolbar">
-            <div class="workplaces-view-switch" role="group" aria-label="Представление раздела">
-                ${viewButton("Рабочие места", "windows")}${viewButton("Операторы", "operators")}
-            </div>
+            <p>Рабочие места и операторы показаны одним связанным списком.</p>
             <div>${ctx.ui.button("Добавить оператора", {action: "create-operator"})}${ctx.ui.button("Добавить рабочее место", {variant: "primary", action: "create-window"})}</div>
         </div>
-        ${viewMode === "windows" ? renderWindowsView(freeOperators) : renderOperatorsView()}`;
+        ${renderLinkedView()}`;
     ctx.view.onclick = handleClick;
     ctx.view.onchange = handleChange;
 }
 
-function viewButton(label, mode) {
-    const active = viewMode === mode;
-    return `<button type="button" class="workplaces-view-button${active ? " is-active" : ""}" data-action="switch-view" data-view="${mode}" aria-pressed="${active}">${label}</button>`;
-}
-
-function renderWindowsView(freeOperators) {
+function renderLinkedView() {
+    const rows = buildLinkedRows();
     return `<section class="workplaces-section" aria-labelledby="workplaces-title">
-            <h2 id="workplaces-title">Рабочие места</h2>
-            ${windows.length ? `<div class="workplaces-columns" aria-label="Сортировка рабочих мест">
-                ${sortButton("ID", "id")}${sortButton("Название", "name")}${sortButton("Статус", "status")}${sortButton("Услуги", "services")}<span>Оператор</span><span>Действия</span>
-            </div>` : ""}
-            <div class="workplaces-list">${windows.length ? sortWindows(windows).map(renderWindow).join("") : emptyState("Рабочих мест пока нет")}</div>
-        </section>
-        <section class="workplaces-section" aria-labelledby="unassigned-title">
-            <div class="workplaces-section-heading"><h2 id="unassigned-title">Операторы без назначения</h2>${ctx.ui.badge(String(freeOperators.length), freeOperators.length ? "warning" : "neutral")}</div>
-            <div class="unassigned-operators">${freeOperators.length ? freeOperators.sort(byName).map(renderFreeOperator).join("") : `<p class="workplaces-empty-inline">Все операторы назначены на рабочие места.</p>`}</div>
-        </section>`;
-}
-
-function renderOperatorsView() {
-    return `<section class="workplaces-section" aria-labelledby="operators-title">
-        <h2 id="operators-title">Операторы</h2>
-        ${operators.length ? `<div class="operators-columns" aria-label="Сортировка операторов">
-            ${operatorSortButton("ID", "id")}${operatorSortButton("Имя", "name")}${operatorSortButton("Логин", "login")}${operatorSortButton("Рабочее место", "window")}<span>Автовызов</span><span>Действия</span>
+        <h2 id="workplaces-title">Назначения</h2>
+        ${rows.length ? `<div class="workplaces-columns" aria-label="Сортировка назначений">
+            ${sortButton("ID места", "window_id")}${sortButton("Рабочее место", "window_name")}${sortButton("Статус", "status")}${sortButton("Услуги", "services")}${sortButton("ID оператора", "operator_id")}${sortButton("Оператор", "operator_name")}${sortButton("Логин", "login")}<span>Действия</span>
         </div>` : ""}
-        <div class="operators-list">${operators.length ? sortOperators(operators).map(renderOperator).join("") : emptyState("Операторов пока нет")}</div>
+        <div class="workplaces-list">${rows.length ? sortRows(rows).map(renderLinkedRow).join("") : emptyState("Рабочих мест и операторов пока нет")}</div>
     </section>`;
 }
 
@@ -107,39 +81,24 @@ function sortButton(label, key) {
     return `<button class="workplaces-sort${active ? " is-active" : ""}" type="button" data-action="sort" data-sort-key="${key}" aria-label="Сортировать: ${label}">${label}<span aria-hidden="true">${arrow}</span></button>`;
 }
 
-function operatorSortButton(label, key) {
-    const active = operatorSortState.key === key;
-    const arrow = active ? (operatorSortState.direction === "asc" ? "↑" : "↓") : "";
-    return `<button class="workplaces-sort${active ? " is-active" : ""}" type="button" data-action="sort-operator" data-sort-key="${key}" aria-label="Сортировать операторов: ${label}">${label}<span aria-hidden="true">${arrow}</span></button>`;
+function buildLinkedRows() {
+    const rows = windows.map(windowItem => ({windowItem, operator: operatorForWindow(windowItem.id)}));
+    operators.filter(operator => !operator.window_id).forEach(operator => rows.push({windowItem: null, operator}));
+    return rows;
 }
 
-function renderWindow(windowItem) {
-    const operator = operatorForWindow(windowItem.id);
-    const linked = windowServices.get(windowItem.id) || [];
-    const serviceNames = linked.map(link => services.find(service => service.id === link.service_id)?.name).filter(Boolean);
-    return `<article class="workplace-card ${operator ? "is-occupied" : "is-free"} status-${ctx.ui.escapeHtml(windowItem.status)}">
-        <strong class="workplace-id">${windowItem.id}</strong>
-        <div class="workplace-identity"><span class="workplace-status-dot" aria-hidden="true"></span><h3>${ctx.ui.escapeHtml(windowItem.name)}</h3></div>
-        <div class="workplace-state">${ctx.ui.badge(statusLabel(windowItem.status), statusTone(windowItem.status))}</div>
-        <div class="workplace-services"><strong>${serviceNames.length ? ctx.ui.escapeHtml(serviceNames.join(", ")) : "Не назначены"}</strong></div>
-        <div class="workplace-operator"><span>Оператор</span>${operator ? `<strong>${ctx.ui.escapeHtml(operator.name)}</strong><small>${ctx.ui.escapeHtml(operator.login || "")}</small>` : `<select class="admin-input workplace-assign-select" data-action="assign" data-window-id="${windowItem.id}" aria-label="Назначить оператора на ${ctx.ui.escapeHtml(windowItem.name)}"><option value="">Выберите оператора</option>${freeOperatorOptions()}</select>`}</div>
-        <div class="workplace-actions">${operator ? ctx.ui.button("Снять", {variant: "ghost", action: "unassign", id: windowItem.id}) : ""}${operator ? ctx.ui.button("Оператор", {variant: "link", action: "edit-operator", id: operator.id}) : ""}${ctx.ui.button("Настроить", {variant: "link", action: "edit-window", id: windowItem.id})}</div>
-    </article>`;
-}
-
-function renderFreeOperator(operator) {
-    return `<article class="unassigned-operator-card"><div><strong>${ctx.ui.escapeHtml(operator.name)}</strong><small>${ctx.ui.escapeHtml(operator.login || "")}</small></div>${ctx.ui.button("Изменить", {variant: "link", action: "edit-operator", id: operator.id})}</article>`;
-}
-
-function renderOperator(operator) {
-    const windowItem = windows.find(item => item.id === operator.window_id);
-    return `<article class="operator-card">
-        <strong class="workplace-id">${operator.id}</strong>
-        <strong class="operator-card-name">${ctx.ui.escapeHtml(operator.name)}</strong>
-        <span>${ctx.ui.escapeHtml(operator.login || "—")}</span>
-        <span>${ctx.ui.escapeHtml(windowItem?.name || "Не назначено")}</span>
-        <span>${ctx.ui.escapeHtml(autoCallModeLabel(operator.auto_call_mode))}</span>
-        <div class="workplace-actions">${ctx.ui.button("Изменить", {variant: "link", action: "edit-operator", id: operator.id})}</div>
+function renderLinkedRow({windowItem, operator}) {
+    const serviceNames = windowItem ? serviceNamesForWindow(windowItem.id) : [];
+    const stateClass = windowItem ? `status-${ctx.ui.escapeHtml(windowItem.status)}` : "is-unassigned-operator";
+    return `<article class="workplace-card ${stateClass}">
+        <strong class="workplace-id">${windowItem?.id ?? "—"}</strong>
+        <div class="workplace-identity">${windowItem ? `<span class="workplace-status-dot" aria-hidden="true"></span><strong>${ctx.ui.escapeHtml(windowItem.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign-window" data-operator-id="${operator.id}" aria-label="Назначить рабочее место оператору ${ctx.ui.escapeHtml(operator.name)}"><option value="">Не назначено</option>${freeWindowOptions()}</select>`}</div>
+        <div class="workplace-state">${windowItem ? ctx.ui.badge(statusLabel(windowItem.status), statusTone(windowItem.status)) : "—"}</div>
+        <div class="workplace-services"><strong>${windowItem ? (serviceNames.length ? ctx.ui.escapeHtml(serviceNames.join(", ")) : "Не назначены") : "—"}</strong></div>
+        <strong class="workplace-id">${operator?.id ?? "—"}</strong>
+        <div class="workplace-operator">${operator ? `<strong>${ctx.ui.escapeHtml(operator.name)}</strong>` : `<select class="admin-input workplace-assign-select" data-action="assign" data-window-id="${windowItem.id}" aria-label="Назначить оператора на ${ctx.ui.escapeHtml(windowItem.name)}"><option value="">Не назначен</option>${freeOperatorOptions()}</select>`}</div>
+        <span class="workplace-login">${ctx.ui.escapeHtml(operator?.login || "—")}</span>
+        <div class="workplace-actions">${windowItem && operator ? ctx.ui.button("Снять", {variant: "ghost", action: "unassign", id: windowItem.id}) : ""}${operator ? ctx.ui.button("Оператор", {variant: "link", action: "edit-operator", id: operator.id}) : ""}${windowItem ? ctx.ui.button("Место", {variant: "link", action: "edit-window", id: windowItem.id}) : ""}</div>
     </article>`;
 }
 
@@ -151,6 +110,14 @@ function freeOperatorOptions() {
     return operators.filter(item => !item.window_id).sort(byName).map(item => `<option value="${item.id}">${ctx.ui.escapeHtml(item.name)}</option>`).join("");
 }
 
+function freeWindowOptions() {
+    return windows.filter(item => !operatorForWindow(item.id)).sort(byName).map(item => `<option value="${item.id}">${ctx.ui.escapeHtml(item.name)}</option>`).join("");
+}
+
+function serviceNamesForWindow(windowId) {
+    return (windowServices.get(windowId) || []).map(link => services.find(service => service.id === link.service_id)?.name).filter(Boolean);
+}
+
 function operatorForWindow(windowId) {
     return operators.find(item => item.window_id === windowId);
 }
@@ -159,32 +126,21 @@ function byName(a, b) {
     return String(a.name || "").localeCompare(String(b.name || ""), "ru", {numeric: true, sensitivity: "base"});
 }
 
-function sortWindows(items) {
+function sortRows(items) {
     return [...items].sort((a, b) => {
         const result = compareValues(sortValue(a), sortValue(b));
         return sortState.direction === "asc" ? result : -result;
     });
 }
 
-function sortOperators(items) {
-    return [...items].sort((a, b) => {
-        const result = compareValues(operatorSortValue(a), operatorSortValue(b));
-        return operatorSortState.direction === "asc" ? result : -result;
-    });
-}
-
-function operatorSortValue(operator) {
-    if (operatorSortState.key === "id") return operator.id ?? 0;
-    if (operatorSortState.key === "login") return operator.login || "";
-    if (operatorSortState.key === "window") return windows.find(item => item.id === operator.window_id)?.name || "";
-    return operator.name || "";
-}
-
-function sortValue(windowItem) {
-    if (sortState.key === "id") return windowItem.id ?? 0;
-    if (sortState.key === "status") return statusLabel(windowItem.status);
-    if (sortState.key === "services") return windowServices.get(windowItem.id)?.length || 0;
-    return windowItem.name || "";
+function sortValue({windowItem, operator}) {
+    if (sortState.key === "window_id") return windowItem?.id ?? Number.MAX_SAFE_INTEGER;
+    if (sortState.key === "window_name") return windowItem?.name || "Я";
+    if (sortState.key === "status") return windowItem ? statusLabel(windowItem.status) : "Я";
+    if (sortState.key === "services") return windowItem ? serviceNamesForWindow(windowItem.id).length : Number.MAX_SAFE_INTEGER;
+    if (sortState.key === "operator_id") return operator?.id ?? Number.MAX_SAFE_INTEGER;
+    if (sortState.key === "login") return operator?.login || "Я";
+    return operator?.name || "Я";
 }
 
 function compareValues(a, b) {
@@ -197,29 +153,12 @@ function setSort(key) {
     try { localStorage.setItem(sortStorageKey, JSON.stringify(sortState)); } catch (error) { /* Current-page sorting still works. */ }
 }
 
-function setOperatorSort(key) {
-    operatorSortState = {key, direction: operatorSortState.key === key && operatorSortState.direction === "asc" ? "desc" : "asc"};
-    try { localStorage.setItem(operatorSortStorageKey, JSON.stringify(operatorSortState)); } catch (error) { /* Current-page sorting still works. */ }
-}
-
 function loadSortState(fallback) {
     try {
         const saved = JSON.parse(localStorage.getItem(sortStorageKey) || "null");
-        if (saved && ["id", "name", "status", "services"].includes(saved.key) && ["asc", "desc"].includes(saved.direction)) return saved;
+        if (saved && ["window_id", "window_name", "status", "services", "operator_id", "operator_name", "login"].includes(saved.key) && ["asc", "desc"].includes(saved.direction)) return saved;
     } catch (error) { return fallback; }
     return fallback;
-}
-
-function loadOperatorSortState(fallback) {
-    try {
-        const saved = JSON.parse(localStorage.getItem(operatorSortStorageKey) || "null");
-        if (saved && ["id", "name", "login", "window"].includes(saved.key) && ["asc", "desc"].includes(saved.direction)) return saved;
-    } catch (error) { return fallback; }
-    return fallback;
-}
-
-function autoCallModeLabel(mode) {
-    return autoCallModes.find(item => item.value === mode)?.label || autoCallModes[0].label;
 }
 
 function statusLabel(status) {
@@ -231,27 +170,17 @@ function statusTone(status) {
 }
 
 async function handleChange(event) {
-    if (event.target.dataset.action !== "assign" || !event.target.value) return;
+    if (!event.target.value) return;
     event.target.disabled = true;
-    await assignOperator(Number(event.target.dataset.windowId), Number(event.target.value));
+    if (event.target.dataset.action === "assign") await assignOperator(Number(event.target.dataset.windowId), Number(event.target.value));
+    if (event.target.dataset.action === "assign-window") await assignOperator(Number(event.target.value), Number(event.target.dataset.operatorId));
 }
 
 async function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button || button.matches("select")) return;
-    if (button.dataset.action === "switch-view") {
-        viewMode = button.dataset.view;
-        try { localStorage.setItem(viewStorageKey, viewMode); } catch (error) { /* Current-page view still works. */ }
-        render();
-        return;
-    }
     if (button.dataset.action === "sort") {
         setSort(button.dataset.sortKey);
-        render();
-        return;
-    }
-    if (button.dataset.action === "sort-operator") {
-        setOperatorSort(button.dataset.sortKey);
         render();
         return;
     }

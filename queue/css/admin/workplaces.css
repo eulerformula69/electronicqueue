@@ -23,23 +23,18 @@ body.admin-page .workplaces-summary-warning strong { color: var(--warning); }
 body.admin-page .workplaces-toolbar,
 body.admin-page .workplaces-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 body.admin-page .workplaces-toolbar { margin-bottom: 26px; }
+body.admin-page .workplaces-toolbar p { margin: 0; color: var(--text-muted); }
 body.admin-page .workplaces-toolbar > div { display: flex; gap: 10px; }
-body.admin-page .workplaces-view-switch { padding: 3px; border: 1px solid var(--admin-border); border-radius: 9px; background: var(--admin-soft-bg); }
-body.admin-page .workplaces-view-button { min-height: 36px; padding: 0 15px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; cursor: pointer; }
-body.admin-page .workplaces-view-button.is-active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 4px color-mix(in srgb, var(--primary) 14%, transparent); }
 body.admin-page .workplaces-section + .workplaces-section { margin-top: 28px; }
 body.admin-page .workplaces-section h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: -.01em; }
 body.admin-page .workplaces-list { display: grid; gap: 10px; }
 body.admin-page .workplaces-columns,
 body.admin-page .workplace-card {
-    grid-template-columns: 56px 160px 124px minmax(240px, 1fr) 330px 280px;
-    column-gap: 18px;
+    grid-template-columns: 58px 150px 112px minmax(210px, 1fr) 76px 170px 130px 220px;
+    column-gap: 14px;
 }
-body.admin-page .operators-columns,
-body.admin-page .operator-card { grid-template-columns: 56px minmax(220px, 1fr) 220px 240px 180px 120px; column-gap: 18px; }
 
-body.admin-page .workplaces-columns,
-body.admin-page .operators-columns {
+body.admin-page .workplaces-columns {
     display: grid;
     align-items: center;
     padding: 0 18px 9px;
@@ -78,10 +73,6 @@ body.admin-page .workplace-card {
     background: var(--card-bg);
     box-shadow: var(--shadow);
 }
-body.admin-page .operators-list { display: grid; gap: 10px; }
-body.admin-page .operator-card { display: grid; align-items: center; min-height: 72px; padding: 12px 18px; border: 1px solid var(--admin-border); border-radius: 10px; background: var(--card-bg); box-shadow: var(--shadow); }
-body.admin-page .operator-card > span,
-body.admin-page .operator-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 body.admin-page .workplace-card:active { transform: scale(.998); }
 body.admin-page .workplace-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -96,6 +87,7 @@ body.admin-page .workplace-operator > span { color: var(--text-muted); font-size
 body.admin-page .workplace-services strong,
 body.admin-page .workplace-operator strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 body.admin-page .workplace-operator small { color: var(--text-muted); }
+body.admin-page .workplace-login { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.admin-page .workplace-assign-select { width: 100%; min-width: 0; }
 body.admin-page .workplace-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
 body.admin-page .workplace-actions .admin-btn { flex: 0 0 auto; padding-inline: 12px; }
@@ -107,28 +99,22 @@ body.admin-page .workplaces-empty-inline { color: var(--text-muted); }
 body.admin-page .workplaces-empty-inline { margin: 0; padding: 18px; border: 1px dashed var(--admin-border); border-radius: 10px; }
 
 @media (max-width: 1350px) {
-    body.admin-page .workplaces-columns,
-    body.admin-page .operators-columns { display: none; }
-    body.admin-page .workplace-card { grid-template-columns: 56px minmax(180px, .8fr) 124px minmax(240px, 1.2fr) minmax(240px, 1fr); }
+    body.admin-page .workplaces-columns { display: none; }
+    body.admin-page .workplace-card { grid-template-columns: 56px minmax(160px, .8fr) 112px minmax(220px, 1.2fr) 76px minmax(180px, 1fr) 130px; }
     body.admin-page .workplace-actions { grid-column: 1 / -1; }
-    body.admin-page .operator-card { grid-template-columns: 56px minmax(180px, 1fr) 180px minmax(200px, 1fr) 160px; }
-    body.admin-page .operator-card .workplace-actions { grid-column: 1 / -1; }
 }
 
 @media (max-width: 720px) {
     body.admin-page .workplaces-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     body.admin-page .workplaces-toolbar { align-items: stretch; flex-direction: column; }
     body.admin-page .workplaces-toolbar > div { flex-direction: column; }
-    body.admin-page .workplaces-view-switch { display: grid !important; grid-template-columns: 1fr 1fr; }
     body.admin-page .workplace-card { grid-template-columns: 48px 1fr; gap: 14px; }
     body.admin-page .workplace-state,
     body.admin-page .workplace-services,
     body.admin-page .workplace-operator,
+    body.admin-page .workplace-login,
     body.admin-page .workplace-actions { grid-column: 1 / -1; }
     body.admin-page .workplace-actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
-    body.admin-page .operator-card { grid-template-columns: 48px 1fr; gap: 12px; }
-    body.admin-page .operator-card > span,
-    body.admin-page .operator-card .workplace-actions { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
