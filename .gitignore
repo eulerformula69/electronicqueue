@@ -7,6 +7,7 @@ queue/tts/cache/
 queue/media/playlist.json
 queue/media/
 data/map.json
+data/docs/
 
 .pytest_cache/
 .coverage

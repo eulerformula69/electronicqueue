@@ -30,7 +30,7 @@ from app.migrations import (
     migrate_operator_workflow_settings_schema,
     migrate_operator_changelog_button_text_schema,
 )
-from app.routers import admin, auth, operators, services, system, tickets, tts, websocket, windows
+from app.routers import admin, auth, documentation, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
 from app.services.auto_dispatch import auto_dispatch_worker
 from app.services.operators import cleanup_sessions
@@ -49,7 +49,7 @@ app.mount("/queue", StaticFiles(directory=BASE_DIR / "queue"), name="queue")
 
 for router in (
     websocket.router, services.router, tickets.router, operators.router,
-    windows.router, auth.router, admin.router, tts.router, system.router,
+    windows.router, auth.router, admin.router, documentation.router, tts.router, system.router,
 ):
     app.include_router(router)
 
