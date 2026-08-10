@@ -481,6 +481,69 @@ body.operator-page .operator-popup-actions{
     margin-top: 22px;
     flex-wrap: wrap;
 }
+body.operator-page .operator-changelog-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.62);
+}
+body.operator-page .operator-changelog-modal{
+    width: min(560px, 100%);
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
+    text-align: left;
+}
+body.operator-page .operator-changelog-modal h2{
+    margin: 0 0 14px;
+    color: var(--text-main);
+    font-size: 1.3rem;
+}
+body.operator-page .operator-changelog-content{
+    max-height: min(58vh, 520px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+body.operator-page .operator-changelog-entry + .operator-changelog-entry{
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+body.operator-page .operator-changelog-entry h3{
+    margin: 0 0 10px;
+    padding: 0;
+    color: var(--primary);
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+}
+body.operator-page .operator-changelog-modal ul{
+    margin: 0;
+    padding-left: 22px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+body.operator-page .operator-changelog-modal li + li{
+    margin-top: 8px;
+}
+body.operator-page .operator-changelog-actions{
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+}
+body.operator-page .operator-changelog-actions .btn-primary{
+    width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+    padding: 14px 18px;
+}
 body.operator-page .info-status{
     display: flex;
     align-items: center;

@@ -371,6 +371,9 @@ async def update_admin_settings(
         settings.redirect_allow_break = _bool_to_str(data.redirect_allow_break)
         settings.redirect_allow_offline = _bool_to_str(data.redirect_allow_offline)
         settings.max_ticket_redirects = data.max_ticket_redirects
+        settings.operator_changelog_confirm_button_text = (
+            data.operator_changelog_confirm_button_text.strip()
+        )
         settings.call_message_template = data.call_message_template
         settings.board_ticket_template = data.board_ticket_template
         board_ticker_messages = normalize_board_ticker_messages(
@@ -434,6 +437,9 @@ async def get_public_settings():
             "redirect_allow_break": settings["redirect_allow_break"],
             "redirect_allow_offline": settings["redirect_allow_offline"],
             "max_ticket_redirects": settings["max_ticket_redirects"],
+            "operator_changelog_confirm_button_text": settings[
+                "operator_changelog_confirm_button_text"
+            ],
             "board_ticket_template": settings["board_ticket_template"],
             "board_ticker_text": settings["board_ticker_text"],
             "auto_call_enabled": settings["auto_call_enabled"],

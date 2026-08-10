@@ -248,6 +248,11 @@ class SystemSettingsUpdate(BaseModel):
     redirect_allow_break: bool = True
     redirect_allow_offline: bool = False
     max_ticket_redirects: int = Field(default=3, ge=1, le=20)
+    operator_changelog_confirm_button_text: str = Field(
+        default="Понятно",
+        min_length=1,
+        max_length=200,
+    )
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str = Field(default="", max_length=500)
@@ -284,6 +289,7 @@ class SystemSettingsResponse(BaseModel):
     redirect_allow_break: bool
     redirect_allow_offline: bool
     max_ticket_redirects: int
+    operator_changelog_confirm_button_text: str
     call_message_template: str
     board_ticket_template: str
     board_ticker_text: str
@@ -313,6 +319,7 @@ class PublicSettingsResponse(BaseModel):
     redirect_allow_break: bool
     redirect_allow_offline: bool
     max_ticket_redirects: int
+    operator_changelog_confirm_button_text: str
     board_ticket_template: str
     board_ticker_text: str
     cancel_reason_options: List[TicketReasonOption] = Field(default_factory=list)

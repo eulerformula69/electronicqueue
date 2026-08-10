@@ -244,6 +244,7 @@ class SystemSettings(Base):
     redirect_allow_break = Column(String, default="true")
     redirect_allow_offline = Column(String, default="false")
     max_ticket_redirects = Column(Integer, default=3)
+    operator_changelog_confirm_button_text = Column(String(200), default="Понятно")
 
     call_message_template = Column(
         String,

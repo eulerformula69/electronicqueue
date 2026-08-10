@@ -59,6 +59,7 @@ function renderQueueSection() {
         ${ctx.ui.field("Адресное перенаправление оператору на перерыве", ctx.ui.switchField("redirect_allow_break", settings.redirect_allow_break ?? true))}
         ${ctx.ui.field("Адресное перенаправление оператору офлайн", ctx.ui.switchField("redirect_allow_offline", settings.redirect_allow_offline ?? false))}
         ${ctx.ui.field("Максимум перенаправлений одного талона", ctx.ui.input("max_ticket_redirects", settings.max_ticket_redirects ?? 3, "type=\"number\" min=\"1\" max=\"20\" step=\"1\""))}
+        ${ctx.ui.field("Текст кнопки подтверждения обновления", ctx.ui.input("operator_changelog_confirm_button_text", settings.operator_changelog_confirm_button_text || "Понятно", "maxlength=\"200\" placeholder=\"Нажимая эту кнопку, я подтверждаю, что прочитал(а) все обновления и теперь в курсе всех изменений в работе очереди\""))}
         ${ctx.ui.field("Минимальная длительность обслуживания, секунд", ctx.ui.input("called_ticket_min_wait_seconds", settings.called_ticket_min_wait_seconds ?? 180, "type=\"number\" min=\"0\" max=\"3600\" step=\"1\""))}
         ${ctx.ui.field("Порог быстрого обслуживания, минут (0 — отключить)", ctx.ui.input("short_service_warning_minutes", settings.short_service_warning_minutes ?? 5, "type=\"number\" min=\"0\" max=\"60\" step=\"1\""))}
         ${ctx.ui.field("Максимум отложенных талонов у оператора", ctx.ui.input("max_deferred_tickets_per_operator", settings.max_deferred_tickets_per_operator ?? 3, "type=\"number\" min=\"1\" max=\"50\" step=\"1\""))}
@@ -204,6 +205,9 @@ async function save() {
     if (activeSection === "queue" && (!Number.isInteger(payload.max_ticket_redirects) || payload.max_ticket_redirects < 1 || payload.max_ticket_redirects > 20)) {
         return ctx.toast("Лимит перенаправлений должен быть целым числом от 1 до 20", "error");
     }
+    if (activeSection === "queue" && !payload.operator_changelog_confirm_button_text) {
+        return ctx.toast("Введите текст кнопки подтверждения обновления", "error");
+    }
     if (activeSection === "terminal" && (!payload.ticket_notice_printed_text.includes("<number>") || !payload.ticket_notice_unprinted_text.includes("<number>"))) {
         return ctx.toast("Тексты терминала должны содержать <number>", "error");
     }
@@ -241,6 +245,7 @@ function applyQueueForm(payload, data) {
         redirect_allow_break: Boolean(data.redirect_allow_break),
         redirect_allow_offline: Boolean(data.redirect_allow_offline),
         max_ticket_redirects: Number(data.max_ticket_redirects),
+        operator_changelog_confirm_button_text: data.operator_changelog_confirm_button_text.trim(),
         called_ticket_min_wait_seconds: Number(data.called_ticket_min_wait_seconds),
         short_service_warning_minutes: Number(data.short_service_warning_minutes),
         max_deferred_tickets_per_operator: Number(data.max_deferred_tickets_per_operator),

@@ -14,6 +14,7 @@ DEFAULT_CALLED_TICKET_MIN_WAIT_SECONDS = 180
 MIN_CALLED_TICKET_MIN_WAIT_SECONDS = 0
 MAX_CALLED_TICKET_MIN_WAIT_SECONDS = 3600
 DEFAULT_MAX_TICKET_REDIRECTS = 3
+DEFAULT_OPERATOR_CHANGELOG_CONFIRM_BUTTON_TEXT = "Понятно"
 MIN_MAX_TICKET_REDIRECTS = 1
 MAX_MAX_TICKET_REDIRECTS = 20
 DEFAULT_SHORT_SERVICE_WARNING_MINUTES = 5
@@ -239,6 +240,10 @@ def get_system_settings_dict(db: Session) -> dict:
         "redirect_allow_break": _str_to_bool(settings.redirect_allow_break, default=True),
         "redirect_allow_offline": _str_to_bool(settings.redirect_allow_offline, default=False),
         "max_ticket_redirects": _normalize_max_ticket_redirects(settings.max_ticket_redirects),
+        "operator_changelog_confirm_button_text": (
+            settings.operator_changelog_confirm_button_text
+            or DEFAULT_OPERATOR_CHANGELOG_CONFIRM_BUTTON_TEXT
+        ),
         "call_message_template": settings.call_message_template or "Талон <number> подойдите к окну <window>",
         "board_ticket_template": settings.board_ticket_template or "Билет <number> -> окно <window>",
         "board_ticker_text": build_board_ticker_text(board_ticker_messages),
