@@ -129,36 +129,6 @@ def test_max_ticket_redirects_is_in_settings_schemas_with_default():
     assert field.default == 3
 
 
-def test_operator_changelog_button_text_is_in_settings_schemas_with_default():
-    for schema in (SystemSettingsUpdate, SystemSettingsResponse, PublicSettingsResponse):
-        assert "operator_changelog_confirm_button_text" in _schema_fields(schema)
-
-    field = _schema_fields(SystemSettingsUpdate)[
-        "operator_changelog_confirm_button_text"
-    ]
-    assert field.default == "Понятно"
-
-
-def test_system_settings_dict_includes_operator_changelog_button_text():
-    engine = create_engine("sqlite:///:memory:")
-    SystemSettings.__table__.create(engine)
-    Session = sessionmaker(bind=engine)
-    db = Session()
-
-    try:
-        db.add(SystemSettings(
-            id=1,
-            operator_changelog_confirm_button_text="Я всё прочитал",
-        ))
-        db.commit()
-
-        assert get_system_settings_dict(db)[
-            "operator_changelog_confirm_button_text"
-        ] == "Я всё прочитал"
-    finally:
-        db.close()
-
-
 def test_system_settings_dict_includes_board_ticker_text():
     engine = create_engine("sqlite:///:memory:")
     SystemSettings.__table__.create(engine)

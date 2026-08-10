@@ -60,3 +60,14 @@ def test_frontend_exposes_editor_only_to_admin():
     assert 'method: "PUT"' in admin_source
     assert 'method: "PUT"' not in operator_source
     assert "openOperatorDocumentation" in operator_source
+
+
+def test_admin_uses_separate_read_and_edit_modes_without_split_preview():
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "queue/js/admin/views/docs.view.js").read_text(encoding="utf-8")
+    css = (root / "queue/css/admin/docs.css").read_text(encoding="utf-8")
+    assert 'action: "doc-edit"' in source
+    assert 'id="docs-content"' in source
+    assert 'id="docs-editor"' in source
+    assert "docs-preview" not in source
+    assert ".docs-panes" not in css

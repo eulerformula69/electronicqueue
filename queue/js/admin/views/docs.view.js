@@ -3,7 +3,7 @@ let scope = "admin";
 let documents = [];
 let current = null;
 let dirty = false;
-let previewTimer = null;
+let editing = false;
 
 export async function mount(context) {
     ctx = context;
@@ -17,15 +17,20 @@ export async function mount(context) {
             <div class="docs-toolbar">
                 <span id="docs-current-path">Документ не выбран</span>
                 <input id="docs-image-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
-                ${ctx.ui.button("Картинка", {variant: "ghost", action: "doc-image"})}
-                ${ctx.ui.button("Переименовать", {variant: "ghost", action: "doc-rename"})}
-                ${ctx.ui.button("Удалить", {variant: "danger", action: "doc-delete"})}
-                ${ctx.ui.button("Сохранить", {variant: "primary", action: "doc-save"})}
+                <div class="docs-read-actions">
+                    ${ctx.ui.button("Переименовать", {variant: "ghost", action: "doc-rename"})}
+                    ${ctx.ui.button("Удалить", {variant: "danger", action: "doc-delete"})}
+                    ${ctx.ui.button("Редактировать", {variant: "primary", action: "doc-edit"})}
+                </div>
+                <div class="docs-edit-actions" hidden>
+                    ${ctx.ui.button("Картинка", {variant: "ghost", action: "doc-image"})}
+                    ${ctx.ui.button("Отмена", {variant: "ghost", action: "doc-cancel"})}
+                    ${ctx.ui.button("Сохранить", {variant: "primary", action: "doc-save"})}
+                </div>
             </div>
-            <div class="docs-mobile-tabs"><button data-pane="editor" class="active">Редактор</button><button data-pane="preview">Предпросмотр</button></div>
-            <div class="docs-panes" data-active-pane="editor">
-                <textarea id="docs-editor" aria-label="Markdown редактор" spellcheck="true"></textarea>
-                <article id="docs-preview" class="docs-rendered"></article>
+            <div class="docs-document">
+                <article id="docs-content" class="docs-rendered"></article>
+                <textarea id="docs-editor" aria-label="Markdown редактор" spellcheck="true" hidden></textarea>
             </div>
         </section>
     </div>`;
@@ -34,17 +39,12 @@ export async function mount(context) {
 }
 
 export function unmount() {
-    clearTimeout(previewTimer);
     window.removeEventListener("beforeunload", warnUnsaved);
 }
 
 function bindEvents() {
     ctx.view.addEventListener("click", handleClick);
-    document.getElementById("docs-editor").addEventListener("input", () => {
-        dirty = true;
-        clearTimeout(previewTimer);
-        previewTimer = setTimeout(renderPreview, 120);
-    });
+    document.getElementById("docs-editor").addEventListener("input", () => { dirty = true; });
     document.getElementById("docs-image-input").addEventListener("change", uploadImage);
     window.addEventListener("beforeunload", warnUnsaved);
 }
@@ -54,17 +54,15 @@ async function handleClick(event) {
     if (scopeButton) {
         if (!confirmDiscard()) return;
         scope = scopeButton.dataset.scope;
+        current = null;
         ctx.view.querySelectorAll("[data-scope]").forEach(button => button.classList.toggle("active", button === scopeButton));
         await loadTree(); return;
-    }
-    const pane = event.target.closest("[data-pane]");
-    if (pane) {
-        ctx.view.querySelectorAll("[data-pane]").forEach(button => button.classList.toggle("active", button === pane));
-        ctx.view.querySelector(".docs-panes").dataset.activePane = pane.dataset.pane; return;
     }
     const documentButton = event.target.closest("[data-doc-path]");
     if (documentButton) { if (confirmDiscard()) await openDocument(documentButton.dataset.docPath); return; }
     const action = event.target.closest("[data-action]")?.dataset.action;
+    if (action === "doc-edit") setEditing(true);
+    if (action === "doc-cancel" && confirmDiscard()) { document.getElementById("docs-editor").value = current.content; setEditing(false); }
     if (action === "doc-save") await saveCurrent();
     if (action === "doc-create") await createNew();
     if (action === "doc-rename") await renameCurrent();
@@ -75,7 +73,7 @@ async function handleClick(event) {
 async function loadTree(preferredPath) {
     const data = await ctx.api.request(`/admin/docs/${scope}`);
     documents = data.documents;
-    document.getElementById("docs-tree").innerHTML = documents.map(item => `<button data-doc-path="${ctx.ui.escapeHtml(item.path)}" class="${item.path === current?.path ? "active" : ""}"><strong>${ctx.ui.escapeHtml(item.title)}</strong><small>${ctx.ui.escapeHtml(item.path)}</small></button>`).join("");
+    document.getElementById("docs-tree").innerHTML = documents.map(item => `<button data-doc-path="${ctx.ui.escapeHtml(item.path)}"><strong>${ctx.ui.escapeHtml(item.title)}</strong><small>${ctx.ui.escapeHtml(item.path)}</small></button>`).join("");
     const path = preferredPath || (documents.some(item => item.path === current?.path) ? current.path : documents[0]?.path);
     if (path) await openDocument(path);
 }
@@ -86,14 +84,27 @@ async function openDocument(path) {
     document.getElementById("docs-editor").value = current.content;
     document.getElementById("docs-current-path").textContent = current.path;
     ctx.view.querySelectorAll("[data-doc-path]").forEach(button => button.classList.toggle("active", button.dataset.docPath === path));
-    renderPreview();
+    renderDocument();
+    setEditing(false);
+}
+
+function setEditing(value) {
+    editing = value;
+    if (!value) dirty = false;
+    document.getElementById("docs-content").hidden = value;
+    document.getElementById("docs-editor").hidden = !value;
+    ctx.view.querySelector(".docs-read-actions").hidden = value;
+    ctx.view.querySelector(".docs-edit-actions").hidden = !value;
+    if (value) document.getElementById("docs-editor").focus();
 }
 
 async function saveCurrent() {
     if (!current) return;
     try {
         current = await ctx.api.json(`/admin/docs/${scope}/content?path=${encodeURIComponent(current.path)}`, {method: "PUT", body: {content: document.getElementById("docs-editor").value, revision: current.revision}});
-        dirty = false; ctx.toast("Документ сохранён", "success"); await loadTree(current.path);
+        dirty = false;
+        ctx.toast("Документ сохранён", "success");
+        await loadTree(current.path);
     } catch (error) { if (error.status === 409) ctx.toast("Файл изменён в другой вкладке. Обновите страницу.", "error"); else throw error; }
 }
 
@@ -103,6 +114,7 @@ async function createNew() {
     const path = value.toLowerCase().endsWith(".md") ? value : `${value}.md`;
     const created = await ctx.api.json(`/admin/docs/${scope}/content`, {method: "POST", body: {path}});
     await loadTree(created.path);
+    setEditing(true);
 }
 
 async function renameCurrent() {
@@ -122,7 +134,7 @@ async function deleteCurrent() {
 
 async function uploadImage(event) {
     const file = event.target.files[0];
-    if (!file || !current) return;
+    if (!file || !current || !editing) return;
     const form = new FormData(); form.append("file", file);
     const result = await ctx.api.formData(`/admin/docs/${scope}/images`, form, {method: "POST"});
     const editor = document.getElementById("docs-editor");
@@ -130,10 +142,10 @@ async function uploadImage(event) {
     editor.dispatchEvent(new Event("input")); event.target.value = "";
 }
 
-function renderPreview() {
-    const preview = document.getElementById("docs-preview");
-    preview.innerHTML = window.DocsMarkdown.render(document.getElementById("docs-editor").value);
-    window.DocsMarkdown.hydrateImages(preview, `/admin/docs/${scope}/asset`, ctx.api.getSessionId());
+function renderDocument() {
+    const content = document.getElementById("docs-content");
+    content.innerHTML = window.DocsMarkdown.render(current?.content || "");
+    window.DocsMarkdown.hydrateImages(content, `/admin/docs/${scope}/asset`, ctx.api.getSessionId());
 }
 
 function confirmDiscard() { return !dirty || confirm("Есть несохранённые изменения. Продолжить без сохранения?"); }
