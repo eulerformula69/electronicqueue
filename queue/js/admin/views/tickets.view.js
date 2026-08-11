@@ -75,8 +75,10 @@ function render() {
         <td>${formatDate(ticket.service_started_at)}</td>
         <td>${formatDate(ticket.finished_at)}</td>
         <td class="admin-ticket-actions">
-            ${ctx.ui.button("Подробнее", {variant: "ghost", action: "details", id: ticket.id})}
-            ${ACTIVE_STATUSES.has(ticket.status) ? ctx.ui.button("Отменить", {variant: "danger", action: "cancel", id: ticket.id}) : ""}
+            <div class="admin-ticket-action-list">
+                ${ctx.ui.button("Подробнее", {variant: "ghost", action: "details", id: ticket.id})}
+                ${ACTIVE_STATUSES.has(ticket.status) ? ctx.ui.button("Отменить", {variant: "danger", action: "cancel", id: ticket.id}) : ""}
+            </div>
         </td>
     </tr>`);
 

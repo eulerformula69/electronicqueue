@@ -576,8 +576,11 @@ def test_admin_tickets_use_manual_refresh_and_readable_window_names():
     assert "ticket.target_window_id" not in source
     assert "ticket.root_ticket_number" in source
     assert "ticket.root_ticket_id" not in source
+    assert 'class="admin-ticket-action-list"' in source
 
     styles = _read("queue/css/admin/tickets.css")
     assert "max-width: 100%;" in styles
     assert ".admin-ticket-page .admin-table-scroll" in styles
     assert "overflow-x: auto;" in styles
+    assert ".admin-ticket-action-list" in styles
+    assert ".admin-ticket-actions { display: flex" not in styles
