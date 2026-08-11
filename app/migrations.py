@@ -672,3 +672,25 @@ def migrate_operator_changelog_button_text_schema(engine):
     """
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_ticket_admin_changes_schema(engine):
+    """Create the immutable audit trail for manual admin ticket changes."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS ticket_admin_changes (
+        id bigserial PRIMARY KEY,
+        ticket_id integer NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+        admin_id integer REFERENCES admins(id) ON DELETE SET NULL,
+        admin_login varchar NOT NULL,
+        previous_status varchar NOT NULL,
+        new_status varchar NOT NULL,
+        reason varchar(255),
+        changed_at timestamp without time zone NOT NULL
+            DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')
+    );
+
+    CREATE INDEX IF NOT EXISTS ix_ticket_admin_changes_ticket_changed
+        ON ticket_admin_changes (ticket_id, changed_at);
+    """
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

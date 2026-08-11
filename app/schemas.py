@@ -129,6 +129,11 @@ class TicketRead(BaseModel):
         from_attributes = True
 
 
+class AdminTicketStatusUpdate(BaseModel):
+    status: Literal["cancelled"]
+    reason: str
+
+
 class TicketReprintResponse(BaseModel):
     id: int
     number: int

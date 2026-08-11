@@ -283,8 +283,11 @@ async def test_cancel_ticket_accepts_other_comment_reason(monkeypatch):
         board_updates.append(True)
 
     monkeypatch.setattr(tickets_router, "SessionLocal", lambda: db)
-    monkeypatch.setattr(tickets_router.manager, "broadcast", fake_broadcast)
-    monkeypatch.setattr(tickets_router, "broadcast_board", fake_broadcast_board)
+    from app.services import ticket_status
+
+    monkeypatch.setattr(ticket_status.manager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(ticket_status.operatorManager, "broadcast", fake_broadcast)
+    monkeypatch.setattr(ticket_status, "broadcast_board", fake_broadcast_board)
     monkeypatch.setattr(tickets_router, "ensure_client_operations_allowed", lambda *_: None)
 
     result = await tickets_router.cancel_current_ticket(
@@ -299,7 +302,11 @@ async def test_cancel_ticket_accepts_other_comment_reason(monkeypatch):
     assert db.committed is True
     assert db.refreshed is ticket
     assert db.closed is True
-    assert broadcasts == [{"type": "queue_updated"}]
+    assert [message["type"] for message in broadcasts] == [
+        "ticket.updated", "ticket.updated", "queue_updated", "queue_updated"
+    ]
+    assert broadcasts[0]["previousStatus"] == "called"
+    assert broadcasts[0]["status"] == "cancelled"
     assert board_updates == [True]
 
 

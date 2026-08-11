@@ -48,6 +48,7 @@ from app.services.ticket_lifecycle import (
     InvalidTicketTransition,
     start_ticket_service,
 )
+from app.services.ticket_status import TicketStatusError, cancel_ticket, publish_ticket_updated
 from app.services.tickets import (
     called_ticket_wait_remaining_seconds,
     broadcast_board, claim_next_ticket,
@@ -630,28 +631,28 @@ async def cancel_current_ticket(
         db.close()
         return {"detail": "Нет активного билета для отмены (клиент не вызван)"}
 
-    # Устанавливаем статус отмены и время завершения
-    ticket.status = "cancelled"
-    ticket.completion_reason = "cancelled"
     cancel_reason = normalize_ticket_reason(data.reason if data else "Клиент не явился")
-    if not cancel_reason:
-        raise HTTPException(status_code=400, detail="Укажите причину отмены")
-
-    ticket.cancel_reason = cancel_reason
-    if ticket.operator_id is None:
-        ticket.operator_id = operator.id
-    ticket.finished_at = datetime.now()
+    try:
+        previous_status = cancel_ticket(
+            db, ticket, cancel_reason, operator_id=operator.id
+        )
+    except TicketStatusError as exc:
+        db.close()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()
     db.refresh(ticket)
 
-    # Уведомляем систему об изменениях только после сохранения в БД
-    await manager.broadcast({
-        "type": "queue_updated"
-    })
-
-    # Обновляем табло, чтобы номер исчез из списка вызванных
-    await broadcast_board()
+    await publish_ticket_updated({
+        "id": ticket.id,
+        "number": ticket.number,
+        "status": ticket.status,
+        "service_id": ticket.service_id,
+        "operator_id": ticket.operator_id,
+        "window_id": ticket.window_id,
+        "cancel_reason": ticket.cancel_reason,
+        "finished_at": ticket.finished_at.isoformat() if ticket.finished_at else None,
+    }, previous_status)
 
     db.close()
 

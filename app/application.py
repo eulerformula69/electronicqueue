@@ -29,8 +29,9 @@ from app.migrations import (
     migrate_auto_call_balance_and_board_cancel_schema,
     migrate_operator_workflow_settings_schema,
     migrate_operator_changelog_button_text_schema,
+    migrate_ticket_admin_changes_schema,
 )
-from app.routers import admin, auth, documentation, operators, services, system, tickets, tts, websocket, windows
+from app.routers import admin, admin_tickets, auth, documentation, operators, services, system, tickets, tts, websocket, windows
 from app.services.media import start_media_processor
 from app.services.auto_dispatch import auto_dispatch_worker
 from app.services.operators import cleanup_sessions
@@ -49,7 +50,7 @@ app.mount("/queue", StaticFiles(directory=BASE_DIR / "queue"), name="queue")
 
 for router in (
     websocket.router, services.router, tickets.router, operators.router,
-    windows.router, auth.router, admin.router, documentation.router, tts.router, system.router,
+    windows.router, auth.router, admin.router, admin_tickets.router, documentation.router, tts.router, system.router,
 ):
     app.include_router(router)
 
@@ -79,6 +80,7 @@ async def startup():
     migrate_auto_call_balance_and_board_cancel_schema(engine)
     migrate_operator_workflow_settings_schema(engine)
     migrate_operator_changelog_button_text_schema(engine)
+    migrate_ticket_admin_changes_schema(engine)
     init_ticket_numbering(engine)
     migrate_service_terminal_visibility_schema(engine)
     migrate_service_groups_schema(engine)

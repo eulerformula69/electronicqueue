@@ -221,6 +221,28 @@ class AdminSession(Base):
     is_expirable = Column(Integer, default=1)
 
 
+class TicketAdminChange(Base):
+    """Audit trail for ticket state changes made from the admin panel."""
+
+    __tablename__ = "ticket_admin_changes"
+    __table_args__ = (
+        Index("ix_ticket_admin_changes_ticket_changed", "ticket_id", "changed_at"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+    admin_id = Column(Integer, ForeignKey("admins.id", ondelete="SET NULL"), nullable=True)
+    admin_login = Column(String, nullable=False)
+    previous_status = Column(String, nullable=False)
+    new_status = Column(String, nullable=False)
+    reason = Column(String(255), nullable=True)
+    changed_at = Column(
+        TIMESTAMP(timezone=False),
+        nullable=False,
+        server_default=text("(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Irkutsk')"),
+    )
+
+
 class WindowService(Base):
     __tablename__ = "window_services"
     window_id = Column(Integer, ForeignKey("windows.id"), primary_key=True)

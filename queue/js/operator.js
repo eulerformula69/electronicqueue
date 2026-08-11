@@ -5,6 +5,7 @@ const panel = document.getElementById("queue-list");
 
 // Глобальный WebSocket оператора (терминальный канал)
 let operatorSocket = null;
+let queueRefreshTimer = null;
 
 // Polling — резервное обновление очереди и текущего клиента.
 // WebSocket остается основным каналом быстрых событий, а polling страхует окна,
@@ -150,8 +151,9 @@ function initWebSocket() {
             loadOperatorReasonSettings();
         }
 
-        if (data.type === "queue_updated") {
-            refreshQueueAndAutoCall();
+        if (data.type === "queue_updated" || data.type === "ticket.updated") {
+            clearTimeout(queueRefreshTimer);
+            queueRefreshTimer = setTimeout(refreshQueueAndAutoCall, 80);
         }
 
         if (data.type === "auto_dispatch_updated") {
