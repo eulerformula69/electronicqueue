@@ -392,22 +392,6 @@ body.board-page .board-page-dot.active{
     background: #2d89ef;
 }
 
-body.board-page .board-empty,
-body.board-page .waiting-empty{
-    height: 100%;
-    min-height: 160px;
-    border-radius: 10px;
-    background: #ffffff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: #6c757d;
-    font-size: 28px;
-    font-weight: 700;
-}
-
 @media (max-width: 1100px) {
     body.board-page .board-wrapper-with-waiting{
         grid-template-columns: 1fr;

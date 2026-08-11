@@ -323,25 +323,6 @@ body.board-media-page.lite-version #waiting-board .ticket {
     text-align: center !important;
 }
 
-body.board-media-page.lite-version .board-empty,
-body.board-media-page.lite-version .waiting-empty {
-    width: 100% !important;
-    min-height: var(--lite-card-height) !important;
-    padding: 12px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-    text-align: center !important;
-    color: var(--lite-muted) !important;
-    background: #ffffff !important;
-    border-radius: 8px !important;
-    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.08) !important;
-    font-size: 20px !important;
-    line-height: 1.15 !important;
-    font-weight: 700 !important;
-}
-
 body.board-media-page.lite-version .board-page-dots,
 body.board-media-page.lite-version .board-page-dot {
     display: none !important;

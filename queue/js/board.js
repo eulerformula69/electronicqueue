@@ -388,7 +388,6 @@ function renderCalledPage(board, currentTickets) {
     board.innerHTML = "";
 
     if (!currentTickets.length) {
-        board.innerHTML = `<div class="board-empty">Нет вызванных талонов</div>`;
         return;
     }
 
@@ -418,7 +417,6 @@ function renderWaitingPage(waitingBoard, currentTickets) {
     waitingBoard.innerHTML = "";
 
     if (!currentTickets.length) {
-        waitingBoard.innerHTML = `<div class="waiting-empty">Очередь ожидания пуста</div>`;
         return;
     }
 

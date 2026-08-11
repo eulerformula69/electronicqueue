@@ -204,7 +204,7 @@
         currentTickets = calledPages[calledCurrentPage] || [];
 
         if (!currentTickets.length) {
-            board.innerHTML = '<div class="board-empty">Нет вызванных билетов</div>';
+            board.innerHTML = "";
             return;
         }
 
@@ -249,7 +249,7 @@
         currentTickets = waitingPages[waitingCurrentPage] || [];
 
         if (!currentTickets.length) {
-            waitingBoard.innerHTML = '<div class="waiting-empty">Очередь ожидания пуста</div>';
+            waitingBoard.innerHTML = "";
             return;
         }
 
