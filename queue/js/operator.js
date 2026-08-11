@@ -153,7 +153,9 @@ function initWebSocket() {
 
         if (data.type === "queue_updated" || data.type === "ticket.updated") {
             clearTimeout(queueRefreshTimer);
-            queueRefreshTimer = setTimeout(() => refreshQueueAndAutoCall(), 80);
+            queueRefreshTimer = setTimeout(() => {
+                refreshQueueAndAutoCall();
+            }, 80);
         }
 
         if (data.type === "auto_dispatch_updated") {
