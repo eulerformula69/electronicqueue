@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func
+from sqlalchemy.orm import aliased
 
 from app.database import SessionLocal
 from app.dependencies import verify_admin_session
@@ -15,12 +16,15 @@ from app.services.ticket_status import (
 
 
 router = APIRouter(prefix="/admin/tickets", tags=["Admin tickets"])
+TargetWindow = aliased(Window)
+RootTicket = aliased(Ticket)
 ALLOWED_SORTS = {
     "number": Ticket.number,
     "status": Ticket.status,
     "service": Service.name,
     "operator": Operator.name,
     "window": Window.name,
+    "target_window": TargetWindow.name,
     "created_at": Ticket.created_at,
     "called_at": Ticket.called_at,
     "service_started_at": Ticket.service_started_at,
@@ -28,7 +32,14 @@ ALLOWED_SORTS = {
 }
 
 
-def serialize_ticket(ticket, service_name=None, operator_name=None, window_name=None):
+def serialize_ticket(
+    ticket,
+    service_name=None,
+    operator_name=None,
+    window_name=None,
+    target_window_name=None,
+    root_ticket_number=None,
+):
     def iso(value):
         return value.isoformat() if value else None
 
@@ -44,7 +55,9 @@ def serialize_ticket(ticket, service_name=None, operator_name=None, window_name=
         "window_id": ticket.window_id,
         "window_name": window_name,
         "target_window_id": ticket.target_window_id,
+        "target_window_name": target_window_name,
         "root_ticket_id": ticket.root_ticket_id,
+        "root_ticket_number": root_ticket_number,
         "created_at": iso(ticket.created_at),
         "queue_entered_at": iso(ticket.queue_entered_at),
         "called_at": iso(ticket.called_at),
@@ -60,10 +73,19 @@ def serialize_ticket(ticket, service_name=None, operator_name=None, window_name=
 
 def ticket_query(db):
     return (
-        db.query(Ticket, Service.name, Operator.name, Window.name)
+        db.query(
+            Ticket,
+            Service.name,
+            Operator.name,
+            Window.name,
+            TargetWindow.name,
+            RootTicket.number,
+        )
         .outerjoin(Service, Service.id == Ticket.service_id)
         .outerjoin(Operator, Operator.id == Ticket.operator_id)
         .outerjoin(Window, Window.id == Ticket.window_id)
+        .outerjoin(TargetWindow, TargetWindow.id == Ticket.target_window_id)
+        .outerjoin(RootTicket, RootTicket.id == Ticket.root_ticket_id)
     )
 
 
@@ -116,7 +138,7 @@ def list_admin_tickets(
 
         rows = query.offset(offset).limit(limit).all()
         return {
-            "items": [serialize_ticket(ticket, service, operator, window) for ticket, service, operator, window in rows],
+            "items": [serialize_ticket(*row) for row in rows],
             "total": total,
             "filters": {
                 "services": [{"id": item.id, "name": item.name} for item in db.query(Service).order_by(Service.name).all()],
@@ -135,8 +157,8 @@ def get_admin_ticket(ticket_id: int, admin: Admin = Depends(verify_admin_session
         row = ticket_query(db).filter(Ticket.id == ticket_id).first()
         if not row:
             raise HTTPException(status_code=404, detail="Талон не найден")
-        ticket, service, operator, window = row
-        payload = serialize_ticket(ticket, service, operator, window)
+        ticket = row[0]
+        payload = serialize_ticket(*row)
         payload["admin_changes"] = [{
             "id": change.id,
             "admin_id": change.admin_id,

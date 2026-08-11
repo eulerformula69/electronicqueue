@@ -1,6 +1,5 @@
 let ctx;
 let state;
-let realtimeTimer;
 
 const STATUS_LABELS = {
     waiting: "Ожидает",
@@ -11,6 +10,11 @@ const STATUS_LABELS = {
     cancelled: "Отменён"
 };
 const ACTIVE_STATUSES = new Set(["waiting", "called", "serving", "deferred"]);
+const COMPLETION_REASON_LABELS = {
+    completed: "Обслуживание завершено",
+    redirected: "Перенаправлен",
+    cancelled: "Отменён"
+};
 
 export async function mount(context) {
     ctx = context;
@@ -23,14 +27,10 @@ export async function mount(context) {
     ctx.view.innerHTML = `<div class="admin-loading">Загрузка талонов...</div>`;
     ctx.view.onclick = handleClick;
     ctx.view.onchange = handleFilterChange;
-    window.addEventListener("admin:ticket-updated", handleRealtimeUpdate);
     await loadTickets();
 }
 
-export function unmount() {
-    clearTimeout(realtimeTimer);
-    window.removeEventListener("admin:ticket-updated", handleRealtimeUpdate);
-}
+export function unmount() {}
 
 async function loadTickets() {
     const params = new URLSearchParams({limit: "500"});
@@ -45,6 +45,7 @@ async function loadTickets() {
     state.items = data.items;
     state.filters = data.filters;
     state.total = data.total;
+    state.loadedAt = new Date();
     render();
 }
 
@@ -54,7 +55,8 @@ function render() {
         ctx.ui.sortHeader("Статус", "status", state.sort),
         ctx.ui.sortHeader("Услуга", "service", state.sort),
         ctx.ui.sortHeader("Оператор", "operator", state.sort),
-        ctx.ui.sortHeader("Окно", "window", state.sort),
+        ctx.ui.sortHeader("Окно обслуживания", "window", state.sort),
+        ctx.ui.sortHeader("Выбрано клиентом", "target_window", state.sort),
         ctx.ui.sortHeader("Создан", "created_at", state.sort),
         ctx.ui.sortHeader("Вызван", "called_at", state.sort),
         ctx.ui.sortHeader("Начат", "service_started_at", state.sort),
@@ -67,6 +69,7 @@ function render() {
         <td>${text(ticket.service_name)}</td>
         <td>${text(ticket.operator_name)}</td>
         <td>${text(ticket.window_name)}</td>
+        <td>${text(ticket.target_window_name)}</td>
         <td>${formatDate(ticket.created_at)}</td>
         <td>${formatDate(ticket.called_at)}</td>
         <td>${formatDate(ticket.service_started_at)}</td>
@@ -91,7 +94,10 @@ function render() {
                 <label class="admin-field"><span>Дата до</span><input class="admin-input" type="date" name="created_to" value="${ctx.ui.escapeHtml(state.query.created_to || "")}"></label>
                 ${ctx.ui.button("Сбросить", {variant: "secondary", action: "reset-filters"})}
             </div>
-            <div class="admin-ticket-count">Показано ${state.items.length} из ${state.total}</div>
+            <div class="admin-ticket-toolbar">
+                <div class="admin-ticket-count">Показано ${state.items.length} из ${state.total} · обновлено ${formatTime(state.loadedAt)}</div>
+                ${ctx.ui.button("↻ Обновить таблицу", {variant: "primary", action: "refresh"})}
+            </div>
             ${ctx.ui.table(headers, rows)}
         </section>`;
 }
@@ -107,6 +113,10 @@ function entityOptions(key, emptyLabel) {
 async function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) return;
+    if (button.dataset.action === "refresh") {
+        await loadTickets();
+        ctx.toast("Таблица обновлена", "success");
+    }
     if (button.dataset.action === "sort") {
         const key = button.dataset.sortKey;
         state.sort = {key, direction: state.sort.key === key && state.sort.direction === "desc" ? "asc" : "desc"};
@@ -144,15 +154,16 @@ async function cancelTicket(id) {
 async function showDetails(id) {
     const ticket = await ctx.api.request(`/admin/tickets/${id}`);
     const fields = [
-        ["ID", ticket.id], ["Номер", `№${ticket.number}`], ["Статус", STATUS_LABELS[ticket.status] || ticket.status],
-        ["Услуга", ticket.service_name], ["Оператор", ticket.operator_name], ["Окно", ticket.window_name],
-        ["Корневой талон", ticket.root_ticket_id], ["Целевое окно", ticket.target_window_id],
+        ["Номер", `№${ticket.number}`], ["Статус", STATUS_LABELS[ticket.status] || ticket.status],
+        ["Услуга", ticket.service_name], ["Оператор", ticket.operator_name], ["Окно обслуживания", ticket.window_name],
+        ["Выбрано клиентом", ticket.target_window_name],
+        ["Исходный талон", ticket.root_ticket_number ? `№${ticket.root_ticket_number}` : null],
         ["Создан", formatDate(ticket.created_at)], ["Вошёл в очередь", formatDate(ticket.queue_entered_at)],
         ["Вызван", formatDate(ticket.called_at)], ["Начало обслуживания", formatDate(ticket.service_started_at)],
         ["Последний повторный вызов", formatDate(ticket.last_recalled_at)], ["Отложен", formatDate(ticket.deferred_at)],
         ["Завершён", formatDate(ticket.finished_at)], ["Возвратов в очередь", ticket.returned_to_queue_count],
         ["Причина отложения", ticket.defer_reason], ["Причина отмены", ticket.cancel_reason],
-        ["Причина завершения", ticket.completion_reason]
+        ["Причина завершения", COMPLETION_REASON_LABELS[ticket.completion_reason] || ticket.completion_reason]
     ];
     const history = ticket.admin_changes.length ? ticket.admin_changes.map(change => `
         <li><strong>${formatDate(change.changed_at)}</strong> — ${ctx.ui.escapeHtml(change.admin_login)}:
@@ -164,14 +175,13 @@ async function showDetails(id) {
         <h3>История изменений</h3><ul class="admin-ticket-history">${history}</ul>`);
 }
 
-function handleRealtimeUpdate() {
-    clearTimeout(realtimeTimer);
-    realtimeTimer = setTimeout(() => loadTickets().catch(console.error), 120);
-}
-
 function statusBadge(status) {
     const tone = {waiting: "blue", called: "warning", serving: "success", deferred: "neutral", finished: "success", cancelled: "danger"}[status] || "neutral";
     return ctx.ui.badge(STATUS_LABELS[status] || status, tone);
+}
+
+function formatTime(value) {
+    return value ? new Intl.DateTimeFormat("ru-RU", {timeStyle: "medium"}).format(value) : "—";
 }
 
 function formatDate(value) {

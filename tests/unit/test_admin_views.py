@@ -564,3 +564,15 @@ def test_board_ticker_splits_multiline_messages_with_separator():
     assert "margin-left: 72px;" in board_css
     assert 'content: "|";' in media_css
     assert 'content: "";' not in media_css
+
+
+def test_admin_tickets_use_manual_refresh_and_readable_window_names():
+    source = _read("queue/js/admin/views/tickets.view.js")
+
+    assert "↻ Обновить таблицу" in source
+    assert 'button.dataset.action === "refresh"' in source
+    assert "admin:ticket-updated" not in source
+    assert "ticket.target_window_name" in source
+    assert "ticket.target_window_id" not in source
+    assert "ticket.root_ticket_number" in source
+    assert "ticket.root_ticket_id" not in source

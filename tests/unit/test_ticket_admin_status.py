@@ -3,6 +3,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.models import Ticket
+from app.routers.admin_tickets import serialize_ticket
 from app.services.ticket_status import TicketStatusError, cancel_ticket
 
 
@@ -45,3 +47,19 @@ def test_cancel_rejects_completed_ticket():
 def test_cancel_requires_reason():
     with pytest.raises(TicketStatusError, match="причину"):
         cancel_ticket(Mock(), make_ticket(), "   ")
+
+
+def test_admin_ticket_payload_contains_readable_window_and_root_ticket_names():
+    ticket = Ticket(id=42, number=108, status="waiting", target_window_id=3, root_ticket_id=9)
+
+    payload = serialize_ticket(
+        ticket,
+        "Получение документов",
+        None,
+        None,
+        "Окно 3",
+        101,
+    )
+
+    assert payload["target_window_name"] == "Окно 3"
+    assert payload["root_ticket_number"] == 101
