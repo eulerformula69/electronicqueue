@@ -13,6 +13,7 @@
 import argparse
 import fnmatch
 import hashlib
+import json
 import shutil
 import subprocess
 import sys
@@ -42,6 +43,7 @@ DEFAULT_EXCLUDES = [
     "*.sqlite3",
 
     ".backup_update_*/",
+    "release.json",
 
     SCRIPT_NAME,
     EXCLUDE_FILE,
@@ -297,6 +299,31 @@ def checkout_allowed_files(repo_dir: Path) -> None:
     )
 
 
+def get_repo_revision(repo_dir: Path) -> str:
+    return run_command_capture(
+        ["git", "-C", str(repo_dir), "rev-parse", "--short=12", "HEAD"]
+    ).strip()
+
+
+def get_installed_revision(project_dir: Path) -> str | None:
+    try:
+        data = json.loads((project_dir / "release.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    revision = str(data.get("version", "")).strip()
+    return revision or None
+
+
+def write_installed_revision(project_dir: Path, revision: str) -> None:
+    release_file = project_dir / "release.json"
+    temporary_file = project_dir / "release.json.tmp"
+    temporary_file.write_text(
+        json.dumps({"version": revision}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    temporary_file.replace(release_file)
+
+
 def collect_checked_out_files(repo_dir: Path, excludes: list[str]) -> list[Path]:
     result = []
 
@@ -444,6 +471,7 @@ def main() -> None:
         repo_dir = tmp_dir / "repo"
 
         clone_repo_metadata(args.repo, args.branch, repo_dir)
+        target_revision = get_repo_revision(repo_dir)
 
         all_repo_files = list_repo_files(repo_dir)
         check_project_markers_in_tree(all_repo_files)
@@ -513,7 +541,9 @@ def main() -> None:
             print("Чтобы реально обновить проект, запусти с флагом --apply.")
             return
 
-        if not files_to_update and not files_to_delete:
+        release_needs_update = get_installed_revision(project_dir) != target_revision
+
+        if not files_to_update and not files_to_delete and not release_needs_update:
             print("\nОбновлять нечего.")
             return
 
@@ -542,6 +572,9 @@ def main() -> None:
                     path.unlink()
                     remove_empty_dirs_upwards(path.parent, project_dir)
                     print(f"  удалён: {relative}")
+
+        write_installed_revision(project_dir, target_revision)
+        print(f"  версия релиза: {target_revision}")
 
         print("\nГотово.")
 

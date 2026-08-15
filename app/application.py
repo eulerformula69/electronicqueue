@@ -35,10 +35,12 @@ from app.routers import admin, admin_tickets, auth, documentation, operators, se
 from app.services.media import start_media_processor
 from app.services.auto_dispatch import auto_dispatch_worker
 from app.services.operators import cleanup_sessions
+from app.release_middleware import release_cache_middleware
 
 TESTING = os.getenv("TESTING", "").lower() in {"1", "true", "yes", "on"}
 
 app = FastAPI()
+app.middleware("http")(release_cache_middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,

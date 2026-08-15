@@ -13,7 +13,7 @@ def test_operator_page_loads_operator_changelog_only():
     operator_html = read_text("queue/operator.html")
 
     assert '<script src="/queue/js/operator-changelog.js"></script>' in operator_html
-    assert '<script src="/queue/js/app-version.js"></script>' not in operator_html
+    assert '<script src="/queue/js/app-version.js"></script>' in operator_html
     assert 'id="app-update-notification"' in operator_html
     assert 'onclick="openOperatorChangelogHistory()"' in operator_html
     assert "ОБНОВЛЕНИЯ" in operator_html
