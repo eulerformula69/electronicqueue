@@ -105,13 +105,20 @@
 
                     </div>
 
-                    <button
-                        id="call-by-number-btn"
-                        class="btn-outline operator-settings-wide-button"
-                        data-call-action
-                        type="button"
-                        onclick="promptCallByNumber()"
-                    >Вызвать по номеру</button>
+                    <div class="operator-settings-row">
+                        <div>
+                            <strong>Показывать кнопку «Вызвать по номеру»</strong>
+                            <span>Быстрый вызов талона из раздела «Ожидающие»</span>
+                        </div>
+                        <label class="window-status-switch operator-preference-switch">
+                            <input
+                                id="show-call-by-number-toggle"
+                                type="checkbox"
+                                onchange="toggleCallByNumberButtons(this.checked)"
+                            >
+                            <span class="window-status-switch-track" aria-hidden="true"></span>
+                        </label>
+                    </div>
 
                     <button class="btn-outline operator-settings-wide-button" type="button" onclick="openOperatorDocumentation()">ИНСТРУКЦИЯ</button>
                     <button class="btn-outline operator-settings-wide-button" type="button" onclick="openOperatorChangelogHistory()">ОБНОВЛЕНИЯ</button>
@@ -198,6 +205,7 @@
 <script src="/queue/js/operator-feedback.js"></script>
 <script src="/queue/js/operator-ui-state.js"></script>
 <script src="/queue/js/operator-ticket-timers.js"></script>
+<script src="/queue/js/operator-call-by-number.js"></script>
 <script src="/queue/js/operator.js"></script>
 <script src="/queue/js/operator-changelog.js"></script>
 <script src="/queue/js/docs-markdown.js"></script>

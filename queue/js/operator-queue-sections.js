@@ -137,6 +137,9 @@ const OperatorQueueSections = (() => {
             const resumeDisabled = (
                 typeof currentWindowStatus !== "undefined" && currentWindowStatus !== "online"
             ) || (typeof currentTicketId !== "undefined" && Boolean(currentTicketId));
+            const canCallByNumber = selectedSection === "waiting"
+                && typeof showCallByNumberButtons !== "undefined"
+                && showCallByNumberButtons;
             const redirected = Boolean(ticket.is_redirected_to_window);
             return `
                 <div class="queue-item queue-detail-item ${redirected ? "queue-item-redirected" : ""}">
@@ -153,6 +156,11 @@ const OperatorQueueSections = (() => {
                         ${reason ? `<span>Причина: ${escapeHtml(reason)}</span>` : ""}
                     </div>
                     ${redirected ? '<div class="redirect-badge">Перенаправлено</div>' : ''}
+                    ${canCallByNumber ? `
+                        <div class="queue-ticket-actions">
+                            <button class="btn-primary queue-call-by-number-btn" data-call-action type="button" onclick="callTicketByNumber(${Number(ticket.number)})">Вызвать по номеру</button>
+                        </div>
+                    ` : ""}
                     ${canResume ? `
                         <div class="queue-ticket-actions">
                             <button class="btn-primary queue-resume-btn" type="button" onclick="resumeTicket(${Number(ticket.id)}, '${selectedSection}')" ${resumeDisabled ? "disabled" : ""}>Вернуть в обслуживание</button>

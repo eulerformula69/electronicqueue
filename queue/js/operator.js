@@ -118,7 +118,8 @@ async function init() {
 	loadCurrentTicket();
 	loadOperatorReasonSettings();
 	updateNewTicketSoundButton();
-	updateNewTicketSystemNotificationButton();	
+	updateNewTicketSystemNotificationButton();
+	updateCallByNumberToggle();
 }
 
 function initWebSocket() {
@@ -2324,80 +2325,6 @@ function scheduleAutoCallAfterWorkspaceFreed() {
         return;
     }
     startAutoCallAfterFinish();
-}
-
-/* =========================
-   Вызов по конкретному номеру
-========================= */
-async function promptCallByNumber() {
-    closeOperatorMoreMenu();
-    closeOperatorSettingsPopup();
-
-    if (currentTicketId !== null && currentTicketId !== undefined) {
-        showToast("Закончите с текущим клиентом!", "danger");
-        return;
-    }
-    if (deferredTicketCount >= operatorSettings.max_deferred_tickets_per_operator) {
-        showToast(
-            `Нельзя вызвать нового клиента: у вас отложено ${deferredTicketCount}`,
-            "warning"
-        );
-        OperatorQueueSections.select("deferred");
-        return;
-    }
-    if (!ensureClientOperationsAllowed()) return;
-
-    const numStr = await OperatorFeedback.input({
-        title: "Вызвать по номеру",
-        message: "Введите номер талона из доступной очереди.",
-        label: "Номер талона",
-        inputMode: "numeric",
-        submitText: "Вызвать",
-        validate: value => /^\d+$/.test(value)
-            ? ""
-            : "Введите корректный числовой номер"
-    });
-    if (numStr === null) return;
-    
-    const ticketNumber = parseInt(numStr.trim(), 10);
-    if (isNaN(ticketNumber)) {
-        showToast("Введите корректный числовой номер", "warning");
-        return;
-    }
-    if (!beginOperatorRequest("call-specific")) return;
-
-    try {
-        const res = await fetch(`${CONFIG.API_URL}/tickets/call-specific`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "session-id": sessionId
-            },
-            body: JSON.stringify({ number: ticketNumber })
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.id) {
-            stopAutoCall("");
-            // Успешно вызвали
-            setCurrentTicket(data);
-            document.getElementById("current").textContent = data.number;
-            document.getElementById("current-service").textContent = data.service_name || "Услуга не указана";
-            
-            document.getElementById("toast-notification").style.display = "none";
-            
-            loadQueue();
-        } else {
-            // Вывод ошибки от бэкенда
-            showToast(data.detail || "Не удалось вызвать данный талон", "danger");
-        }
-    } catch (e) {
-        console.error(e);
-        showToast("Ошибка соединения с сервером", "danger");
-    } finally {
-        endOperatorRequest("call-specific");
-    }
 }
 
 window.addEventListener("beforeunload", () => {

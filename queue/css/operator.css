@@ -405,6 +405,10 @@ body.operator-page .operator-settings-row .icon-button{
     justify-content: center;
     padding: 10px 12px;
 }
+
+body.operator-page .operator-preference-switch{
+    flex: 0 0 auto;
+}
 body.operator-page .operator-settings-wide-button{
     width: 100%;
     text-align: center;
@@ -1128,6 +1132,7 @@ body.operator-page .queue-ticket-actions{
 }
 
 body.operator-page .queue-resume-btn,
+body.operator-page .queue-call-by-number-btn,
 body.operator-page .queue-cancel-deferred-btn{
     min-height: 42px;
 }

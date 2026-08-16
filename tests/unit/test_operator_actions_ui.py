@@ -42,8 +42,24 @@ def test_operator_defer_replaces_return_to_queue_in_primary_actions():
         '</header>', 1
     )[0]
     assert "Вызвать по номеру" not in actions_area
-    assert "Вызвать по номеру" in settings_area
+    assert "Показывать кнопку «Вызвать по номеру»" in settings_area
+    assert 'id="show-call-by-number-toggle"' in settings_area
     assert "cancelCurrent({reason: 'no_show'})" in actions_area
+
+
+def test_call_by_number_button_is_opt_in_and_rendered_only_for_waiting_tickets():
+    html = read_text("queue/operator.html")
+    source = read_text("queue/js/operator-call-by-number.js")
+    sections = read_text("queue/js/operator-queue-sections.js")
+
+    assert '<script src="/queue/js/operator-call-by-number.js"></script>' in html
+    assert 'localStorage.getItem(SHOW_CALL_BY_NUMBER_STORAGE_KEY) === "true"' in source
+    assert "toggleCallByNumberButtons(this.checked)" in html
+    assert 'selectedSection === "waiting"' in sections
+    assert "showCallByNumberButtons" in sections
+    assert "callTicketByNumber(${Number(ticket.number)})" in sections
+    assert "async function callTicketByNumber(ticketNumber)" in source
+    assert "promptCallByNumber" not in source
 
 
 def test_operator_has_four_clickable_queue_columns():
@@ -514,6 +530,7 @@ def test_operator_queue_scrolls_inside_desktop_viewport():
 
 def test_operator_mutations_share_double_click_guard():
     source = read_text("queue/js/operator.js")
+    source += read_text("queue/js/operator-call-by-number.js")
     ui_state = read_text("queue/js/operator-ui-state.js")
 
     assert "const activeOperatorRequests = new Set();" in ui_state
