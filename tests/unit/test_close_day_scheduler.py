@@ -53,5 +53,6 @@ def test_close_day_includes_serving_tickets_and_admin_has_scheduler_view():
     assert '("waiting", "called", "serving")' in close_day_source
     assert 'label: "Планировщик"' in app_source
     assert 'name="weekday"' in view_source
-    assert 'ctx.ui.select("operator_action"' in view_source
-    assert 'ctx.ui.select("ticket_action"' in view_source
+    assert 'renderChoiceGroup("Что сделать с операторами", "operator_action"' in view_source
+    assert 'renderChoiceGroup("Что сделать с талонами", "ticket_action"' in view_source
+    assert '24-часовой формат · ЧЧ:ММ' in view_source
