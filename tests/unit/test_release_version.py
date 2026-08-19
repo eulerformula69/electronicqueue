@@ -20,6 +20,8 @@ def test_version_checker_offers_one_click_reload():
 
     assert 'button.textContent = "Обновить"' in source
     assert 'window.location.reload()' in source
+    assert 'window.showAppUpdateNotification = showUpdateNotification' in source
+    assert 'notification.id = "app-release-notification"' in source
     assert 'meta[name="app-version"]' in source
     assert 'cache: "no-store"' in source
 

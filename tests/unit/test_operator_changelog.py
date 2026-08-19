@@ -14,7 +14,8 @@ def test_operator_page_loads_operator_changelog_only():
 
     assert '<script src="/queue/js/operator-changelog.js"></script>' in operator_html
     assert '<script src="/queue/js/app-version.js"></script>' in operator_html
-    assert 'id="app-update-notification"' in operator_html
+    assert 'id="app-update-notification"' not in operator_html
+    assert operator_html.index('app-version.js') < operator_html.index('operator-changelog.js')
     assert 'onclick="openOperatorChangelogHistory()"' in operator_html
     assert "ОБНОВЛЕНИЯ" in operator_html
 
@@ -52,8 +53,8 @@ def test_operator_changelog_polling_shows_update_banner_without_modal():
 
     assert "pageChangelogVersion = version" in source
     assert "setInterval(() => loadOperatorChangelog({ checkForUpdate: true }), CHECK_INTERVAL_MS)" in source
-    assert 'document.getElementById("app-update-notification")' in source
-    assert "Доступно обновление, пожалуйста перезапустите страницу" in source
+    assert 'window.showAppUpdateNotification()' in source
+    assert 'app-update-notification' not in source
 
     update_branch = source.index("if (options.checkForUpdate)")
     banner_call = source.index("showUpdateNotification();", update_branch)

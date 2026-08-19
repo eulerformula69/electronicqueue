@@ -21,6 +21,8 @@
         notification.style.display = "flex";
     }
 
+    window.showAppUpdateNotification = showUpdateNotification;
+
     async function checkAppVersion() {
         if (checkInProgress || typeof CONFIG === "undefined") return;
         checkInProgress = true;

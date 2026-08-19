@@ -3,7 +3,6 @@
     const STORAGE_KEY = "operatorChangelogVersion";
     const CHECK_INTERVAL_MS = 60000;
     const ACTIVITY_CHECK_COOLDOWN_MS = 30000;
-    const UPDATE_NOTIFICATION_TEXT = "Доступно обновление, пожалуйста перезапустите страницу (ctrl + F5)";
     const DEFAULT_CONFIRM_BUTTON_TEXT = "Понятно";
     let confirmButtonText = DEFAULT_CONFIRM_BUTTON_TEXT;
     let pageChangelogVersion = null;
@@ -38,16 +37,9 @@
     }
 
     function showUpdateNotification() {
-        let notification = document.getElementById("app-update-notification");
-        if (!notification) {
-            notification = document.createElement("div");
-            notification.id = "app-update-notification";
-            notification.className = "app-update-notification";
-            notification.textContent = UPDATE_NOTIFICATION_TEXT;
-            document.body.appendChild(notification);
+        if (typeof window.showAppUpdateNotification === "function") {
+            window.showAppUpdateNotification();
         }
-
-        notification.style.display = "block";
     }
 
     function appendChangelogEntry(container, entry) {
