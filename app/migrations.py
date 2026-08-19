@@ -694,3 +694,20 @@ def migrate_ticket_admin_changes_schema(engine):
     """
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def migrate_close_day_schedule_schema(engine):
+    """Create the singleton weekly close-day schedule."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS close_day_schedule (
+        id integer PRIMARY KEY,
+        enabled integer NOT NULL DEFAULT 0,
+        weekdays varchar(20) NOT NULL DEFAULT '0,1,2,3,4',
+        run_time varchar(5) NOT NULL DEFAULT '18:00',
+        operator_action varchar(16) NOT NULL DEFAULT 'offline',
+        ticket_action varchar(16) NOT NULL DEFAULT 'cancel',
+        last_run_date varchar(10)
+    );
+    """
+    with engine.begin() as conn:
+        conn.execute(text(ddl))

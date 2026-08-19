@@ -5,10 +5,8 @@ import asyncio
 import argparse
 import json
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import func, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 import websockets
 
@@ -19,155 +17,12 @@ if str(PROJECT_DIR) not in sys.path:
 
 from app.database import SessionLocal  # noqa: E402
 from app.config import CLOSE_DAY_WS_URL  # noqa: E402
-from app.models import (  # noqa: E402
-    Operator,
-    Service,
-    Ticket,
-    UserSession,
-    Window,
-    record_operator_status,
-)
-from app.services.settings import get_system_settings_dict  # noqa: E402
+from app.services.close_day import CloseDayResult, close_day  # noqa: E402
 from scripts.close_day_schedule import (  # noqa: E402
     collect_interactive_schedule,
     parse_run_at,
     run_schedule,
 )
-
-
-@dataclass(frozen=True)
-class CloseDayResult:
-    windows_status_changed: int
-    tickets_finished: int
-    tickets_cancelled: int
-    tickets_deferred: int
-    sessions_deleted: int
-    deleted_session_ids: tuple[str, ...]
-
-
-def close_day(
-    db,
-    *,
-    ticket_action: str,
-    operator_action: str,
-) -> CloseDayResult:
-    """Apply all end-of-day changes atomically and return affected row counts."""
-    if operator_action not in {"offline", "online", "break"}:
-        raise ValueError(f"Неизвестное действие с операторами: {operator_action}")
-
-    # This helper may create the singleton settings row and commit it.
-    settings = get_system_settings_dict(db)
-
-    # Prevent queue activity from being committed halfway through the operation.
-    db.execute(
-        text(
-            "LOCK TABLE tickets, windows, sessions, operator_status_periods "
-            "IN SHARE ROW EXCLUSIVE MODE"
-        )
-    )
-
-    now = func.timezone("Asia/Irkutsk", func.current_timestamp())
-    db.execute(
-        text(
-            """
-            UPDATE tickets t
-            SET operator_id = o.id
-            FROM operators o
-            WHERE t.status = 'called'
-              AND t.operator_id IS NULL
-              AND t.window_id = o.window_id
-            """
-        )
-    )
-    tickets_finished = 0
-    tickets_cancelled = 0
-    tickets_deferred = 0
-    if ticket_action == "finish":
-        tickets_finished = (
-            db.query(Ticket)
-            .filter(Ticket.status == "called")
-            .update(
-                {
-                    Ticket.status: "finished",
-                    Ticket.completion_reason: "completed",
-                    Ticket.finished_at: now,
-                },
-                synchronize_session=False,
-            )
-        )
-    elif ticket_action != "cancel":
-        raise ValueError(f"Неизвестное действие с билетами: {ticket_action}")
-
-    tickets_cancelled = (
-        db.query(Ticket)
-        .filter(
-            Ticket.status.in_(
-                ("waiting", "called")
-                if ticket_action == "cancel"
-                else ("waiting",)
-            )
-        )
-        .update(
-            {
-                Ticket.status: "cancelled",
-                Ticket.completion_reason: "cancelled",
-                Ticket.finished_at: now,
-            },
-            synchronize_session=False,
-        )
-    )
-    tickets_deferred = (
-        db.query(Ticket)
-        .filter(Ticket.status == "deferred")
-        .update(
-            {
-                Ticket.status: "cancelled",
-                Ticket.completion_reason: "cancelled",
-                Ticket.finished_at: now,
-            },
-            synchronize_session=False,
-        )
-    )
-
-    windows_status_changed = 0
-    deleted_session_ids: tuple[str, ...] = ()
-    sessions_deleted = 0
-    if operator_action in {"offline", "break"}:
-        operators = db.query(Operator).order_by(Operator.id).all()
-        for operator in operators:
-            record_operator_status(
-                db, operator.id, operator.window_id, operator_action
-            )
-
-        windows_status_changed = (
-            db.query(Window)
-            .filter(or_(Window.status != operator_action, Window.status.is_(None)))
-            .update({Window.status: operator_action}, synchronize_session=False)
-        )
-
-        if settings["hide_services_without_online_operators"]:
-            db.query(Service).update(
-                {Service.status: "inactive"}, synchronize_session=False
-            )
-
-    if operator_action == "offline":
-        deleted_session_ids = tuple(
-            session_id
-            for (session_id,) in db.query(UserSession.session_id)
-            .order_by(UserSession.session_id)
-            .all()
-        )
-        sessions_deleted = db.query(UserSession).delete(synchronize_session=False)
-
-    db.commit()
-    return CloseDayResult(
-        windows_status_changed=windows_status_changed,
-        tickets_finished=tickets_finished,
-        tickets_cancelled=tickets_cancelled,
-        tickets_deferred=tickets_deferred,
-        sessions_deleted=sessions_deleted,
-        deleted_session_ids=deleted_session_ids,
-    )
 
 
 async def notify_clients(deleted_session_ids: tuple[str, ...]) -> None:

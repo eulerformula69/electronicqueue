@@ -1,0 +1,21 @@
+body.admin-page .admin-scheduler-form { max-width: 940px; }
+body.admin-page .admin-scheduler-card { display: grid; gap: 28px; }
+body.admin-page .admin-scheduler-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+body.admin-page .admin-scheduler-heading h2 { margin: 0 0 6px; }
+body.admin-page .admin-scheduler-heading p { margin: 0; color: var(--text-muted); }
+body.admin-page .admin-scheduler-enabled { display: flex; align-items: center; gap: 12px; font-weight: 750; }
+body.admin-page .admin-scheduler-days { border: 0; padding: 0; margin: 0; }
+body.admin-page .admin-scheduler-days legend { margin-bottom: 10px; font-weight: 750; }
+body.admin-page .admin-scheduler-days > div { display: flex; flex-wrap: wrap; gap: 8px; }
+body.admin-page .admin-day-toggle input { position: absolute; opacity: 0; }
+body.admin-page .admin-day-toggle span { display: grid; place-items: center; min-width: 48px; height: 42px; border: 1px solid var(--admin-border); border-radius: 10px; background: var(--card-bg); cursor: pointer; font-weight: 750; }
+body.admin-page .admin-day-toggle input:checked + span { color: white; border-color: var(--primary); background: var(--primary); }
+body.admin-page .admin-day-toggle input:focus-visible + span { outline: 3px solid var(--admin-accent-soft); outline-offset: 2px; }
+body.admin-page .admin-scheduler-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }
+body.admin-page .admin-scheduler-grid .admin-field:last-child { grid-column: 1 / -1; }
+body.admin-page .admin-scheduler-actions { display: flex; justify-content: flex-start; }
+@media (max-width: 700px) {
+    body.admin-page .admin-scheduler-heading { align-items: flex-start; flex-direction: column; }
+    body.admin-page .admin-scheduler-grid { grid-template-columns: 1fr; }
+    body.admin-page .admin-scheduler-grid .admin-field:last-child { grid-column: 1; }
+}

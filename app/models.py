@@ -293,3 +293,15 @@ class SystemSettings(Base):
         String(500),
         default="⚠ Талон <number>: вызов отменён оператором окна <window>. Вернулись? Сообщите номер оператору.",
     )
+
+
+class CloseDaySchedule(Base):
+    __tablename__ = "close_day_schedule"
+
+    id = Column(Integer, primary_key=True, default=1)
+    enabled = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    weekdays = Column(String(20), nullable=False, default="0,1,2,3,4", server_default="0,1,2,3,4")
+    run_time = Column(String(5), nullable=False, default="18:00", server_default="18:00")
+    operator_action = Column(String(16), nullable=False, default="offline", server_default="offline")
+    ticket_action = Column(String(16), nullable=False, default="cancel", server_default="cancel")
+    last_run_date = Column(String(10), nullable=True)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 
 class ServiceRename(BaseModel):
@@ -339,3 +339,21 @@ class PublicSettingsResponse(BaseModel):
     auto_call_balance_min_free_operators: int
     cancelled_ticket_board_display_seconds: int
     cancelled_ticket_board_message_template: str
+
+
+class CloseDayScheduleUpdate(BaseModel):
+    enabled: bool = False
+    weekdays: List[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4], min_length=1)
+    run_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    operator_action: Literal["offline", "offline_keep_session", "break"]
+    ticket_action: Literal["cancel", "finish"]
+
+    @validator("weekdays")
+    def validate_weekdays(cls, value):
+        if any(day < 0 or day > 6 for day in value):
+            raise ValueError("Дни недели должны быть от 0 до 6")
+        return value
+
+
+class CloseDayScheduleResponse(CloseDayScheduleUpdate):
+    last_run_date: str | None = None
