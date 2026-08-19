@@ -102,9 +102,9 @@ body.admin-page .admin-nav-link {
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-body.admin-page .admin-nav-link span {
-    width: 22px;
-    text-align: center;
+body.admin-page .admin-nav-label {
+    min-width: 0;
+    text-align: left;
 }
 
 body.admin-page .admin-nav-icon {

@@ -11,14 +11,6 @@ import { mount as mountTickets, unmount as unmountTickets } from "./views/ticket
 import { mount as mountScheduler } from "./views/scheduler.view.js";
 
 const routes = {
-    tickets: {
-        label: "Талоны",
-        description: "Текущее состояние очереди и ручное управление талонами",
-        group: "Очередь",
-        icon: "tickets",
-        mount: mountTickets,
-        unmount: unmountTickets
-    },
     services: {
         label: "Услуги",
         description: "Управление услугами, доступными на терминалах",
@@ -32,6 +24,14 @@ const routes = {
         group: "Очередь",
         icon: "windows",
         mount: mountWindows
+    },
+    tickets: {
+        label: "Талоны",
+        description: "Текущее состояние очереди и ручное управление талонами",
+        group: "Очередь",
+        icon: "tickets",
+        mount: mountTickets,
+        unmount: unmountTickets
     },
     terminalSettings: {
         label: "Терминал",
@@ -71,7 +71,7 @@ const routes = {
     map: {
         label: "Карта",
         description: "Редактор карты офиса",
-        group: "Система",
+        group: "Общее",
         icon: "map",
         mount: mountMap,
         unmount: unmountMap
@@ -79,7 +79,7 @@ const routes = {
     stats: {
         label: "Статистика",
         description: "Показатели очереди и работы операторов",
-        group: "Система",
+        group: "Общее",
         icon: "stats",
         mount: mountStats,
         unmount: unmountStats

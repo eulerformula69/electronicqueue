@@ -39,6 +39,25 @@ def test_workplaces_and_operators_share_one_operational_screen():
     assert 'data-action="assign-window"' in view_source
 
 
+def test_admin_navigation_order_groups_and_long_label_layout():
+    app_source = _read("queue/js/admin/app.js")
+    shell_css = _read("queue/css/admin/shell.css")
+
+    services_position = app_source.index("    services: {")
+    windows_position = app_source.index("    windows: {")
+    tickets_position = app_source.index("    tickets: {")
+    assert services_position < windows_position < tickets_position
+
+    map_route = app_source.split("    map: {", 1)[1].split("    },", 1)[0]
+    stats_route = app_source.split("    stats: {", 1)[1].split("    },", 1)[0]
+    assert 'group: "Общее"' in map_route
+    assert 'group: "Общее"' in stats_route
+
+    label_styles = shell_css.split("body.admin-page .admin-nav-label", 1)[1].split("}", 1)[0]
+    assert "min-width: 0;" in label_styles
+    assert "text-align: left;" in label_styles
+
+
 def test_operator_admin_table_shows_visible_id_and_keeps_internal_id():
     source = _read("queue/js/admin/views/operators.view.js")
 
