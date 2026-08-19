@@ -9,10 +9,24 @@ from app.release_middleware import _version_html
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_every_html_page_loads_version_checker():
-    for html_path in (ROOT / "queue").glob("*.html"):
-        source = html_path.read_text(encoding="utf-8")
-        assert '/queue/js/app-version.js' in source, html_path.name
+def test_version_checker_only_loads_on_interactive_work_pages():
+    pages_with_update_button = ["login.html", "admin.html", "operator.html"]
+    passive_display_pages = [
+        "terminal.html",
+        "board.html",
+        "board-media.html",
+        "board-media-lite.html",
+        "board-media-lite2.html",
+        "board-media-lite3.html",
+    ]
+
+    for page_name in pages_with_update_button:
+        source = (ROOT / "queue" / page_name).read_text(encoding="utf-8")
+        assert '/queue/js/app-version.js' in source, page_name
+
+    for page_name in passive_display_pages:
+        source = (ROOT / "queue" / page_name).read_text(encoding="utf-8")
+        assert '/queue/js/app-version.js' not in source, page_name
 
 
 def test_version_checker_offers_one_click_reload():
