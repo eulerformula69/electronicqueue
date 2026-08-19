@@ -18,6 +18,16 @@ def test_default_documents_are_created_for_both_roles(docs_root):
     assert documentation.list_documents("operator")[0]["path"] == "index.md"
 
 
+def test_index_is_first_and_other_documents_are_sorted_alphabetically(docs_root):
+    documentation.create_document("admin", "00-before-index.md")
+    documentation.create_document("admin", "z-last.md")
+    documentation.create_document("admin", "a-first.md")
+
+    paths = [item["path"] for item in documentation.list_documents("admin")]
+
+    assert paths == ["index.md", "00-before-index.md", "a-first.md", "z-last.md"]
+
+
 def test_document_lifecycle_and_revision_conflict(docs_root):
     created = documentation.create_document("admin", "setup/start.md")
     saved = documentation.save_document("admin", created["path"], "# Начало\n\nТекст", created["revision"])

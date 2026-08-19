@@ -59,11 +59,17 @@ def resolve_path(scope: str, relative_path: str, extensions: set[str]) -> Path:
 
 def list_documents(scope: str) -> list[dict]:
     root = _scope_root(scope)
+    paths = [path for path in root.rglob("*.md") if path.is_file()]
+    paths.sort(key=lambda path: _document_sort_key(root, path))
     return [
         {"path": path.relative_to(root).as_posix(), "title": _document_title(path)}
-        for path in sorted(root.rglob("*.md"), key=lambda item: item.as_posix().lower())
-        if path.is_file()
+        for path in paths
     ]
+
+
+def _document_sort_key(root: Path, path: Path) -> tuple[bool, str]:
+    relative_path = path.relative_to(root).as_posix()
+    return relative_path.lower() != "index.md", relative_path.lower()
 
 
 def read_document(scope: str, relative_path: str) -> dict:
