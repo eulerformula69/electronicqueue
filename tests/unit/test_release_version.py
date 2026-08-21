@@ -9,9 +9,13 @@ from app.release_middleware import _version_html
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_version_checker_only_loads_on_interactive_work_pages():
-    pages_with_update_button = ["login.html", "admin.html", "operator.html"]
-    passive_display_pages = [
+def test_changelog_update_button_only_loads_on_operator_page():
+    operator_source = (ROOT / "queue" / "operator.html").read_text(encoding="utf-8")
+    assert '/queue/js/app-version.js' in operator_source
+
+    pages_without_update_button = [
+        "login.html",
+        "admin.html",
         "terminal.html",
         "board.html",
         "board-media.html",
@@ -20,24 +24,20 @@ def test_version_checker_only_loads_on_interactive_work_pages():
         "board-media-lite3.html",
     ]
 
-    for page_name in pages_with_update_button:
-        source = (ROOT / "queue" / page_name).read_text(encoding="utf-8")
-        assert '/queue/js/app-version.js' in source, page_name
-
-    for page_name in passive_display_pages:
+    for page_name in pages_without_update_button:
         source = (ROOT / "queue" / page_name).read_text(encoding="utf-8")
         assert '/queue/js/app-version.js' not in source, page_name
 
 
-def test_version_checker_offers_one_click_reload():
+def test_changelog_update_notification_offers_one_click_reload_without_polling_system_version():
     source = (ROOT / "queue" / "js" / "app-version.js").read_text(encoding="utf-8")
 
     assert 'button.textContent = "Обновить"' in source
     assert 'window.location.reload()' in source
     assert 'window.showAppUpdateNotification = showUpdateNotification' in source
     assert 'notification.id = "app-release-notification"' in source
-    assert 'meta[name="app-version"]' in source
-    assert 'cache: "no-store"' in source
+    assert '/system/version' not in source
+    assert 'setInterval' not in source
 
 
 def test_html_assets_receive_release_version():
@@ -59,4 +59,4 @@ def test_version_endpoint_and_html_are_not_cached():
     assert version_response.headers["cache-control"] == "no-store"
     assert html_response.headers["cache-control"] == "no-store"
     assert '<meta name="app-version"' in html_response.text
-    assert '/queue/js/app-version.js?v=' in html_response.text
+    assert '/queue/js/app-version.js' not in html_response.text

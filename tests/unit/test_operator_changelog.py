@@ -58,6 +58,9 @@ def test_operator_changelog_polling_shows_update_banner_without_modal():
 
     update_branch = source.index("if (options.checkForUpdate)")
     banner_call = source.index("showUpdateNotification();", update_branch)
+    remembered_version = source.index("pageChangelogVersion = version;", banner_call)
+    assert banner_call < remembered_version
+
     update_return = source.index("return;", banner_call)
     modal_call = source.index("showOperatorChangelog(data, options);", update_return)
 

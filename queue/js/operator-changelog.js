@@ -129,6 +129,7 @@
             if (options.checkForUpdate) {
                 if (pageChangelogVersion !== version) {
                     showUpdateNotification();
+                    pageChangelogVersion = version;
                 }
                 return;
             }
